@@ -13,14 +13,13 @@ const schema = a.schema({
     })
     .authorization((allow) => [allow.publicApiKey()]),
 
-  const schema = a.schema({
-  // 既存の Todo モデルなど
+  
 
   Auth: a.model({
     username: a.string().required(),
     loginTime: a.datetime().required(),
   }).authorization((allow) => [allow.authenticated()]), // 認証ユーザーだけ保存可能
-  });
+  
   
   Post: a.customType({
     id: a.id().required(),

@@ -360,8 +360,9 @@ export default function App() {
           <h1>ようこそ、{user?.username} さん</h1>
           <p>{JSON.stringify(attr)}</p>
           <h1>元気ですか？ {attr?.preferred_username} さん</h1>
-      
+          
           <button onClick={signOut}>ログアウト</button>
+
         </main>
       )}
       </Authenticator>
