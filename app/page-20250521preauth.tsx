@@ -38,7 +38,7 @@ const customTheme = {
 };
 
 
-/*
+
 Amplify.configure({
   Auth: {
     Cognito: {
@@ -48,11 +48,9 @@ Amplify.configure({
       loginWith: {
         username: true,
       },
-}}});*/
+}}});
 
-
-
-Amplify.configure(outputs); 
+ //Amplify.configure(outputs); 
 
 const components = {
 

@@ -2,18 +2,14 @@
 
 import { Amplify } from "aws-amplify";
 import { Authenticator, SignIn, useAuthenticator } from "@aws-amplify/ui-react";
-import outputs from "../amplify_outputs.json";
+import outputs from "../../amplify_outputs.json";
 import "@aws-amplify/ui-react/styles.css";
 import { useTheme, View, Image, Heading, Text, Button } from "@aws-amplify/ui-react";
 import './app.css' 
 import { ThemeProvider, defaultTheme } from '@aws-amplify/ui-react';
 import { I18n } from '@aws-amplify/core';
-import { FetchUserAttributesOutput, fetchUserAttributes } from 'aws-amplify/auth';
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { signIn } from 'aws-amplify/auth';
-
-
-
 
 I18n.setLanguage('ja'); 
 I18n.putVocabularies({
@@ -36,23 +32,18 @@ const customTheme = {
     }
   }
 };
-
-
 /*
 Amplify.configure({
+  ...outputs,
   Auth: {
-    Cognito: {
-      userPoolId: "ap-northeast-1_z60CJDdU7",
-      userPoolClientId: "6gnv9qldhuos82bvc7gkcudp7m",
-      identityPoolId: "ap-northeast-1:8390aebf-9353-4adf-9ada-0b096192993f",
-      loginWith: {
-        username: true,
-      },
-}}});*/
+    region: 'ap-northeast-1',
+    userPoolId: 'ap-northeast-1_z60CJDdU7',
+    userPoolWebClientId: '6gnv9qldhuos82bvc7gkcudp7m',
+    authenticationFlowType: 'USER_PASSWORD_AUTH',
+  },
+});*/
 
-
-
-Amplify.configure(outputs); 
+ Amplify.configure(outputs); 
 
 const components = {
 
@@ -313,7 +304,6 @@ const formFields = {
   },
 };
 
-/*
 const handleSignIn = async () => {
   try {
     const userId = "test_cognito";
@@ -333,20 +323,8 @@ const handleSignIn = async () => {
   }
 };
 
-*/
+
 export default function App() {
-
-   const [attr, setAttrResult] = useState<FetchUserAttributesOutput>();
-   const getCurrentUserAsync = async () => {
-    const result = await fetchUserAttributes();
-    console.log(result);
-    setAttrResult(result);
-  };
-
-  useEffect(() => {
-    getCurrentUserAsync();
-  }, []);
-
 
   /*useEffect(() => {
     handleSignIn();
@@ -358,9 +336,7 @@ export default function App() {
         {({ signOut, user }) => (
         <main style={{ padding: "1.5rem" }}>
           <h1>ようこそ、{user?.username} さん</h1>
-          <p>{JSON.stringify(attr)}</p>
-          <h1>元気ですか？ {attr?.preferred_username} さん</h1>
-      
+          <h1>{user?.updated_at}</h1>
           <button onClick={signOut}>ログアウト</button>
         </main>
       )}

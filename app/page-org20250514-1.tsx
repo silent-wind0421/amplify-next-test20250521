@@ -8,19 +8,13 @@ import { useTheme, View, Image, Heading, Text, Button } from "@aws-amplify/ui-re
 import './app.css' 
 import { ThemeProvider, defaultTheme } from '@aws-amplify/ui-react';
 import { I18n } from '@aws-amplify/core';
-import { FetchUserAttributesOutput, fetchUserAttributes } from 'aws-amplify/auth';
-import { useEffect, useState } from "react";
-import { signIn } from 'aws-amplify/auth';
-
-
-
+import React, { useState } from 'react';
 
 I18n.setLanguage('ja'); 
 I18n.putVocabularies({
   ja: {
     'Sign in': '送信',
     'Signing in': '送信中',
-    'Incorrect username or password.': 'IDまたはパスワードが間違っています。',
   },
 });
 
@@ -38,21 +32,63 @@ const customTheme = {
 };
 
 
-/*
-Amplify.configure({
-  Auth: {
-    Cognito: {
-      userPoolId: "ap-northeast-1_z60CJDdU7",
-      userPoolClientId: "6gnv9qldhuos82bvc7gkcudp7m",
-      identityPoolId: "ap-northeast-1:8390aebf-9353-4adf-9ada-0b096192993f",
-      loginWith: {
-        username: true,
-      },
-}}});*/
+
+Amplify.configure(outputs);
+
+const SignInCustom = () => {
+  const { signIn } = useAuthenticator();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await signIn({ username, password });
+      // 成功時は username をリセット（記憶しない）
+      setUsername('');
+      setPassword('');
+      setErrorMsg('');
+    } catch (err) {
+      // 失敗時のみ username を保持
+      setErrorMsg('ログインに失敗しました。もう一度お試しください。');
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <Heading level={3}>ログイン</Heading>
+      {errorMsg && <div style={{ color: 'red' }}>{errorMsg}</div>}
+      <TextField
+        label="ユーザー名"
+        name="username"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        autoComplete="off"
+        required
+      />
+      <TextField
+        label="パスワード"
+        name="password"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        autoComplete="new-password"
+        required
+      />
+      <Button type="submit" variation="primary">
+        送信
+      </Button>
+    </form>
+  );
 
 
 
-Amplify.configure(outputs); 
+
+};
+
+
+
 
 const components = {
 
@@ -313,57 +349,12 @@ const formFields = {
   },
 };
 
-/*
-const handleSignIn = async () => {
-  try {
-    const userId = "test_cognito";
-    const password = "3#6FnZH8J\G";
-
-    const userData = await signIn(userId, password);
-
-    // 全体を確認
-    console.log("✅ ユーザーデータ:", userData);
-
-    // 特定の情報を確認
-    console.log("ユーザー名:", userData.username);
-    console.log("属性:", userData.attributes);
-    console.log("メールアドレス:", userData.attributes?.email);
-  } catch (error) {
-    console.error("❌ サインイン失敗:", error);
-  }
-};
-
-*/
 export default function App() {
-
-   const [attr, setAttrResult] = useState<FetchUserAttributesOutput>();
-   const getCurrentUserAsync = async () => {
-    const result = await fetchUserAttributes();
-    console.log(result);
-    setAttrResult(result);
-  };
-
-  useEffect(() => {
-    getCurrentUserAsync();
-  }, []);
-
-
-  /*useEffect(() => {
-    handleSignIn();
-  }, []);*/
-  
   return (
     <ThemeProvider theme={customTheme}>
-      <Authenticator formFields={formFields} components={components} hideSignUp={true} loginMechanisms={["username"]} >
-        {({ signOut, user }) => (
-        <main style={{ padding: "1.5rem" }}>
-          <h1>ようこそ、{user?.username} さん</h1>
-          <p>{JSON.stringify(attr)}</p>
-          <h1>元気ですか？ {attr?.preferred_username} さん</h1>
-      
-          <button onClick={signOut}>ログアウト</button>
-        </main>
-      )}
+      <Authenticator formFields={formFields} components={{SignIn: () => <SignInCustom />}} 
+        hideSignUp={true} loginMechanisms={["username", "e-mail"]} >
+        {({ signOut }) => <button onClick={signOut}>Sign out</button>}
       </Authenticator>
     </ThemeProvider>  
   );
