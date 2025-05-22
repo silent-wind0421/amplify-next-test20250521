@@ -57,7 +57,7 @@ Amplify.configure({
 const components = {
 
   SignIn: {
-    
+    /*
     FormFields() {
       const { getFieldProps } = useAuthenticator();
 
@@ -67,7 +67,7 @@ const components = {
           <TextField {...getFieldProps("password")} autoComplete="off" type="password" />
         </View>
       );
-    },
+    },*/
 
     Header() {
       const { tokens } = useTheme();
