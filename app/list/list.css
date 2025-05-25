@@ -1,0 +1,46 @@
+/* list.css */
+
+.table-th {
+  border: 1px solid #ccc;
+  padding: 24px;
+  background-color: #f2f2f2;
+  /* text-align: left; 必要に応じて有効化 */
+}
+
+.table-td {
+  border: 1px solid #ccc;
+  padding: 24px;
+  text-align: center;
+}
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.table-container {
+  width: 100%;
+  position: relative;
+}
+
+.table-wrapper {
+  width: 100%;
+  position: relative;
+}
+
+.table-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.table-controls label {
+  font-size: 14px;
+}
+
+.table-controls select {
+  margin-left: 8px;
+  padding: 4px 8px;
+}
+
