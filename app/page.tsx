@@ -335,7 +335,7 @@ const handleSignIn = async () => {
 
 */
 export default function App() {
-
+{/*
    const [attr, setAttrResult] = useState<FetchUserAttributesOutput>();
    const getCurrentUserAsync = async () => {
     const result = await fetchUserAttributes();
@@ -346,6 +346,7 @@ export default function App() {
   useEffect(() => {
     getCurrentUserAsync();
   }, []);
+  */}
 
 
   /*useEffect(() => {
@@ -358,8 +359,10 @@ export default function App() {
         {({ signOut, user }) => (
         <main style={{ padding: "1.5rem" }}>
           <h1>ようこそ、{user?.username} さん</h1>
+         {/*
           <p>{JSON.stringify(attr)}</p>
           <h1>元気ですか？ {attr?.preferred_username} さん</h1>
+          */}
           
           <button onClick={signOut}>ログアウト</button>
 
