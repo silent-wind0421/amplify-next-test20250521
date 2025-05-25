@@ -13,18 +13,19 @@ import { useEffect, useState } from "react";
 import { signIn } from 'aws-amplify/auth';
 import { createTheme } from '@aws-amplify/ui-react';
 
+
 const customTheme = createTheme({
   name: 'my-custom-theme',
   tokens: {
-    ...defaultTheme.tokens,
     colors: {
-      ...defaultTheme.tokens.colors,
       background: {
-        primary: { value: '#F4F4F4' },  // セミコロンは入れない
+        primary: { value: '#f0f0f0' }, // 必要なカスタマイズだけ定義
       },
     },
+    // components.authenticator を定義しないことで型の衝突を回避
   },
 });
+
 
 
 
