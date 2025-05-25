@@ -11,6 +11,19 @@ import { I18n } from '@aws-amplify/core';
 import { FetchUserAttributesOutput, fetchUserAttributes } from 'aws-amplify/auth';
 import { useEffect, useState } from "react";
 import { signIn } from 'aws-amplify/auth';
+import { createTheme } from '@aws-amplify/ui-react';
+
+const customTheme = createTheme({
+  name: 'my-custom-theme',
+  overrides: [defaultTheme], // 既存テーマを継承する
+  tokens: {
+    colors: {
+      background: {
+        primary: { value: '#F4F4F4' }  // セミコロンは不要です
+      }
+    }
+  }
+});
 
 
 
@@ -24,18 +37,6 @@ I18n.putVocabularies({
   },
 });
 
-const customTheme = {
-  ...defaultTheme,
-  tokens: {
-    ...defaultTheme.tokens,
-    colors: {
-      ...defaultTheme.tokens.colors,
-      background: {
-        primary: { value: '#F4F4F4;' } 
-      }
-    }
-  }
-};
 
 
 
@@ -102,7 +103,7 @@ const components = {
             onClick={submitForm}
             style={{ backgroundColor: 'blue', color: 'white' }}
           >
-            
+
             送信
           </Button>
         </View>
