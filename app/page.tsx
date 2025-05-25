@@ -15,14 +15,15 @@ import { createTheme } from '@aws-amplify/ui-react';
 
 const customTheme = createTheme({
   name: 'my-custom-theme',
-  overrides: [defaultTheme], // 既存テーマを継承する
   tokens: {
+    ...defaultTheme.tokens,
     colors: {
+      ...defaultTheme.tokens.colors,
       background: {
-        primary: { value: '#F4F4F4' }  // セミコロンは不要です
-      }
-    }
-  }
+        primary: { value: '#F4F4F4' },  // セミコロンは入れない
+      },
+    },
+  },
 });
 
 
