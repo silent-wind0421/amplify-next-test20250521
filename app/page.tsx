@@ -102,6 +102,7 @@ const components = {
             onClick={submitForm}
             style={{ backgroundColor: 'blue', color: 'white' }}
           >
+            
             送信
           </Button>
         </View>
