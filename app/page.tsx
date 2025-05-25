@@ -17,12 +17,21 @@ const customTheme = createTheme({
   name: 'my-custom-theme',
   overrides: [defaultTheme], // 既存テーマを継承する
   tokens: {
+    ...defaultTheme.tokens,
     colors: {
+      ...defaultTheme.tokens.colors,
       background: {
+<<<<<<< HEAD
         primary: { value: '#F4F4F4' }  // セミコロンは不要です
       }
     }
   }
+=======
+        primary: { value: '#F4F4F4' },  // セミコロンは入れない
+      },
+    },
+  },
+>>>>>>> parent of f148909 (modify20250525aa)
 });
 
 
