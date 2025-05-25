@@ -100,9 +100,9 @@ const components = {
           <Button
             variation="primary"
             onClick={submitForm}
-            label="送信"
             style={{ backgroundColor: 'blue', color: 'white' }}
           >
+            送信
           </Button>
         </View>
       );
