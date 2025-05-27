@@ -12,6 +12,9 @@ import { FetchUserAttributesOutput, fetchUserAttributes } from 'aws-amplify/auth
 import { useEffect, useState } from "react";
 import { signIn } from 'aws-amplify/auth';
 import { createTheme } from '@aws-amplify/ui-react';
+import { useRouter } from 'next/navigation';
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "@/amplify/data/resource";
 
 
 const customTheme = createTheme({
@@ -39,24 +42,25 @@ I18n.putVocabularies({
   },
 });
 
-
-
-
-Amplify.configure({
+// ① まず outputs を展開する
+const fullConfig = {
+ // ...outputs,
   Auth: {
     Cognito: {
       userPoolId: "ap-northeast-1_z60CJDdU7",
       userPoolClientId: "6gnv9qldhuos82bvc7gkcudp7m",
       identityPoolId: "ap-northeast-1:8390aebf-9353-4adf-9ada-0b096192993f",
-      loginWith: {
-        username: true,
-      },
-    }}});
+      loginWith: { username: true },
+    }
+  }
+};
+
+// ② 1回だけ configure
+Amplify.configure(outputs);
 
 
+const client = generateClient<Schema>();
 
-
-//Amplify.configure(outputs); 
 
 const components = {
 
@@ -339,6 +343,37 @@ const handleSignIn = async () => {
 };
 
 */
+
+function RedirectAfterSignIn() {
+  const router = useRouter();
+  const { user, authStatus } = useAuthenticator((context) => [context.user, context.authStatus]);
+
+  useEffect(() => {
+
+      const doCreateAndRedirect = async () => {
+
+      if (authStatus === 'authenticated' && user) {
+        try {
+              await client.models.Auth.create({
+              username: user.username,
+              loginTime: new Date().toISOString(),
+        });
+            router.push('./list');
+        }catch (error) {
+            console.error("Failed to create auth record:", error);
+        }
+     }
+  };
+
+  doCreateAndRedirect();   
+
+  }, [authStatus, user]);
+
+  
+  return null;
+
+}
+
 export default function App() {
 {/*
    const [attr, setAttrResult] = useState<FetchUserAttributesOutput>();
@@ -358,21 +393,32 @@ export default function App() {
     handleSignIn();
   }, []);*/
   
+  
   return (
     <ThemeProvider theme={customTheme}>
       <Authenticator formFields={formFields} components={components} hideSignUp={true} loginMechanisms={["username"]} >
-        {({ signOut, user }) => (
+       
+       
+      <RedirectAfterSignIn /> 
+
+       {/*
+       {({ signOut, user }) => (
+          
+        //  router.push('/list');
+
+       
         <main style={{ padding: "1.5rem" }}>
           <h1>ようこそ、{user?.username} さん</h1>
-         {/*
-          <p>{JSON.stringify(attr)}</p>
-          <h1>元気ですか？ {attr?.preferred_username} さん</h1>
-          */}
-          
+       
           <button onClick={signOut}>ログアウト</button>
 
         </main>
-      )}
+
+
+
+      )}  
+
+      */}
       </Authenticator>
     </ThemeProvider>  
   );
