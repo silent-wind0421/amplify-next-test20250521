@@ -1,3 +1,5 @@
+//src/app/attendance/page.tsx
+
 'use client';
 
 import AttendanceTable from '@/components/AttendanceTable';
