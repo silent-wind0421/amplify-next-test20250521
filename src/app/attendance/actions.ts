@@ -1,3 +1,5 @@
+//src/app/attendance/actions.ts
+
 "use client";
 
 import { generateClient } from "aws-amplify/data";
@@ -16,7 +18,7 @@ export async function handleArrival(visitRecordId: string) {
         return;
     }
 
-    await client.models.VisitRecord.update({
+    const { data, errors } = await client.models.VisitRecord.update({
         id: visitRecordId,
         visitDate: current.visitDate,
         officeId: current.officeId,
@@ -39,6 +41,12 @@ export async function handleArrival(visitRecordId: string) {
         version: (current.version ?? 0) + 1,
         remarks: current.remarks || "",
     });
+
+    if (errors) {
+        console.error("来所時の更新エラー:", errors);
+    } else {
+        console.log("来所時の更新成功:", data);
+    }
 }
 
 export async function handleLeave(record: Schema["VisitRecord"]["type"]) {
@@ -53,12 +61,29 @@ export async function handleLeave(record: Schema["VisitRecord"]["type"]) {
     const [h2, m2] = now.split(":").map(Number);
     const duration = (h2 * 60 + m2) - (h1 * 60 + m1);
 
-    await client.models.VisitRecord.update({
-        ...record,
+    const { data, errors } = await client.models.VisitRecord.update({
+        id: record.id,
+        visitDate: record.visitDate,
+        officeId: record.officeId,
+        childId: record.childId,
+        plannedArrivalTime: record.plannedArrivalTime,
+        contractedDuration: record.contractedDuration,
+        actualArrivalTime: record.actualArrivalTime,
         actualLeaveTime: now,
         actualDuration: duration,
+        lateReasonCode: record.lateReasonCode || "",
+        earlyLeaveReasonCode: record.earlyLeaveReasonCode || "",
+        isManuallyEntered: true,
+        isDeleted: false,
         updatedAt: new Date().toISOString(),
         updatedBy: "admin",
         version: (record.version ?? 0) + 1,
+        remarks: record.remarks || "",
     });
+
+    if (errors) {
+        console.error("退所時の更新エラー:", errors);
+    } else {
+        console.log("退所時の更新成功:", data);
+    }
 }
