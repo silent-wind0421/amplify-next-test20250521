@@ -41,6 +41,7 @@
     "aws-amplify": "^6.14.4",
     "class-variance-authority": "^0.7.1",
     "date-fns": "^4.1.0",
+    "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.14.0",
     "lucide-react": "^0.511.0",
     "next": "^14.2.29",
