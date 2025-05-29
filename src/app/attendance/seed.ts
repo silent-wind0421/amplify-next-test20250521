@@ -1,10 +1,10 @@
 // src/app/attendance/seed.ts
-"use server";
+"use client";
 
 import { Amplify } from "aws-amplify";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../../amplify/data/resource";
-import amplifyConfig from "../../amplify_outputs.json"; // ← これを追加！
+import amplifyConfig from "../../amplify_outputs.json"; 
 
 Amplify.configure(amplifyConfig); 
 
