@@ -18,13 +18,15 @@ export default function Home() {
 
   return (
     <div className="space-y-4 p-4">
-      {process.env.NODE_ENV === "development" && (
+      {/* ✅ 本番環境含め、環境変数で表示切替 */}
+      {process.env.NEXT_PUBLIC_SHOW_SEED_BUTTON === "true" && (
         <div className="flex justify-end">
           <Button onClick={handleSeed} disabled={seeding}>
             {seeding ? "登録中…" : "初期データを投入"}
           </Button>
         </div>
       )}
+
       <AttendanceManagement />
     </div>
   );
