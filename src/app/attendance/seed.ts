@@ -9,22 +9,29 @@ import type { Schema } from "../../../amplify/data/resource";
 
 // Amplify.configure(amplifyConfig); 
 
+Amplify.configure({
+    aws_project_region: process.env.NEXT_PUBLIC_AWS_REGION,
+    aws_appsync_graphqlEndpoint: process.env.NEXT_PUBLIC_APPSYNC_URL,
+    aws_appsync_region: process.env.NEXT_PUBLIC_AWS_REGION,
+    aws_appsync_authenticationType: "API_KEY",
+    aws_appsync_apiKey: process.env.NEXT_PUBLIC_APPSYNC_API_KEY,
+} as any); // 型チェック回避
+
 const client = generateClient<Schema>();
 
 export async function seedVisitRecords() {
-    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    const today = new Date().toISOString().slice(0, 10); // 例: 2025-05-29
 
     const children = [
         { childId: "user001", plannedArrivalTime: "16:00", contractedDuration: 100 },
         { childId: "user002", plannedArrivalTime: "17:00", contractedDuration: 100 },
-        // 必要に応じて児童を追加
     ];
 
     for (const child of children) {
         await client.models.VisitRecord.create({
             visitDate: today,
             childId: child.childId,
-            officeId: "Osaka", // 固定 or 変数化可能
+            officeId: "Osaka",
             plannedArrivalTime: child.plannedArrivalTime,
             contractedDuration: child.contractedDuration,
             actualArrivalTime: "",
