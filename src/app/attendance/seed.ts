@@ -3,17 +3,21 @@
 "use server";
 
 // import config from "../../amplify_outputs.json"; 
+import { v4 as uuidv4 } from "uuid";
 import { Amplify } from "aws-amplify";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../../amplify/data/resource";
 import { revalidatePath } from "next/cache";
 
 //確認用
-console.log("env values", {
-    region: process.env.NEXT_PUBLIC_AWS_REGION,
-    url: process.env.NEXT_PUBLIC_APPSYNC_URL,
-    apiKey: process.env.NEXT_PUBLIC_APPSYNC_API_KEY,
-});
+if (process.env.NODE_ENV === "development") {
+    console.log("env values", {
+        region: process.env.NEXT_PUBLIC_AWS_REGION,
+        url: process.env.NEXT_PUBLIC_APPSYNC_URL,
+        apiKey: process.env.NEXT_PUBLIC_APPSYNC_API_KEY,
+    });
+}
+
 
 // Amplify.configure(config);
 Amplify.configure({
@@ -38,6 +42,7 @@ export async function seedVisitRecords() {
 
         for (const child of children) {
             await client.models.VisitRecord.create({
+                id: uuidv4(), 
                 visitDate: today,
                 childId: child.childId,
                 officeId: "Osaka",
@@ -62,7 +67,7 @@ export async function seedVisitRecords() {
         console.log("✅ 初期データ登録完了");
         revalidatePath("/"); // オプション: データ反映
     } catch (err) {
-        console.error("❌ seedVisitRecords failed:", err);
-        throw new Error("初期データ登録に失敗しました");
+        console.error("❌ seedVisitRecords failed:", err instanceof Error ? err.message : err);
+    throw new Error("初期データ登録に失敗しました");
     }
 }
