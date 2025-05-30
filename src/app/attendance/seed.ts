@@ -2,20 +2,20 @@
 // "use client";
 "use server";
 
-import config from "../../amplify_outputs.json"; 
+// import config from "../../amplify_outputs.json"; 
 import { Amplify } from "aws-amplify";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../../amplify/data/resource";
 import { revalidatePath } from "next/cache";
 
-Amplify.configure(config);
-// Amplify.configure({
-//     aws_project_region: process.env.NEXT_PUBLIC_AWS_REGION,
-//     aws_appsync_graphqlEndpoint: process.env.NEXT_PUBLIC_APPSYNC_URL,
-//     aws_appsync_region: process.env.NEXT_PUBLIC_AWS_REGION,
-//     aws_appsync_authenticationType: "API_KEY",
-//     aws_appsync_apiKey: process.env.NEXT_PUBLIC_APPSYNC_API_KEY,
-// } as any); // 型チェック回避
+// Amplify.configure(config);
+Amplify.configure({
+    aws_project_region: process.env.NEXT_PUBLIC_AWS_REGION,
+    aws_appsync_graphqlEndpoint: process.env.NEXT_PUBLIC_APPSYNC_URL,
+    aws_appsync_region: process.env.NEXT_PUBLIC_AWS_REGION,
+    aws_appsync_authenticationType: "API_KEY",
+    aws_appsync_apiKey: process.env.NEXT_PUBLIC_APPSYNC_API_KEY,
+} as any); // 型チェック回避
 
 const client = generateClient<Schema>();
 
