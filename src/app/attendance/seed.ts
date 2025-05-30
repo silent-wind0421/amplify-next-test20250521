@@ -24,13 +24,13 @@ if (process.env.NODE_ENV === "development") {
 
 
 // Amplify.configure(config);
-Amplify.configure({
-    aws_project_region: process.env.NEXT_PUBLIC_AWS_REGION,
-    aws_appsync_graphqlEndpoint: process.env.NEXT_PUBLIC_APPSYNC_URL,
-    aws_appsync_region: process.env.NEXT_PUBLIC_AWS_REGION,
-    aws_appsync_authenticationType: "API_KEY",
-    aws_appsync_apiKey: process.env.NEXT_PUBLIC_APPSYNC_API_KEY,
-} as any);
+// Amplify.configure({
+//     aws_project_region: process.env.NEXT_PUBLIC_AWS_REGION,
+//     aws_appsync_graphqlEndpoint: process.env.NEXT_PUBLIC_APPSYNC_URL,
+//     aws_appsync_region: process.env.NEXT_PUBLIC_AWS_REGION,
+//     aws_appsync_authenticationType: "API_KEY",
+//     aws_appsync_apiKey: process.env.NEXT_PUBLIC_APPSYNC_API_KEY,
+// } as any);
 
 
 const client = generateClient<Schema>();
@@ -52,11 +52,11 @@ export async function seedVisitRecords() {
                 officeId: "Osaka",
                 plannedArrivalTime: child.plannedArrivalTime,
                 contractedDuration: child.contractedDuration,
-                actualArrivalTime: "",
-                actualLeaveTime: "",
+                actualArrivalTime: null,
+                actualLeaveTime: null,
                 actualDuration: 0,
-                lateReasonCode: "",
-                earlyLeaveReasonCode: "",
+                lateReasonCode: null,
+                earlyLeaveReasonCode: null,
                 isManuallyEntered: false,
                 isDeleted: false,
                 createdAt: new Date().toISOString(),
@@ -64,7 +64,7 @@ export async function seedVisitRecords() {
                 updatedAt: new Date().toISOString(),
                 updatedBy: "admin",
                 version: 1,
-                remarks: "",
+                remarks: null,
             });
         }
 
