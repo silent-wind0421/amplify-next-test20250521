@@ -8,6 +8,10 @@ import { Amplify } from "aws-amplify";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../../amplify/data/resource";
 import { revalidatePath } from "next/cache";
+import { configureAmplify } from "../../../amplify/configureAmplify";
+
+
+configureAmplify(); 
 
 //確認用
 if (process.env.NODE_ENV === "development") {
