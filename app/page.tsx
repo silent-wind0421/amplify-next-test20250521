@@ -1,36 +1,17 @@
 "use client";
 
-import { Amplify } from "aws-amplify";
-import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
-import outputs from "../amplify_outputs.json";
-import "@aws-amplify/ui-react/styles.css";
-import { useTheme, View, Image, Heading, Text, Button } from "@aws-amplify/ui-react";
-import './app.css' 
-import { ThemeProvider, defaultTheme } from '@aws-amplify/ui-react';
-import { I18n } from '@aws-amplify/core';
-import { FetchUserAttributesOutput, fetchUserAttributes } from 'aws-amplify/auth';
-import { useEffect, useState } from "react";
-import { signIn } from 'aws-amplify/auth';
-import { createTheme } from '@aws-amplify/ui-react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from "react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
-
-
-const customTheme = createTheme({
-  name: 'my-custom-theme',
-  tokens: {
-    colors: {
-      background: {
-        primary: { value: '#f0f0f0' }, // 必要なカスタマイズだけ定義
-      },
-    },
-    // components.authenticator を定義しないことで型の衝突を回避
-  },
-});
-
-
-
+import { Amplify } from "aws-amplify";
+import outputs from "@/amplify_outputs.json";
+import "@aws-amplify/ui-react/styles.css";
+import { useTheme, View, Image, Heading, Text, Button } from "@aws-amplify/ui-react";
+import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
+import { Subscription } from 'rxjs';
+import { ThemeProvider, createTheme, defaultTheme } from '@aws-amplify/ui-react';
+import { I18n } from '@aws-amplify/core';
+import { signIn } from 'aws-amplify/auth';
 
 
 I18n.setLanguage('ja'); 
@@ -42,41 +23,35 @@ I18n.putVocabularies({
   },
 });
 
-// ① まず outputs を展開する
-const fullConfig = {
- // ...outputs,
-  Auth: {
-    Cognito: {
-      userPoolId: "ap-northeast-1_z60CJDdU7",
-      userPoolClientId: "6gnv9qldhuos82bvc7gkcudp7m",
-      identityPoolId: "ap-northeast-1:8390aebf-9353-4adf-9ada-0b096192993f",
-      loginWith: { username: true },
-    }
-  }
-};
+const customTheme = createTheme({
+  name: 'custom-theme',
+  tokens: {
+    colors: {
+      background: {
+        primary: { value: '#f0f0f0' },
+      },
+    },
 
-// ② 1回だけ configure
+    components: {
+      button: {
+        primary: {
+          backgroundColor: { value: 'blue' },  // 背景色（例：青）
+          color: { value: 'white' },           // テキスト色（例：白）
+          _hover: {
+            backgroundColor: { value: '#003399' }, // ホバー時の色（任意）
+          },
+        },
+      },
+    },
+  },
+});
+
 Amplify.configure(outputs);
-
-
 const client = generateClient<Schema>();
-
 
 const components = {
 
   SignIn: {
-    /*
-    FormFields() {
-      const { getFieldProps } = useAuthenticator();
-
-      return (
-        <View>
-          <TextField {...getFieldProps("username")} autoComplete="off" />
-          <TextField {...getFieldProps("password")} autoComplete="off" type="password" />
-        </View>
-      );
-    },*/
-
     Header() {
       const { tokens } = useTheme();
 
@@ -108,145 +83,18 @@ const components = {
           <Button
             variation="primary"
             onClick={submitForm}
-            style={{ backgroundColor: 'blue', color: 'white' }}
+           /* style={{ backgroundColor: 'blue', color: 'white' }}*/
           >
-
             送信
           </Button>
         </View>
       );
     },
 
-    
-  },
+    }    
+  };
 
-  SignUp: {
-    Header() {
-      const { tokens } = useTheme();
-
-      return (
-        <Heading
-          padding={`${tokens.space.xl} 0 0 ${tokens.space.xl}`}
-          level={3}
-        >
-          Create a new account
-        </Heading>
-      );
-    },
-    Footer() {
-      const { toSignIn } = useAuthenticator();
-
-      return (
-        <View textAlign="center">
-          <Button
-            fontWeight="normal"
-            onClick={toSignIn}
-            size="small"
-            variation="link"
-          >
-            Back to Sign In
-          </Button>
-        </View>
-      );
-    },
-  },
-  ConfirmSignUp: {
-    Header() {
-      const { tokens } = useTheme();
-      return (
-        <Heading
-          padding={`${tokens.space.xl} 0 0 ${tokens.space.xl}`}
-          level={3}
-        >
-          Enter Information:
-        </Heading>
-      );
-    },
-    Footer() {
-      return <Text>Footer Information</Text>;
-    },
-  },
-  SetupTotp: {
-    Header() {
-      const { tokens } = useTheme();
-      return (
-        <Heading
-          padding={`${tokens.space.xl} 0 0 ${tokens.space.xl}`}
-          level={3}
-        >
-          Enter Information:
-        </Heading>
-      );
-    },
-    Footer() {
-      return <Text>Footer Information</Text>;
-    },
-  },
-  ConfirmSignIn: {
-    Header() {
-      const { tokens } = useTheme();
-      return (
-        <Heading
-          padding={`${tokens.space.xl} 0 0 ${tokens.space.xl}`}
-          level={3}
-        >
-          Enter Information:
-        </Heading>
-      );
-    },
-    Footer() {
-      return <Text>Footer Information</Text>;
-    },
-  },
-  ForgotPassword: {
-    Header() {
-      const { tokens } = useTheme();
-      return (
-        <Heading
-          padding={`${tokens.space.xl} 0 0 ${tokens.space.xl}`}
-          level={3}
-        >
-          Enter Information:
-        </Heading>
-      );
-    },
-    Footer() {
-      return <Text>Footer Information</Text>;
-    },
-  },
-  ConfirmResetPassword: {
-    Header() {
-      const { tokens } = useTheme();
-      return (
-        <Heading
-          padding={`${tokens.space.xl} 0 0 ${tokens.space.xl}`}
-          level={3}
-        >
-          Enter Information:
-        </Heading>
-      );
-    },
-    Footer() {
-      return <Text>Footer Information</Text>;
-    },
-  },
-  SelectMfaType: {
-    Header() {
-      return <Heading level={3}>Select Desired MFA Type</Heading>;
-    },
-    Footer() {
-      return <Text>Footer Information</Text>;
-    },
-  },
-  SetupEmail: {
-    Header() {
-      return <Heading level={3}>Email MFA Setup</Heading>;
-    },
-    Footer() {
-      return <Text>Footer Information</Text>;
-    },
-  },
-};
+  
 
 const formFields = {
   signIn: {
@@ -265,162 +113,129 @@ const formFields = {
     
 
   },
-  signUp: {
-    password: {
-      label: 'Password:',
-      isRequired: true,
-      order: 2,
-    },
-    confirm_password: {
-      label: 'Confirm Password:',
-      order: 1,
-    },
-  },
-  forceNewPassword: {
-    password: {
-      placeholder: 'Enter your Password:',
-    },
-  },
-  forgotPassword: {
-    username: {
-      placeholder: 'Enter your email:',
-    },
-  },
-  confirmResetPassword: {
-    confirmation_code: {
-      placeholder: 'Enter your Confirmation Code:',
-      label: 'New Label',
-      isRequired: false,
-    },
-    confirm_password: {
-      placeholder: 'Enter your Password Please:',
-    },
-  },
-  setupTotp: {
-    QR: {
-      totpIssuer: 'test issuer',
-      totpUsername: 'amplify_qr_test_user',
-    },
-    confirmation_code: {
-      label: 'New Label',
-      placeholder: 'Enter your Confirmation Code:',
-      isRequired: false,
-    },
-  },
-  confirmSignIn: {
-    confirmation_code: {
-      label: 'New Label',
-      placeholder: 'Enter your Confirmation Code:',
-      isRequired: false,
-    },
-  },
-  setupEmail: {
-    email: {
-      label: 'New Label',
-      placeholder: 'Please enter your Email:',
-    },
-  },
+  
 };
 
-/*
-const handleSignIn = async () => {
-  try {
-    const userId = "test_cognito";
-    const password = "3#6FnZH8J\G";
 
-    const userData = await signIn(userId, password);
+function LoginApp() {
+  const [logins, setLogins] = useState<Array<Schema["Login"]["type"]>>([]);
+  const [showHistory, setShowHistory] = useState(false);
+//  const subscriptionRef = useRef<ReturnType<typeof client.models.Todo.observeQuery> | null>(null);
+  const subscriptionRef = useRef<Subscription | null>(null);
 
-    // 全体を確認
-    console.log("✅ ユーザーデータ:", userData);
+  const { user, authStatus, signOut } = useAuthenticator(context => [
+    context.user,
+    context.authStatus,
+    context.signOut,
+  ]);
 
-    // 特定の情報を確認
-    console.log("ユーザー名:", userData.username);
-    console.log("属性:", userData.attributes);
-    console.log("メールアドレス:", userData.attributes?.email);
-  } catch (error) {
-    console.error("❌ サインイン失敗:", error);
-  }
-};
+  const isWritingRef = useRef(false);
 
-*/
-
-function RedirectAfterSignIn() {
-  const router = useRouter();
-  const { user, authStatus } = useAuthenticator((context) => [context.user, context.authStatus]);
-
+  // 🔸 書き込み処理（セッション＋useRef）
   useEffect(() => {
+    if (authStatus === "authenticated" && user && !isWritingRef.current) {
+      const loginId = user.signInDetails?.loginId;
+      console.log("loginId:", JSON.stringify(loginId)); 
+      if (!loginId) {
+        console.log("loginId is none") 
+        return;
+      }  
 
-      const doCreateAndRedirect = async () => {
+      const sessionKey = `hasLogged_${loginId}`;
+      if (sessionStorage.getItem(sessionKey)) return;
 
-      if (authStatus === 'authenticated' && user) {
-        try {
-              await client.models.Auth.create({
-              username: user.username,
-              loginTime: new Date().toISOString(),
-        });
-            router.push('./list');
-        }catch (error) {
-            console.error("Failed to create auth record:", error);
-        }
-     }
-  };
+      isWritingRef.current = true;
 
-  doCreateAndRedirect();   
+      const loginTime = new Date().toLocaleString("ja-JP", {
+        timeZone: "Asia/Tokyo",
+      });
 
+      client.models.Login.create({
+        uid: loginId,
+        loginTime:  loginTime
+      }).then(() => {
+        sessionStorage.setItem(sessionKey, "true");
+        console.log("書き込み成功");
+        console.log(loginId);
+        console.log(loginTime);
+      }).catch(err => {
+        console.error("書き込み失敗:", err);
+      });
+    }
   }, [authStatus, user]);
 
-  
-  return null;
+  // 🔸 「履歴を見る」ボタン押下時に購読開始
+  const handleShowHistory = () => {
+    setShowHistory(true);
+    if (subscriptionRef.current) return; // 二重登録防止
 
-}
+    const subscription = client.models.Login.observeQuery().subscribe({
+      next: (data) => {
+        const sorted = [...data.items]
+          .filter((item) => item.loginTime)
+          .sort((a, b) =>
+            new Date(b.loginTime!).getTime() - new Date(a.loginTime!).getTime()
+          )
+          .slice(0, 5);
+        setLogins(sorted);
+      },
+    });
 
-export default function App() {
-{/*
-   const [attr, setAttrResult] = useState<FetchUserAttributesOutput>();
-   const getCurrentUserAsync = async () => {
-    const result = await fetchUserAttributes();
-    console.log(result);
-    setAttrResult(result);
+    subscriptionRef.current = subscription;
   };
 
+  // 🔸 アンマウント時に購読解除
   useEffect(() => {
-    getCurrentUserAsync();
+    return () => {
+      subscriptionRef.current?.unsubscribe();
+    };
   }, []);
-  */}
 
+  const handleSignOut = () => {
+    sessionStorage.clear();
+    signOut();
+    window.location.reload();
+  };
 
-  /*useEffect(() => {
-    handleSignIn();
-  }, []);*/
-  
-  
+ 
+
   return (
-    <ThemeProvider theme={customTheme}>
-      <Authenticator formFields={formFields} components={components} hideSignUp={true} loginMechanisms={["username"]} >
-       
-       
-      <RedirectAfterSignIn /> 
+    <main style={{ padding: "1.5rem" }}>
+      
+      router.push('./list');
 
-       {/*
-       {({ signOut, user }) => (
-          
-        //  router.push('/list');
+      {/*
+      <p>こんにちは、{user?.username} さん！</p>
 
-       
-        <main style={{ padding: "1.5rem" }}>
-          <h1>ようこそ、{user?.username} さん</h1>
-       
-          <button onClick={signOut}>ログアウト</button>
+      {!showHistory && (
+        <button onClick={handleShowHistory}>履歴を見る</button>
+      )}
 
-        </main>
+      {showHistory && (
+        <ul>
+          {logins.map((login) => (
+             <li key={login.id} style={{ display: "flex", gap: "1rem", padding: "0.5rem", borderBottom: "1px solid #ccc" }}>
+              <div style={{ flex: 1, fontWeight: "bold" }}>{login.uid}</div>
+              <div style={{ flex: 2 }}>{login.loginTime}</div>
+             </li>
+          ))}
+        </ul>
+      )}
 
-
-
-      )}  
-
+      <div style={{ marginTop: "2rem" }}>
+        <button onClick={handleSignOut}>サインアウト</button>
+      </div>
       */}
-      </Authenticator>
-    </ThemeProvider>  
+    </main>
   );
 }
 
+export default function App() {
+  return (
+    <ThemeProvider theme={customTheme}>
+      <Authenticator formFields={formFields} components={components} hideSignUp={true} loginMechanisms={["username"]} >
+        <LoginApp />
+      </Authenticator>
+    </ThemeProvider>
+  );
+}
