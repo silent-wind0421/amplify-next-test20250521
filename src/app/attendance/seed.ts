@@ -63,7 +63,7 @@ export async function seedVisitRecords() {
                 contractedDuration: child.contractedDuration,
                 actualArrivalTime: null,
                 actualLeaveTime: null,
-                actualDuration: 0,
+                // actualDuration: 0,   DynamoDB では未定義で格納される?
                 lateReasonCode: null,
                 earlyLeaveReasonCode: null,
                 isManuallyEntered: false,
