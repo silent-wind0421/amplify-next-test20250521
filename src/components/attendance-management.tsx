@@ -32,10 +32,10 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 import { generateClient } from "aws-amplify/data";
-import type { Schema } from "../../amplify/data/resource"; 
+import type { Schema } from "../../amplify/data/resource";
 
 import { Amplify } from "aws-amplify";
-import config from "../../amplify_outputs.json"; 
+import config from "../../amplify_outputs.json";
 
 Amplify.configure(config);
 
@@ -188,48 +188,92 @@ export default function AttendanceManagement() {
   }, [])
 
   // 来所ボタンのハンドラー
-  const handleArrival = (id: string) => {
-    const now = new Date()
-    const currentTime = format(now, "HH:mm")
+  const handleArrival = async (id: string) => {
+    const now = new Date();
+    const currentTime = format(now, "HH:mm");
 
+    // ローカルUIの更新
     setAttendanceData((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          return {
-            ...item,
-            arrivalTime: currentTime,
-          }
-        }
-        return item
-      }),
-    )
+      prev.map((item) =>
+        item.id === id ? { ...item, arrivalTime: currentTime } : item
+      )
+    );
 
-    toast({
-      title: "来所を記録しました",
-      description: `現在時刻: ${currentTime}`,
-    })
-  }
+    try {
+      // DynamoDBの更新
+      await client.models.VisitRecord.update({
+        id: id,
+        actualArrivalTime: currentTime,
+        updatedAt: now.toISOString(),
+        updatedBy: "admin", // 実際のログインユーザー名に差し替え可
+      });
+
+      toast({
+        title: "来所を記録しました",
+        description: `現在時刻: ${currentTime}`,
+      });
+    } catch (error) {
+      console.error("来所時刻の更新に失敗しました:", error);
+
+      toast({
+        variant: "destructive",
+        title: "エラー",
+        description: "DynamoDBへの更新に失敗しました",
+      });
+
+      // 必要であればここで setAttendanceData をロールバックしてもよい
+    }
+  };
+
 
   // 退所ボタンのハンドラー
-  const handleDeparture = (id: string) => {
-    const now = new Date()
-    const currentTime = format(now, "HH:mm")
+  const handleDeparture = async (id: string) => {
+    const now = new Date();
+    const currentTime = format(now, "HH:mm");
 
+    // 更新対象の item を state から先に取得
+  const target = attendanceData.find((item) => item.id === id);
+  if (!target) return;
+
+// 実利用時間を計算
+  const updatedItem = calculateUsageTime(target, currentTime);
+
+  // DynamoDB 更新
+  try {
+    const actualDuration = updatedItem.actualUsageTime
+      ? (() => {
+          const [h, m] = updatedItem.actualUsageTime.split(":").map(Number);
+          return h * 60 + m;
+        })()
+      : 0;
+
+    await client.models.VisitRecord.update({
+      id,
+      actualLeaveTime: currentTime,
+      actualDuration: actualDuration,
+      earlyLeaveReasonCode: updatedItem.reason ?? undefined,
+      updatedAt: now.toISOString(),
+      updatedBy: "admin",
+    });
+
+    // ローカル状態の更新
     setAttendanceData((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          const updatedItem = calculateUsageTime(item, currentTime)
-          return updatedItem
-        }
-        return item
-      }),
-    )
+      prev.map((item) => (item.id === id ? updatedItem : item))
+    );
 
     toast({
       title: "退所を記録しました",
       description: `現在時刻: ${currentTime}`,
-    })
+    });
+  } catch (error) {
+    console.error("退所時刻の更新に失敗:", error);
+    toast({
+      variant: "destructive",
+      title: "エラー",
+      description: "DynamoDBへの退所記録に失敗しました",
+    });
   }
+};
 
   // 時間編集の開始
   const startEditing = (id: string, type: "arrival" | "departure", currentValue: string) => {
@@ -360,7 +404,14 @@ export default function AttendanceManagement() {
 
   // 実利用時間を計算する関数
   const calculateUsageTime = (item: AttendanceData, departureTime: string): AttendanceData => {
-    if (!item.arrivalTime) return item
+    if (!item.arrivalTime) {
+  return {
+    ...item,
+    departureTime,
+    actualUsageTime: null,
+    isShortUsage: false,
+  };
+}
 
     // 来所時刻と退所時刻から実利用時間を計算
     const arrivalParts = item.arrivalTime.split(":")
