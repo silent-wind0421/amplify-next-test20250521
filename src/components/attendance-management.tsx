@@ -31,9 +31,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "../../amplify/data/resource"; // パスは要調整
+
+const client = generateClient<Schema>();
+
+
 // 利用者データの型定義
 type AttendanceData = {
-  id: number
+  id: string
   userName: string
   scheduledTime: string
   contractTime: string
@@ -53,75 +59,113 @@ export default function AttendanceManagement() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [screenWidth, setScreenWidth] = useState<number | null>(null);
 
-useEffect(() => {
-  if (typeof window !== "undefined") {
-    setScreenWidth(window.innerWidth);
-  }
-}, []);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setScreenWidth(window.innerWidth);
+    }
+  }, []);
 
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState("")
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [datePickerOpen, setDatePickerOpen] = useState(false)
-  const [editingTime, setEditingTime] = useState<{ id: number; type: "arrival" | "departure"; value: string } | null>(
+  const [editingTime, setEditingTime] = useState<{ id: string; type: "arrival" | "departure"; value: string } | null>(
     null,
   )
-  const [editingNote, setEditingNote] = useState<{ id: number; value: string } | null>(null)
+  const [editingNote, setEditingNote] = useState<{ id: string; value: string } | null>(null)
   const [sortConfig, setSortConfig] = useState<{ column: SortColumn; direction: SortDirection } | null>(null)
-  const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([
-    // パターン1: まだ来所していない
-    {
-      id: 1,
-      userName: "山田太郎",
-      scheduledTime: "16:00",
-      contractTime: "01:40",
-      arrivalTime: null,
-      departureTime: null,
-      actualUsageTime: null,
-      isShortUsage: false,
-      reason: null,
-      note: null,
-    },
-    // パターン2: 来所している
-    {
-      id: 2,
-      userName: "佐藤花子",
-      scheduledTime: "17:30",
-      contractTime: "01:40",
-      arrivalTime: null,
-      departureTime: null,
-      actualUsageTime: null,
-      isShortUsage: false,
-      reason: null,
-      note: "お迎えは母親の予定",
-    },
-    // パターン3: 退所している
-    {
-      id: 3,
-      userName: "鈴木一郎",
-      scheduledTime: "16:00",
-      contractTime: "01:40",
-      arrivalTime: null,
-      departureTime: null,
-      actualUsageTime: null,
-      isShortUsage: false,
-      reason: null,
-      note: null,
-    },
-    // パターン4: 契約時間より短い利用
-    {
-      id: 4,
-      userName: "田中美咲子（とても長い名前の例）",
-      scheduledTime: "16:00",
-      contractTime: "01:40",
-      arrivalTime: null,
-      departureTime: null,
-      actualUsageTime: null,
-      isShortUsage: true,
-      reason: "保護者都合",
-      note: "体調不良のため早めのお迎え",
-    },
-  ])
+
+
+
+  // const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([
+  //   // パターン1: まだ来所していない
+  //   {
+  //     id: 1,
+  //     userName: "山田太郎",
+  //     scheduledTime: "16:00",
+  //     contractTime: "01:40",
+  //     arrivalTime: null,
+  //     departureTime: null,
+  //     actualUsageTime: null,
+  //     isShortUsage: false,
+  //     reason: null,
+  //     note: null,
+  //   },
+  //   // パターン2: 来所している
+  //   {
+  //     id: 2,
+  //     userName: "佐藤花子",
+  //     scheduledTime: "17:30",
+  //     contractTime: "01:40",
+  //     arrivalTime: null,
+  //     departureTime: null,
+  //     actualUsageTime: null,
+  //     isShortUsage: false,
+  //     reason: null,
+  //     note: "お迎えは母親の予定",
+  //   },
+  //   // パターン3: 退所している
+  //   {
+  //     id: 3,
+  //     userName: "鈴木一郎",
+  //     scheduledTime: "16:00",
+  //     contractTime: "01:40",
+  //     arrivalTime: null,
+  //     departureTime: null,
+  //     actualUsageTime: null,
+  //     isShortUsage: false,
+  //     reason: null,
+  //     note: null,
+  //   },
+  //   // パターン4: 契約時間より短い利用
+  //   {
+  //     id: 4,
+  //     userName: "田中美咲子（とても長い名前の例）",
+  //     scheduledTime: "16:00",
+  //     contractTime: "01:40",
+  //     arrivalTime: null,
+  //     departureTime: null,
+  //     actualUsageTime: null,
+  //     isShortUsage: true,
+  //     reason: "保護者都合",
+  //     note: "体調不良のため早めのお迎え",
+  //   },
+  // ])
+
+  const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([]);
+
+  useEffect(() => {
+    const fetchRecords = async () => {
+      const { data } = await client.models.VisitRecord.list({
+        filter: {
+          visitDate: { eq: format(new Date(), "yyyy-MM-dd") }, // 今日の日付を指定
+        },
+      });
+
+      const mapped = data.map((record) => ({
+        id: record.id,
+        userName: record.childId ?? "未設定", // ここは現状 childId をそのまま表示。将来的にはマスタ参照で名前変換可。
+        scheduledTime: record.plannedArrivalTime ?? "",
+        contractTime: record.contractedDuration != null
+          ? convertMinutesToHHMM(record.contractedDuration)
+          : "--:--"
+        ,
+        arrivalTime: record.actualArrivalTime || null,
+        departureTime: record.actualLeaveTime || null,
+        actualUsageTime: record.actualDuration
+          ? convertMinutesToHHMM(record.actualDuration)
+          : null,
+        isShortUsage: false, // 現時点では arrivalTime/departureTime から別途算出する必要あり
+        reason: record.earlyLeaveReasonCode || null,
+        note: record.remarks || null,
+      }));
+
+      setAttendanceData(mapped);
+    };
+
+    fetchRecords();
+  }, []);
+
 
   // 現在の日付
   const formattedDate = format(selectedDate, "yyyy年MM月dd日(E)", { locale: ja })
@@ -139,7 +183,7 @@ useEffect(() => {
   }, [])
 
   // 来所ボタンのハンドラー
-  const handleArrival = (id: number) => {
+  const handleArrival = (id: string) => {
     const now = new Date()
     const currentTime = format(now, "HH:mm")
 
@@ -162,7 +206,7 @@ useEffect(() => {
   }
 
   // 退所ボタンのハンドラー
-  const handleDeparture = (id: number) => {
+  const handleDeparture = (id: string) => {
     const now = new Date()
     const currentTime = format(now, "HH:mm")
 
@@ -183,7 +227,7 @@ useEffect(() => {
   }
 
   // 時間編集の開始
-  const startEditing = (id: number, type: "arrival" | "departure", currentValue: string) => {
+  const startEditing = (id: string, type: "arrival" | "departure", currentValue: string) => {
     setEditingTime({ id, type, value: currentValue })
   }
 
@@ -193,7 +237,7 @@ useEffect(() => {
   }
 
   // 時間編集の保存
-  const saveEditedTime = (id: number, type: "arrival" | "departure", newValue: string) => {
+  const saveEditedTime = (id: string, type: "arrival" | "departure", newValue: string) => {
     // 時刻形式のバリデーション (HH:mm)
     const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/
     if (!timeRegex.test(newValue)) {
@@ -246,12 +290,12 @@ useEffect(() => {
   }
 
   // 備考編集の開始
-  const startEditingNote = (id: number, currentValue: string | null) => {
+  const startEditingNote = (id: string, currentValue: string | null) => {
     setEditingNote({ id, value: currentValue || "" })
   }
 
   // 備考の保存
-  const saveNote = (id: number, newValue: string) => {
+  const saveNote = (id: string, newValue: string) => {
     setAttendanceData((prev) =>
       prev.map((item) => {
         if (item.id === id) {
@@ -272,7 +316,7 @@ useEffect(() => {
   }
 
   // 理由の更新
-  const updateReason = (id: number, reason: string) => {
+  const updateReason = (id: string, reason: string) => {
     setAttendanceData((prev) =>
       prev.map((item) => {
         if (item.id === id) {
@@ -289,6 +333,14 @@ useEffect(() => {
       title: "早退/超過理由を更新しました",
     })
   }
+
+  // 利用時間（分）を "HH:mm" 形式に変換するユーティリティ
+  const convertMinutesToHHMM = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
+  };
+
 
   // 時刻を比較する関数 (a < b なら負、a > b なら正、a = b なら 0)
   const compareTime = (a: string, b: string): number => {
@@ -337,7 +389,7 @@ useEffect(() => {
   }
 
   // 時刻をリセットする関数
-  const resetTime = (id: number, type: "arrival" | "departure") => {
+  const resetTime = (id: string, type: "arrival" | "departure") => {
     setAttendanceData((prev) =>
       prev.map((item) => {
         if (item.id === id) {
@@ -539,9 +591,8 @@ useEffect(() => {
 
         {/* メインコンテンツ */}
         <main
-          className={`flex-1 overflow-auto p-4 transition-all duration-300 ${
-            sidebarOpen ? "" : "container mx-auto px-2 md:px-4"
-          }`}
+          className={`flex-1 overflow-auto p-4 transition-all duration-300 ${sidebarOpen ? "" : "container mx-auto px-2 md:px-4"
+            }`}
         >
           <Card className="mb-4 overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between bg-blue-500 py-3 text-white">
@@ -860,14 +911,14 @@ useEffect(() => {
                                         <Tooltip>
                                           <TooltipTrigger asChild>
                                             {screenWidth === null ? (
-  ""
-) : (
-  <span className="truncate">
-    {data.note!.length > (screenWidth < 1280 ? 10 : 20)
-      ? `${data.note!.substring(0, screenWidth < 1280 ? 10 : 20)}...`
-      : data.note}
-  </span>
-)}
+                                              ""
+                                            ) : (
+                                              <span className="truncate">
+                                                {data.note!.length > (screenWidth < 1280 ? 10 : 20)
+                                                  ? `${data.note!.substring(0, screenWidth < 1280 ? 10 : 20)}...`
+                                                  : data.note}
+                                              </span>
+                                            )}
 
                                           </TooltipTrigger>
                                           <TooltipContent>
