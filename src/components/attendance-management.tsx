@@ -32,7 +32,12 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 import { generateClient } from "aws-amplify/data";
-import type { Schema } from "../../amplify/data/resource"; // パスは要調整
+import type { Schema } from "../../amplify/data/resource"; 
+
+import { Amplify } from "aws-amplify";
+import config from "../../amplify_outputs.json"; 
+
+Amplify.configure(config);
 
 const client = generateClient<Schema>();
 
