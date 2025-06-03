@@ -1,3 +1,4 @@
+//src/component/sidebar.tsx
 "use client"
 
 import type React from "react"

@@ -4,7 +4,7 @@
 import { DialogTrigger } from "@/components/ui/dialog"
 
 import { useState, useEffect } from "react"
-import { format } from "date-fns"
+import { format } from "date-fns-tz"
 import { ja } from "date-fns/locale"
 import { LogOut, Calendar, Edit2, Check, XIcon, Trash2, ArrowUp, ArrowDown, Menu } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -141,26 +141,32 @@ export default function AttendanceManagement() {
 
   useEffect(() => {
     const fetchRecords = async () => {
-      const { data } = await client.models.VisitRecord.list({
+
+      // 児童マスタ（Child モデル）を取得
+      const { data: children } = await client.models.Child.list();
+      const childMap = new Map(children.map(child => [child.childId, `${child.lastName}${child.firstName}`]));
+
+      // 本日の VisitRecord を取得
+      const { data: records } = await client.models.VisitRecord.list({
         filter: {
-          visitDate: { eq: format(new Date(), "yyyy-MM-dd") }, // 今日の日付を指定
-        },
+          visitDate: { eq: format(new Date(), "yyyy-MM-dd", { timeZone: "Asia/Tokyo" }) }
+        }
       });
 
-      const mapped = data.map((record) => ({
+      // VisitRecord の各レコードに対して、児童名（childId → 氏名）を解決
+      const mapped = records.map((record) => ({
         id: record.id,
-        userName: record.childId ?? "未設定", // ここは現状 childId をそのまま表示。将来的にはマスタ参照で名前変換可。
+        userName: childMap.get(record.childId) ?? "未設定",  // ← ここが変わるポイント
         scheduledTime: record.plannedArrivalTime ?? "",
         contractTime: record.contractedDuration != null
           ? convertMinutesToHHMM(record.contractedDuration)
-          : "--:--"
-        ,
+          : "--:--",
         arrivalTime: record.actualArrivalTime || null,
         departureTime: record.actualLeaveTime || null,
         actualUsageTime: record.actualDuration
           ? convertMinutesToHHMM(record.actualDuration)
           : null,
-        isShortUsage: false, // 現時点では arrivalTime/departureTime から別途算出する必要あり
+        isShortUsage: false,
         reason: record.earlyLeaveReasonCode || null,
         note: record.remarks || null,
       }));
@@ -232,48 +238,48 @@ export default function AttendanceManagement() {
     const currentTime = format(now, "HH:mm");
 
     // 更新対象の item を state から先に取得
-  const target = attendanceData.find((item) => item.id === id);
-  if (!target) return;
+    const target = attendanceData.find((item) => item.id === id);
+    if (!target) return;
 
-// 実利用時間を計算
-  const updatedItem = calculateUsageTime(target, currentTime);
+    // 実利用時間を計算
+    const updatedItem = calculateUsageTime(target, currentTime);
 
-  // DynamoDB 更新
-  try {
-    const actualDuration = updatedItem.actualUsageTime
-      ? (() => {
+    // DynamoDB 更新
+    try {
+      const actualDuration = updatedItem.actualUsageTime
+        ? (() => {
           const [h, m] = updatedItem.actualUsageTime.split(":").map(Number);
           return h * 60 + m;
         })()
-      : 0;
+        : 0;
 
-    await client.models.VisitRecord.update({
-      id,
-      actualLeaveTime: currentTime,
-      actualDuration: actualDuration,
-      earlyLeaveReasonCode: updatedItem.reason ?? undefined,
-      updatedAt: now.toISOString(),
-      updatedBy: "admin",
-    });
+      await client.models.VisitRecord.update({
+        id,
+        actualLeaveTime: currentTime,
+        actualDuration: actualDuration,
+        earlyLeaveReasonCode: updatedItem.reason ?? undefined,
+        updatedAt: now.toISOString(),
+        updatedBy: "admin",
+      });
 
-    // ローカル状態の更新
-    setAttendanceData((prev) =>
-      prev.map((item) => (item.id === id ? updatedItem : item))
-    );
+      // ローカル状態の更新
+      setAttendanceData((prev) =>
+        prev.map((item) => (item.id === id ? updatedItem : item))
+      );
 
-    toast({
-      title: "退所を記録しました",
-      description: `現在時刻: ${currentTime}`,
-    });
-  } catch (error) {
-    console.error("退所時刻の更新に失敗:", error);
-    toast({
-      variant: "destructive",
-      title: "エラー",
-      description: "DynamoDBへの退所記録に失敗しました",
-    });
-  }
-};
+      toast({
+        title: "退所を記録しました",
+        description: `現在時刻: ${currentTime}`,
+      });
+    } catch (error) {
+      console.error("退所時刻の更新に失敗:", error);
+      toast({
+        variant: "destructive",
+        title: "エラー",
+        description: "DynamoDBへの退所記録に失敗しました",
+      });
+    }
+  };
 
   // 時間編集の開始
   const startEditing = (id: string, type: "arrival" | "departure", currentValue: string) => {
@@ -405,13 +411,13 @@ export default function AttendanceManagement() {
   // 実利用時間を計算する関数
   const calculateUsageTime = (item: AttendanceData, departureTime: string): AttendanceData => {
     if (!item.arrivalTime) {
-  return {
-    ...item,
-    departureTime,
-    actualUsageTime: null,
-    isShortUsage: false,
-  };
-}
+      return {
+        ...item,
+        departureTime,
+        actualUsageTime: null,
+        isShortUsage: false,
+      };
+    }
 
     // 来所時刻と退所時刻から実利用時間を計算
     const arrivalParts = item.arrivalTime.split(":")

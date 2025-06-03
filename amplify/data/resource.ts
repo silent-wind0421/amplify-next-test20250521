@@ -3,14 +3,14 @@ import { a, defineData, type ClientSchema } from '@aws-amplify/backend';
 
 const schema = a.schema({
   VisitRecord: a.model({
-    visitDate: a.string(),
+    visitDate: a.date(), // 旧: a.string()
     officeId: a.string(),
     childId: a.string(),
-    plannedArrivalTime: a.string(),
+    plannedArrivalTime: a.time(), // 旧: a.string()
     contractedDuration: a.integer(),
 
-    actualArrivalTime: a.string(),
-    actualLeaveTime: a.string(),
+    actualArrivalTime: a.time(), // 旧: a.string()
+    actualLeaveTime: a.time(),   // 旧: a.string()
     actualDuration: a.integer(),
 
     lateReasonCode: a.string(),
@@ -26,8 +26,20 @@ const schema = a.schema({
 
     version: a.integer(),
     remarks: a.string(),
-  }).authorization((allow) => [allow.publicApiKey()])
+  }).authorization((allow) => [allow.publicApiKey()]),
+
+  Child: a.model({
+    childId: a.string(), // 手動ID指定（自動なら .id() でもOK）
+    lastName: a.string(),
+    firstName: a.string(),
+    lastNameKana: a.string(),
+    firstNameKana: a.string(),
+  })
+  .identifier(["childId"])
+  .authorization((allow) => [allow.publicApiKey()])
 });
+
+
 
 export type Schema = ClientSchema<typeof schema>;
 
