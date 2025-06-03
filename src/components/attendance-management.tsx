@@ -144,8 +144,11 @@ export default function AttendanceManagement() {
 
       // 児童マスタ（Child モデル）を取得
       const { data: children } = await client.models.Child.list();
-      const childMap = new Map(children.map(child => [child.childId, `${child.lastName}${child.firstName}`]));
-
+      const childMap = new Map(
+        children
+          .filter(child => child.childId != null)
+          .map(child => [child.childId!, `${child.lastName}${child.firstName}`])
+      );
       // 本日の VisitRecord を取得
       const { data: records } = await client.models.VisitRecord.list({
         filter: {
@@ -156,7 +159,10 @@ export default function AttendanceManagement() {
       // VisitRecord の各レコードに対して、児童名（childId → 氏名）を解決
       const mapped = records.map((record) => ({
         id: record.id,
-        userName: childMap.get(record.childId) ?? "未設定",  // ← ここが変わるポイント
+        userName:
+          record.childId && childMap.has(record.childId)
+            ? childMap.get(record.childId)!
+            : "未設定",
         scheduledTime: record.plannedArrivalTime ?? "",
         contractTime: record.contractedDuration != null
           ? convertMinutesToHHMM(record.contractedDuration)
