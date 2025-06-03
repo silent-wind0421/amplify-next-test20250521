@@ -29,9 +29,9 @@ const schema = a.schema({
   }).authorization((allow) => [allow.publicApiKey()]),
 
   Child: a.model({
-    childId: a.string(), // 手動ID指定（自動なら .id() でもOK）
-    lastName: a.string(),
-    firstName: a.string(),
+    childId: a.string().required(), // 手動ID指定（自動なら .id() でもOK）
+    lastName: a.string().required(),
+    firstName: a.string().required(),
     lastNameKana: a.string(),
     firstNameKana: a.string(),
   })
