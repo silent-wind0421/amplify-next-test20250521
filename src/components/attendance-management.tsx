@@ -139,49 +139,135 @@ export default function AttendanceManagement() {
 
   const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([]);
 
-  useEffect(() => {
-    const fetchRecords = async () => {
+  // State: 児童マスタと前回取得データのキャッシュ
+  const [childMap, setChildMap] = useState<Map<string, string>>(new Map());
+  const [lastFetchedJson, setLastFetchedJson] = useState<string>("");
 
-      // 児童マスタ（Child モデル）を取得
+  useEffect(() => {
+  const fetchChildMaster = async () => {
+    try {
       const { data: children } = await client.models.Child.list();
-      const childMap = new Map(
+      const map = new Map(
         children
           .filter(child => child.childId != null)
           .map(child => [child.childId!, `${child.lastName}${child.firstName}`])
       );
-      // 本日の VisitRecord を取得
-      const { data: records } = await client.models.VisitRecord.list({
-        filter: {
-          visitDate: { eq: format(new Date(), "yyyy-MM-dd", { timeZone: "Asia/Tokyo" }) }
-        }
-      });
+      setChildMap(map);
+    } catch (error) {
+      console.error("児童マスタの取得に失敗:", error);
+    }
+  };
 
-      // VisitRecord の各レコードに対して、児童名（childId → 氏名）を解決
-      const mapped = records.map((record) => ({
-        id: record.id,
-        userName:
-          record.childId && childMap.has(record.childId)
-            ? childMap.get(record.childId)!
-            : "未設定",
-        scheduledTime: record.plannedArrivalTime ?? "",
-        contractTime: record.contractedDuration != null
+  fetchChildMaster();
+}, []);
+
+/**
+ * 通所実績を取得してステートを更新する。
+ * 無駄な更新を避けるため、前回と同一であれば更新しない。
+ */
+const fetchVisitRecords = async () => {
+  try {
+    const { data: records } = await client.models.VisitRecord.list({
+      filter: {
+        visitDate: {
+          eq: format(new Date(), "yyyy-MM-dd", { timeZone: "Asia/Tokyo" }),
+        },
+      },
+    });
+
+    // 変更検知用の JSON 化
+    const currentJson = JSON.stringify(records);
+    if (currentJson === lastFetchedJson) return;
+
+    setLastFetchedJson(currentJson);
+
+    const mapped = records.map((record) => ({
+      id: record.id,
+      userName:
+        record.childId && childMap.has(record.childId)
+          ? childMap.get(record.childId)!
+          : "未設定",
+      scheduledTime: record.plannedArrivalTime ?? "",
+      contractTime:
+        record.contractedDuration != null
           ? convertMinutesToHHMM(record.contractedDuration)
           : "--:--",
-        arrivalTime: record.actualArrivalTime || null,
-        departureTime: record.actualLeaveTime || null,
-        actualUsageTime: record.actualDuration
-          ? convertMinutesToHHMM(record.actualDuration)
-          : null,
-        isShortUsage: false,
-        reason: record.earlyLeaveReasonCode || null,
-        note: record.remarks || null,
-      }));
+      arrivalTime: record.actualArrivalTime || null,
+      departureTime: record.actualLeaveTime || null,
+      actualUsageTime: record.actualDuration
+        ? convertMinutesToHHMM(record.actualDuration)
+        : null,
+      isShortUsage: false,
+      reason: record.earlyLeaveReasonCode || null,
+      note: record.remarks || null,
+    }));
 
-      setAttendanceData(mapped);
-    };
+    setAttendanceData(mapped);
+  } catch (error) {
+    console.error("通所実績の取得に失敗:", error);
+  }
+};
 
-    fetchRecords();
-  }, []);
+/**
+ * 通所実績を 10 秒おきに自動取得。
+ * タブが非アクティブなときはスキップする。
+ */
+useEffect(() => {
+  fetchVisitRecords(); // 初回即実行
+
+  const intervalId = setInterval(() => {
+    if (document.visibilityState === "visible") {
+      fetchVisitRecords();
+    }
+  }, 10000); // 10秒
+
+  return () => clearInterval(intervalId);
+}, [childMap]); // childMap に依存（児童マスタ取得完了後に開始）
+
+
+  // useEffect(() => {
+  //   const fetchRecords = async () => {
+
+  //     // 児童マスタ（Child モデル）を取得
+  //     const { data: children } = await client.models.Child.list();
+  //     const childMap = new Map(
+  //       children
+  //         .filter(child => child.childId != null)
+  //         .map(child => [child.childId!, `${child.lastName}${child.firstName}`])
+  //     );
+  //     // 本日の VisitRecord を取得
+  //     const { data: records } = await client.models.VisitRecord.list({
+  //       filter: {
+  //         visitDate: { eq: format(new Date(), "yyyy-MM-dd", { timeZone: "Asia/Tokyo" }) }
+  //       }
+  //     });
+
+  //     // VisitRecord の各レコードに対して、児童名（childId → 氏名）を解決
+  //     const mapped = records.map((record) => ({
+  //       id: record.id,
+  //       userName:
+  //         record.childId && childMap.has(record.childId)
+  //           ? childMap.get(record.childId)!
+  //           : "未設定",
+  //       scheduledTime: record.plannedArrivalTime ?? "",
+  //       contractTime: record.contractedDuration != null
+  //         ? convertMinutesToHHMM(record.contractedDuration)
+  //         : "--:--",
+  //       arrivalTime: record.actualArrivalTime || null,
+  //       departureTime: record.actualLeaveTime || null,
+  //       actualUsageTime: record.actualDuration
+  //         ? convertMinutesToHHMM(record.actualDuration)
+  //         : null,
+  //       isShortUsage: false,
+  //       reason: record.earlyLeaveReasonCode || null,
+  //       note: record.remarks || null,
+  //     }));
+
+  //     setAttendanceData(mapped);
+  //   };
+
+  //   fetchRecords();
+  // }, []);
 
 
   // 現在の日付

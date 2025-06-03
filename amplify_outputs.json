@@ -50,7 +50,7 @@
             "visitDate": {
               "name": "visitDate",
               "isArray": false,
-              "type": "String",
+              "type": "AWSDate",
               "isRequired": false,
               "attributes": []
             },
@@ -71,7 +71,7 @@
             "plannedArrivalTime": {
               "name": "plannedArrivalTime",
               "isArray": false,
-              "type": "String",
+              "type": "AWSTime",
               "isRequired": false,
               "attributes": []
             },
@@ -85,14 +85,14 @@
             "actualArrivalTime": {
               "name": "actualArrivalTime",
               "isArray": false,
-              "type": "String",
+              "type": "AWSTime",
               "isRequired": false,
               "attributes": []
             },
             "actualLeaveTime": {
               "name": "actualLeaveTime",
               "isArray": false,
-              "type": "String",
+              "type": "AWSTime",
               "isRequired": false,
               "attributes": []
             },
@@ -202,6 +202,201 @@
           "primaryKeyInfo": {
             "isCustomPrimaryKey": false,
             "primaryKeyFieldName": "id",
+            "sortKeyFieldNames": []
+          }
+        },
+        "Child": {
+          "name": "Child",
+          "fields": {
+            "childId": {
+              "name": "childId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "lastName": {
+              "name": "lastName",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "firstName": {
+              "name": "firstName",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "lastNameKana": {
+              "name": "lastNameKana",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "firstNameKana": {
+              "name": "firstNameKana",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "Children",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "fields": [
+                  "childId"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": true,
+            "primaryKeyFieldName": "childId",
+            "sortKeyFieldNames": []
+          }
+        },
+        "RecipientCertificate": {
+          "name": "RecipientCertificate",
+          "fields": {
+            "certificateId": {
+              "name": "certificateId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "childId": {
+              "name": "childId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "officeId": {
+              "name": "officeId",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "validFrom": {
+              "name": "validFrom",
+              "isArray": false,
+              "type": "AWSDate",
+              "isRequired": false,
+              "attributes": []
+            },
+            "validTo": {
+              "name": "validTo",
+              "isArray": false,
+              "type": "AWSDate",
+              "isRequired": false,
+              "attributes": []
+            },
+            "status": {
+              "name": "status",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "RecipientCertificates",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "fields": [
+                  "certificateId"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "allow": "public",
+                    "provider": "apiKey",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": true,
+            "primaryKeyFieldName": "certificateId",
             "sortKeyFieldNames": []
           }
         }

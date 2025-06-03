@@ -36,7 +36,18 @@ const schema = a.schema({
     firstNameKana: a.string(),
   })
   .identifier(["childId"])
-  .authorization((allow) => [allow.publicApiKey()])
+  .authorization((allow) => [allow.publicApiKey()]),
+
+  RecipientCertificate: a.model({
+    certificateId: a.string().required(),
+    childId: a.string().required(),
+    officeId: a.string().required(),
+    validFrom: a.date(),
+    validTo: a.date(),
+    status: a.string(),
+  })
+  .identifier(['certificateId'])
+  .authorization((allow) => [allow.publicApiKey()]),
 });
 
 
