@@ -170,7 +170,7 @@ const fetchVisitRecords = async () => {
     const { data: records } = await client.models.VisitRecord.list({
       filter: {
         visitDate: {
-          eq: format(new Date(), "yyyy-MM-dd", { timeZone: "Asia/Tokyo" }),
+          eq: format(selectedDate, "yyyy-MM-dd", { timeZone: "Asia/Tokyo" }),
         },
       },
     });
@@ -222,7 +222,7 @@ useEffect(() => {
   }, 10000); // 10秒
 
   return () => clearInterval(intervalId);
-}, [childMap]); // childMap に依存（児童マスタ取得完了後に開始）
+}, [childMap, selectedDate]); // childMap に依存（児童マスタ取得完了後に開始）
 
 
   // useEffect(() => {
@@ -770,11 +770,12 @@ useEffect(() => {
                       selected={selectedDate}
                       onSelect={(date) => {
                         if (date) {
+                          console.log("選択された日付", date)
                           setSelectedDate(date)
                           setDatePickerOpen(false)
                         }
                       }}
-                      initialFocus
+                      autoFocus
                     />
                   </PopoverContent>
                 </Popover>

@@ -1,3 +1,6 @@
+/* src/app/globals.css */
+/* @import "react-day-picker/dist/style.css"; */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -85,9 +88,9 @@ body {
 }
 
 @layer base {
-  * {
+  /* * {
     @apply border-border;
-  }
+  } */
   body {
     @apply bg-background text-foreground;
   }

@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "target": "es5",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
@@ -20,7 +20,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/amplify/data/resource": ["amplify/data/resource.ts"],
+      "@/*": ["src/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
