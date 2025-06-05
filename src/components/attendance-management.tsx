@@ -800,7 +800,7 @@ const resetTime = async (id: string, type: "arrival" | "departure") => {
                           setDatePickerOpen(false)
                         }
                       }}
-                      autoFocus
+                      // autoFocus
                     />
                   </PopoverContent>
                 </Popover>
