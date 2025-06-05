@@ -4,10 +4,18 @@
 import { Authenticator } from "@aws-amplify/ui-react";
 import ListPage from "./listpage";
 
+
+  
+
+
+
 export default function Page() {
+
+  console.log("listです");
   return (
-    <Authenticator>
+    
       <ListPage />
-    </Authenticator>
+    
+      
   );
 }

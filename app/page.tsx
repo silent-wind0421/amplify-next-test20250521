@@ -12,7 +12,7 @@ import { Subscription } from 'rxjs';
 import { ThemeProvider, createTheme, defaultTheme } from '@aws-amplify/ui-react';
 import { I18n } from '@aws-amplify/core';
 import { signIn } from 'aws-amplify/auth';
-
+import { useRouter } from "next/navigation";
 
 I18n.setLanguage('ja'); 
 I18n.putVocabularies({
@@ -122,6 +122,7 @@ function LoginApp() {
   const [showHistory, setShowHistory] = useState(false);
 //  const subscriptionRef = useRef<ReturnType<typeof client.models.Todo.observeQuery> | null>(null);
   const subscriptionRef = useRef<Subscription | null>(null);
+  const router = useRouter();
 
   const { user, authStatus, signOut } = useAuthenticator(context => [
     context.user,
@@ -146,6 +147,9 @@ function LoginApp() {
 
       isWritingRef.current = true;
 
+      const japanDate = new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" });
+      const isoString = new Date(japanDate).toISOString(); // "2025-06-01T05:00:00.000Z"
+
       const loginTime = new Date().toLocaleString("ja-JP", {
         timeZone: "Asia/Tokyo",
       });
@@ -158,6 +162,11 @@ function LoginApp() {
         console.log("書き込み成功");
         console.log(loginId);
         console.log(loginTime);
+
+        setTimeout(() => {
+          router.push("/list");
+        }, 100);
+        //router.push("/list");
       }).catch(err => {
         console.error("書き込み失敗:", err);
       });
@@ -191,20 +200,15 @@ function LoginApp() {
     };
   }, []);
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     sessionStorage.clear();
-    signOut();
-    window.location.reload();
+    await signOut();
+ //   window.location.reload();
   };
 
  
-
   return (
     <main style={{ padding: "1.5rem" }}>
-      
-      router.push('./list');
-
-      {/*
       <p>こんにちは、{user?.username} さん！</p>
 
       {!showHistory && (
@@ -225,7 +229,11 @@ function LoginApp() {
       <div style={{ marginTop: "2rem" }}>
         <button onClick={handleSignOut}>サインアウト</button>
       </div>
-      */}
+
+      <div style={{ marginTop: "1rem" }}>
+      <button onClick={() => router.push('/list')}>一覧ページへ</button>
+    </div> 
+
     </main>
   );
 }

@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuthenticator } from "@aws-amplify/ui-react";
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import "./list.css"
 
 export default function ListPage() {
     // サンプルデータ
     const today = new Date().toLocaleDateString();
     const [itemsPerPage, setItemsPerPage] = useState(10);
-    const [users, setUsers] = useState([
+    const [members, setMembers] = useState([
       {
         name: '真 屋太郎',
         schedule: '16:00',
@@ -40,9 +40,9 @@ export default function ListPage() {
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
     const handleInputChange = (index: number, field: 'arrival' | 'leaving', value: string) => {
-      const updatedUsers = [...users];
-      updatedUsers[index][field] = value;
-      setUsers(updatedUsers);
+      const updatedMembers = [...members];
+      updatedMembers[index][field] = value;
+      setMembers(updatedMembers);
     };
     
     const handleSort = (key: string) => {
@@ -58,7 +58,7 @@ export default function ListPage() {
       }
     };
 
-    interface User {
+    interface Member {
       name: string;
       schedule: string;
       contract: string;
@@ -67,11 +67,11 @@ export default function ListPage() {
       usage: string;
     }
     
-    const sortedUsers = [...users].sort((a: User, b: User) => {
+    const sortedMembers = [...members].sort((a: Member, b: Member) => {
       if (!sortConfig) return 0;
     
-      const aVal = a[sortConfig.key as keyof User] || '';
-      const bVal = b[sortConfig.key as keyof User] || '';
+      const aVal = a[sortConfig.key as keyof Member] || '';
+      const bVal = b[sortConfig.key as keyof Member] || '';
     
       if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
       if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -80,17 +80,32 @@ export default function ListPage() {
      
     const { authStatus, signOut } = useAuthenticator((context) => [context.authStatus, context.signOut]);
     const router = useRouter();
-
+    const pathname = usePathname(); 
+    const context = useAuthenticator();
     // ✅ 認証状態が unauthenticated になったらサインインページへ戻る
     useEffect(() => {
+     
+      if (authStatus === 'configuring') return; 
+      if (!router) return;
+      
+      console.log(pathname);
+      console.log(context);
+      
+
       if (authStatus === 'unauthenticated') {
+        console.log("loginしてません")
         router.push('/');
+      }else{
+
+        alert("ここですよ");
+        console.log("いますか？");
       }
     }, [authStatus, router]);
 
 
     return (
 
+     
       <main style={{ padding: '2rem', position: 'relative' }}>
         <h1>通所実績管理</h1>
         <p></p>
@@ -121,7 +136,7 @@ export default function ListPage() {
           </div> 
           */}
 
-          <table className="user-table">
+          <table className="member-table">
             <thead>
               <tr>
                 {columns.map(({ key, label }) => (
@@ -137,15 +152,15 @@ export default function ListPage() {
             </thead>
 
             <tbody>
-              {sortedUsers.slice(0, itemsPerPage).map((user, index) => (
+              {sortedMembers.slice(0, itemsPerPage).map((member, index) => (
               <tr key={index}>
-                <td className="table-td">{user.name}</td>
-                <td className="table-td">{user.schedule}</td>
-                <td className="table-td">{user.contract}</td>
+                <td className="table-td">{member.name}</td>
+                <td className="table-td">{member.schedule}</td>
+                <td className="table-td">{member.contract}</td>
                 <td className="table-td">
                   <input
                     type="time"
-                    value={user.arrival}
+                    value={member.arrival}
                     placeholder="waiting"
                     onChange={(e) => handleInputChange(index, 'arrival', e.target.value)}
                   />
@@ -153,12 +168,12 @@ export default function ListPage() {
                 <td className="table-td">
                   <input
                     type="time"
-                    value={user.leaving}
+                    value={member.leaving}
                     placeholder="waiting"
                     onChange={(e) => handleInputChange(index, 'leaving', e.target.value)}
                   />
                 </td>
-                <td className="table-td">{user.usage}</td>
+                <td className="table-td">{member.usage}</td>
               </tr>
               ))}
               </tbody>
