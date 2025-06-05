@@ -4,8 +4,10 @@
 import { DialogTrigger } from "@/components/ui/dialog"
 
 import { useState, useEffect } from "react"
-import { format } from "date-fns-tz"
-import { ja } from "date-fns/locale"
+import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
+import { ja } from "date-fns/locale";
+import { formatTimeJST } from "@/lib/utils";
 import { LogOut, Calendar, Edit2, Check, XIcon, Trash2, ArrowUp, ArrowDown, Menu } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
@@ -48,8 +50,8 @@ type AttendanceData = {
   userName: string
   scheduledTime: string
   contractTime: string
-  arrivalTime: string | null
-  departureTime: string | null
+  arrivalTime: Date | null
+  departureTime: Date | null
   actualUsageTime: string | null
   isShortUsage: boolean
   reason: string | null
@@ -63,6 +65,10 @@ type SortDirection = "asc" | "desc"
 export default function AttendanceManagement() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [screenWidth, setScreenWidth] = useState<number | null>(null);
+
+  useEffect(() => {
+    toast({ title: "テスト", description: "表示されていればOKです" })
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -81,62 +87,6 @@ export default function AttendanceManagement() {
   const [sortConfig, setSortConfig] = useState<{ column: SortColumn; direction: SortDirection } | null>(null)
 
 
-
-  // const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([
-  //   // パターン1: まだ来所していない
-  //   {
-  //     id: 1,
-  //     userName: "山田太郎",
-  //     scheduledTime: "16:00",
-  //     contractTime: "01:40",
-  //     arrivalTime: null,
-  //     departureTime: null,
-  //     actualUsageTime: null,
-  //     isShortUsage: false,
-  //     reason: null,
-  //     note: null,
-  //   },
-  //   // パターン2: 来所している
-  //   {
-  //     id: 2,
-  //     userName: "佐藤花子",
-  //     scheduledTime: "17:30",
-  //     contractTime: "01:40",
-  //     arrivalTime: null,
-  //     departureTime: null,
-  //     actualUsageTime: null,
-  //     isShortUsage: false,
-  //     reason: null,
-  //     note: "お迎えは母親の予定",
-  //   },
-  //   // パターン3: 退所している
-  //   {
-  //     id: 3,
-  //     userName: "鈴木一郎",
-  //     scheduledTime: "16:00",
-  //     contractTime: "01:40",
-  //     arrivalTime: null,
-  //     departureTime: null,
-  //     actualUsageTime: null,
-  //     isShortUsage: false,
-  //     reason: null,
-  //     note: null,
-  //   },
-  //   // パターン4: 契約時間より短い利用
-  //   {
-  //     id: 4,
-  //     userName: "田中美咲子（とても長い名前の例）",
-  //     scheduledTime: "16:00",
-  //     contractTime: "01:40",
-  //     arrivalTime: null,
-  //     departureTime: null,
-  //     actualUsageTime: null,
-  //     isShortUsage: true,
-  //     reason: "保護者都合",
-  //     note: "体調不良のため早めのお迎え",
-  //   },
-  // ])
-
   const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([]);
 
   // State: 児童マスタと前回取得データのキャッシュ
@@ -144,85 +94,110 @@ export default function AttendanceManagement() {
   const [lastFetchedJson, setLastFetchedJson] = useState<string>("");
 
   useEffect(() => {
-  const fetchChildMaster = async () => {
+    const fetchChildMaster = async () => {
+      try {
+        const { data: children } = await client.models.Child.list();
+        const map = new Map(
+          children
+            .filter(child => child.childId != null)
+            .map(child => [child.childId!, `${child.lastName}${child.firstName}`])
+        );
+        setChildMap(map);
+      } catch (error) {
+        console.error("児童マスタの取得に失敗:", error);
+      }
+    };
+
+    fetchChildMaster();
+  }, []);
+
+  /**
+   * 通所実績を取得してステートを更新する。
+   * 無駄な更新を避けるため、前回と同一であれば更新しない。
+   */
+
+  const toDateTime = (date: Date, timeStr: string): Date => {
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    const result = new Date(date);
+    result.setHours(hours);
+    result.setMinutes(minutes);
+    result.setSeconds(0);
+    result.setMilliseconds(0);
+    return result;
+  };
+
+  const formatTime = (time: Date | null): string =>
+    time ? format(time, "HH:mm") : "--:--";
+
+
+  const fetchVisitRecords = async () => {
+
     try {
-      const { data: children } = await client.models.Child.list();
-      const map = new Map(
-        children
-          .filter(child => child.childId != null)
-          .map(child => [child.childId!, `${child.lastName}${child.firstName}`])
-      );
-      setChildMap(map);
+      const { data: records } = await client.models.VisitRecord.list({
+        filter: {
+          visitDate: {
+            eq: formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd"),
+          },
+        },
+      });
+
+      // 変更検知用の JSON 化f
+      const currentJson = JSON.stringify(records);
+      if (currentJson === lastFetchedJson) return;
+
+      setLastFetchedJson(currentJson);
+
+      const mapped: AttendanceData[] = records.map((record): AttendanceData => {
+        const visitDate = new Date(record.visitDate!);
+
+        return {
+          id: record.id,
+          userName:
+            record.childId && childMap.has(record.childId)
+              ? childMap.get(record.childId)!
+              : "未設定",
+          scheduledTime: record.plannedArrivalTime ?? "",
+          contractTime:
+            record.contractedDuration != null
+              ? convertMinutesToHHMM(record.contractedDuration)
+              : "--:--",
+          arrivalTime: record.actualArrivalTime
+            ? toDateTime(visitDate, record.actualArrivalTime)
+            : null,
+          departureTime: record.actualLeaveTime
+            ? toDateTime(visitDate, record.actualLeaveTime)
+            : null,
+          actualUsageTime: record.actualDuration
+            ? convertMinutesToHHMM(record.actualDuration)
+            : null,
+          isShortUsage: false,
+          reason: record.earlyLeaveReasonCode || null,
+          note: record.remarks || null,
+        };
+      });
+
+
+      setAttendanceData(mapped);
     } catch (error) {
-      console.error("児童マスタの取得に失敗:", error);
+      console.error("通所実績の取得に失敗:", error);
     }
   };
 
-  fetchChildMaster();
-}, []);
+  /**
+   * 通所実績を 10 秒おきに自動取得。
+   * タブが非アクティブなときはスキップする。
+   */
+  useEffect(() => {
+    fetchVisitRecords(); // 初回即実行
 
-/**
- * 通所実績を取得してステートを更新する。
- * 無駄な更新を避けるため、前回と同一であれば更新しない。
- */
-const fetchVisitRecords = async () => {
-  try {
-    const { data: records } = await client.models.VisitRecord.list({
-      filter: {
-        visitDate: {
-          eq: format(selectedDate, "yyyy-MM-dd", { timeZone: "Asia/Tokyo" }),
-        },
-      },
-    });
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchVisitRecords();
+      }
+    }, 10000); // 10秒
 
-    // 変更検知用の JSON 化
-    const currentJson = JSON.stringify(records);
-    if (currentJson === lastFetchedJson) return;
-
-    setLastFetchedJson(currentJson);
-
-    const mapped = records.map((record) => ({
-      id: record.id,
-      userName:
-        record.childId && childMap.has(record.childId)
-          ? childMap.get(record.childId)!
-          : "未設定",
-      scheduledTime: record.plannedArrivalTime ?? "",
-      contractTime:
-        record.contractedDuration != null
-          ? convertMinutesToHHMM(record.contractedDuration)
-          : "--:--",
-      arrivalTime: record.actualArrivalTime || null,
-      departureTime: record.actualLeaveTime || null,
-      actualUsageTime: record.actualDuration
-        ? convertMinutesToHHMM(record.actualDuration)
-        : null,
-      isShortUsage: false,
-      reason: record.earlyLeaveReasonCode || null,
-      note: record.remarks || null,
-    }));
-
-    setAttendanceData(mapped);
-  } catch (error) {
-    console.error("通所実績の取得に失敗:", error);
-  }
-};
-
-/**
- * 通所実績を 10 秒おきに自動取得。
- * タブが非アクティブなときはスキップする。
- */
-useEffect(() => {
-  fetchVisitRecords(); // 初回即実行
-
-  const intervalId = setInterval(() => {
-    if (document.visibilityState === "visible") {
-      fetchVisitRecords();
-    }
-  }, 10000); // 10秒
-
-  return () => clearInterval(intervalId);
-}, [childMap, selectedDate]); // childMap に依存（児童マスタ取得完了後に開始）
+    return () => clearInterval(intervalId);
+  }, [childMap, selectedDate]); // childMap に依存（児童マスタ取得完了後に開始）
 
 
   // useEffect(() => {
@@ -288,12 +263,12 @@ useEffect(() => {
   // 来所ボタンのハンドラー
   const handleArrival = async (id: string) => {
     const now = new Date();
-    const currentTime = format(now, "HH:mm");
+    // const currentTime = format(now, "HH:mm");
 
     // ローカルUIの更新
     setAttendanceData((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, arrivalTime: currentTime } : item
+      prev.map((item: AttendanceData) =>
+        item.id === id ? { ...item, arrivalTime: now } : item
       )
     );
 
@@ -327,14 +302,14 @@ useEffect(() => {
   // 退所ボタンのハンドラー
   const handleDeparture = async (id: string) => {
     const now = new Date();
-    const currentTime = format(now, "HH:mm");
+    // const currentTime = format(now, "HH:mm");
 
     // 更新対象の item を state から先に取得
     const target = attendanceData.find((item) => item.id === id);
     if (!target) return;
 
     // 実利用時間を計算
-    const updatedItem = calculateUsageTime(target, currentTime);
+    const updatedItem = calculateUsageTime(target, now);
 
     // DynamoDB 更新
     try {
@@ -356,7 +331,7 @@ useEffect(() => {
 
       // ローカル状態の更新
       setAttendanceData((prev) =>
-        prev.map((item) => (item.id === id ? updatedItem : item))
+        prev.map((item: AttendanceData) => (item.id === id ? updatedItem : item))
       );
 
       toast({
@@ -384,57 +359,86 @@ useEffect(() => {
   }
 
   // 時間編集の保存
-  const saveEditedTime = (id: string, type: "arrival" | "departure", newValue: string) => {
+  const saveEditedTime = async (id: string, type: "arrival" | "departure", newValue: string) => {
     // 時刻形式のバリデーション (HH:mm)
-    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
     if (!timeRegex.test(newValue)) {
       toast({
         variant: "destructive",
         title: "無効な時刻形式です",
         description: "時刻は HH:mm 形式で入力してください (例: 09:30)",
-      })
-      return
+      });
+      return;
     }
 
+    const newDate = toDateTime(selectedDate, newValue);
+    let updatedItem = {} as AttendanceData;
+
+
     setAttendanceData((prev) =>
-      prev.map((item) => {
+      prev.map((item: AttendanceData) => {
         if (item.id === id) {
-          let updatedItem = { ...item }
+          let temp: AttendanceData = { ...item };
 
           if (type === "arrival") {
-            updatedItem.arrivalTime = newValue
-
-            // 退所時刻がある場合は実利用時間を再計算
-            if (updatedItem.departureTime) {
-              updatedItem = calculateUsageTime(updatedItem, updatedItem.departureTime)
+            temp.arrivalTime = newDate;
+            if (temp.departureTime) {
+              temp = calculateUsageTime(temp, temp.departureTime);
             }
-          } else if (type === "departure") {
-            // 来所時刻より前の退所時刻は無効
-            if (item.arrivalTime && compareTime(newValue, item.arrivalTime) < 0) {
+          } else {
+            if (item.arrivalTime && newDate < item.arrivalTime) {
               toast({
                 variant: "destructive",
                 title: "無効な退所時刻です",
                 description: "退所時刻は来所時刻より後である必要があります",
-              })
-              return item
+              });
+              return item;
             }
-
-            updatedItem = calculateUsageTime(updatedItem, newValue)
+            temp = calculateUsageTime(temp, newDate);
           }
 
-          return updatedItem
+          updatedItem = temp;
+          return temp;
         }
-        return item
-      }),
-    )
+        return item;
+      })
+    );
 
-    setEditingTime(null)
+    setEditingTime(null);
 
-    toast({
-      title: `${type === "arrival" ? "来所" : "退所"}時刻を更新しました`,
-      description: `新しい時刻: ${newValue}`,
-    })
-  }
+    if (!updatedItem) return;
+
+    try {
+      await client.models.VisitRecord.update({
+        id,
+        ...(type === "arrival"
+          ? { actualArrivalTime: format(newDate, "HH:mm") }
+          : { actualLeaveTime: format(newDate, "HH:mm") }),
+        actualDuration: updatedItem.actualUsageTime
+          ? (() => {
+            const [h, m] = updatedItem.actualUsageTime!.split(":").map(Number);
+            return h * 60 + m;
+          })()
+          : undefined,
+        earlyLeaveReasonCode: updatedItem.reason ?? undefined,
+        updatedAt: new Date().toISOString(),
+        updatedBy: "admin",
+      });
+
+      toast({
+        title: `${type === "arrival" ? "来所" : "退所"}時刻を更新しました`,
+        description: `新しい時刻: ${newValue}`,
+      });
+    } catch (error) {
+      console.error("DynamoDB 更新失敗:", error);
+      toast({
+        variant: "destructive",
+        title: "更新エラー",
+        description: "DynamoDBへの反映に失敗しました",
+      });
+    }
+  };
+
 
   // 備考編集の開始
   const startEditingNote = (id: string, currentValue: string | null) => {
@@ -444,7 +448,7 @@ useEffect(() => {
   // 備考の保存
   const saveNote = (id: string, newValue: string) => {
     setAttendanceData((prev) =>
-      prev.map((item) => {
+      prev.map((item: AttendanceData) => {
         if (item.id === id) {
           return {
             ...item,
@@ -465,7 +469,7 @@ useEffect(() => {
   // 理由の更新
   const updateReason = (id: string, reason: string) => {
     setAttendanceData((prev) =>
-      prev.map((item) => {
+      prev.map((item: AttendanceData) => {
         if (item.id === id) {
           return {
             ...item,
@@ -490,93 +494,102 @@ useEffect(() => {
 
 
   // 時刻を比較する関数 (a < b なら負、a > b なら正、a = b なら 0)
-  const compareTime = (a: string, b: string): number => {
-    const [aHours, aMinutes] = a.split(":").map(Number)
-    const [bHours, bMinutes] = b.split(":").map(Number)
-
-    if (aHours !== bHours) {
-      return aHours - bHours
-    }
-    return aMinutes - bMinutes
+  const compareTime = (a: Date, b: Date): number => {
+    return a.getTime() - b.getTime();
   }
 
   // 実利用時間を計算する関数
-  const calculateUsageTime = (item: AttendanceData, departureTime: string): AttendanceData => {
+  const calculateUsageTime = (item: AttendanceData, departureTime: Date): AttendanceData => {
     if (!item.arrivalTime) {
       return {
         ...item,
+        arrivalTime: null,
         departureTime,
         actualUsageTime: null,
         isShortUsage: false,
       };
     }
 
-    // 来所時刻と退所時刻から実利用時間を計算
-    const arrivalParts = item.arrivalTime.split(":")
-    const arrivalHours = Number.parseInt(arrivalParts[0])
-    const arrivalMinutes = Number.parseInt(arrivalParts[1])
+    // 差分（分）を計算
+    const diffMilliseconds = departureTime.getTime() - item.arrivalTime.getTime();
+    const diffMinutes = Math.floor(diffMilliseconds / 60000);
 
-    const departureParts = departureTime.split(":")
-    const departureHours = Number.parseInt(departureParts[0])
-    const departureMinutes = Number.parseInt(departureParts[1])
+    // HH:mm 形式の文字列に変換
+    const hours = Math.floor(diffMinutes / 60);
+    const minutes = diffMinutes % 60;
+    const actualUsageTime = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 
-    const diffMinutes = departureHours * 60 + departureMinutes - (arrivalHours * 60 + arrivalMinutes)
-    const hours = Math.floor(diffMinutes / 60)
-    const minutes = diffMinutes % 60
-    const actualUsageTime = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
+    // 契約時間を分に変換
+    const [contractHours, contractMinutes] = item.contractTime.split(":").map(Number);
+    const contractTotalMinutes = contractHours * 60 + contractMinutes;
 
-    // 契約時間の解析（例: "01:40"）
-    const contractParts = item.contractTime.split(":")
-    const contractHours = Number.parseInt(contractParts[0])
-    const contractMinutes = Number.parseInt(contractParts[1])
-    const contractTotalMinutes = contractHours * 60 + contractMinutes
-
-    // 契約時間より短いかどうかを判定
-    const isShortUsage = diffMinutes < contractTotalMinutes
+    // 契約より短いかどうかを判定
+    const isShortUsage = diffMinutes < contractTotalMinutes;
 
     return {
       ...item,
-      departureTime: departureTime,
-      actualUsageTime: actualUsageTime,
-      isShortUsage: isShortUsage,
-    }
-  }
+      departureTime,
+      actualUsageTime,
+      isShortUsage,
+    };
+  };
+
 
   // 時刻をリセットする関数
-  const resetTime = (id: string, type: "arrival" | "departure") => {
-    setAttendanceData((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          if (type === "arrival") {
-            // 来所時刻をリセットする場合は、退所時刻と実利用時間もリセット
-            return {
-              ...item,
-              arrivalTime: null,
-              departureTime: null,
-              actualUsageTime: null,
-              isShortUsage: false,
-            }
-          } else if (type === "departure") {
-            // 退所時刻をリセットする場合は、実利用時間もリセット
-            return {
-              ...item,
-              departureTime: null,
-              actualUsageTime: null,
-              isShortUsage: false,
-            }
+const resetTime = async (id: string, type: "arrival" | "departure") => {
+  setAttendanceData((prev) =>
+    prev.map((item: AttendanceData) => {
+      if (item.id === id) {
+        if (type === "arrival") {
+          return {
+            ...item,
+            arrivalTime: null,
+            departureTime: null,
+            actualUsageTime: null,
+            isShortUsage: false,
+          }
+        } else {
+          return {
+            ...item,
+            departureTime: null,
+            actualUsageTime: null,
+            isShortUsage: false,
           }
         }
-        return item
-      }),
-    )
+      }
+      return item
+    })
+  );
 
-    setEditingTime(null)
+  setEditingTime(null);
+
+  try {
+    const now = new Date();
+
+    await client.models.VisitRecord.update({
+      id,
+      ...(type === "arrival"
+        ? { actualArrivalTime: null, actualLeaveTime: null, actualDuration: null }
+        : { actualLeaveTime: null, actualDuration: null }),
+      earlyLeaveReasonCode: undefined,
+      updatedAt: now.toISOString(),
+      updatedBy: "admin",
+    });
 
     toast({
       title: `${type === "arrival" ? "来所" : "退所"}時刻をリセットしました`,
-      description: "時刻情報が未設定の状態に戻されました",
-    })
+      description: "DynamoDB にも反映されました",
+    });
+  } catch (error) {
+    console.error("リセット時のDB更新失敗:", error);
+    toast({
+      variant: "destructive",
+      title: "リセットエラー",
+      description: "DynamoDBへのリセット反映に失敗しました",
+    });
   }
+};
+
 
   // ソート関数
   const handleSort = (column: SortColumn) => {
@@ -601,8 +614,20 @@ useEffect(() => {
       switch (column) {
         case "userName":
           return a.userName.localeCompare(b.userName) * directionMultiplier
-        case "scheduledTime":
-          return compareTime(a.scheduledTime, b.scheduledTime) * directionMultiplier
+        case "scheduledTime": {
+          const baseDate = new Date(); // 日付部分は何でもよい
+          const parseHHMM = (timeStr: string) => {
+            const [h, m] = timeStr.split(":").map(Number);
+            const d = new Date(baseDate);
+            d.setHours(h, m, 0, 0);
+            return d;
+          };
+          return (
+            compareTime(parseHHMM(a.scheduledTime), parseHHMM(b.scheduledTime)) *
+            directionMultiplier
+          );
+        }
+
         case "contractTime":
           // 契約時間を分に変換して比較
           const getContractMinutes = (time: string) => {
@@ -916,12 +941,12 @@ useEffect(() => {
                                     </div>
                                   ) : (
                                     <div className="flex items-center justify-center w-full">
-                                      <span className="font-medium text-gray-700">{data.arrivalTime}</span>
+                                      <span className="font-medium text-gray-700">{formatTimeJST(data.arrivalTime)}</span>
                                       <Button
                                         size="icon"
                                         variant="ghost"
                                         className="h-6 w-6 rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-700 group-hover:opacity-100 ml-2"
-                                        onClick={() => startEditing(data.id, "arrival", data.arrivalTime!)}
+                                        onClick={() => startEditing(data.id, "arrival", formatTimeJST(data.arrivalTime)!)}
                                       >
                                         <Edit2 className="h-3 w-3" />
                                       </Button>
@@ -982,12 +1007,12 @@ useEffect(() => {
                                     </div>
                                   ) : (
                                     <div className="flex items-center justify-center w-full">
-                                      <span className="font-medium text-gray-700">{data.departureTime}</span>
+                                      <span className="font-medium text-gray-700">{formatTimeJST(data.departureTime)}</span>
                                       <Button
                                         size="icon"
                                         variant="ghost"
                                         className="h-6 w-6 rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-700 group-hover:opacity-100 ml-2"
-                                        onClick={() => startEditing(data.id, "departure", data.departureTime!)}
+                                        onClick={() => startEditing(data.id, "departure", formatTimeJST(data.departureTime))}
                                       >
                                         <Edit2 className="h-3 w-3" />
                                       </Button>
@@ -1150,7 +1175,7 @@ useEffect(() => {
       </Dialog>
 
       {/* トースト通知 */}
-      <Toaster />
+      {/* <Toaster /> */}
     </div>
   )
 }

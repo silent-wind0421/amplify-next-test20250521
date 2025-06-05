@@ -2,32 +2,21 @@
 "use client";
 
 import AttendanceManagement from "@/components/attendance-management";
-import { seedVisitRecords } from "@/app/attendance/seed";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { SeedButton } from "@/components/seed-button";
 
-export default function Home() {
-  const [seeding, setSeeding] = useState(false);
-
-  const handleSeed = async () => {
-    setSeeding(true);
-    await seedVisitRecords();
-    alert("初期データ登録が完了しました");
-    setSeeding(false);
-  };
-
+export default function AttendancePage() {
   return (
-    <div className="space-y-4 p-4">
-      {/* ✅ 本番環境含め、環境変数で表示切替 */}
+    <main className="p-6 space-y-4">
+      <h1 className="text-2xl font-bold">通所実績管理</h1>
+
+      {/* ✅ 本番環境のみボタン表示制御したい場合 */}
       {process.env.NEXT_PUBLIC_SHOW_SEED_BUTTON === "true" && (
         <div className="flex justify-end">
-          <Button onClick={handleSeed} disabled={seeding}>
-            {seeding ? "登録中…" : "初期データを投入"}
-          </Button>
+          <SeedButton />
         </div>
       )}
 
       <AttendanceManagement />
-    </div>
+    </main>
   );
 }
