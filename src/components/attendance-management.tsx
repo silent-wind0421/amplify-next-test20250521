@@ -1,3 +1,9 @@
+/**
+ * @file 通所実績管理画面のメインコンポーネント
+ * @description DynamoDB（VisitRecord）からの実績取得・編集・表示を行うUI実装
+ * @module AttendanceManagement
+ */
+
 //src/componets/attendance-management.tsx
 "use client"
 
@@ -26,7 +32,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
-import { Toaster } from "@/components/ui/toaster"
+// import { Toaster } from "@/components/ui/toaster"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
@@ -41,10 +47,14 @@ import config from "../../amplify_outputs.json";
 
 Amplify.configure(config);
 
+
 const client = generateClient<Schema>();
 
 
-// 利用者データの型定義
+/**
+ * 通所実績データを表す型。
+ * 各児童に対して、当日の来所・退所・利用状況などを表現する。
+ */
 type AttendanceData = {
   id: string
   userName: string
@@ -62,10 +72,24 @@ type AttendanceData = {
 type SortColumn = "userName" | "scheduledTime" | "contractTime" | "arrivalTime" | "departureTime" | "actualUsageTime"
 type SortDirection = "asc" | "desc"
 
+
+/**
+ * 通所実績管理画面のメインコンポーネント。
+ *
+ * - DynamoDB（VisitRecord）からの実績取得
+ * - 来所・退所の記録と編集（手動入力/自動記録）
+ * - ソート・ステータス表示・理由や備考の編集など多機能対応
+ *
+ * @returns {JSX.Element} 実績管理画面全体を構成するReact要素
+ */
+
 export default function AttendanceManagement() {
+  // UIの開閉状態（サイドバー用）
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  // 現在の画面幅（レスポンシブ表示制御用）
   const [screenWidth, setScreenWidth] = useState<number | null>(null);
 
+  // 開発時の表示確認用トースト（本番では削除）
   useEffect(() => {
     toast({ title: "テスト", description: "表示されていればOKです" })
   }, []);
@@ -85,8 +109,6 @@ export default function AttendanceManagement() {
   )
   const [editingNote, setEditingNote] = useState<{ id: string; value: string } | null>(null)
   const [sortConfig, setSortConfig] = useState<{ column: SortColumn; direction: SortDirection } | null>(null)
-
-
   const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([]);
 
   // State: 児童マスタと前回取得データのキャッシュ
@@ -126,10 +148,11 @@ export default function AttendanceManagement() {
     return result;
   };
 
-  const formatTime = (time: Date | null): string =>
-    time ? format(time, "HH:mm") : "--:--";
 
-
+  /**
+   * 選択中の日付に該当する通所実績を取得し、state に反映する。
+   * 同一データはスキップして再描画を抑制。
+   */
   const fetchVisitRecords = async () => {
 
     try {
@@ -199,52 +222,6 @@ export default function AttendanceManagement() {
     return () => clearInterval(intervalId);
   }, [childMap, selectedDate]); // childMap に依存（児童マスタ取得完了後に開始）
 
-
-  // useEffect(() => {
-  //   const fetchRecords = async () => {
-
-  //     // 児童マスタ（Child モデル）を取得
-  //     const { data: children } = await client.models.Child.list();
-  //     const childMap = new Map(
-  //       children
-  //         .filter(child => child.childId != null)
-  //         .map(child => [child.childId!, `${child.lastName}${child.firstName}`])
-  //     );
-  //     // 本日の VisitRecord を取得
-  //     const { data: records } = await client.models.VisitRecord.list({
-  //       filter: {
-  //         visitDate: { eq: format(new Date(), "yyyy-MM-dd", { timeZone: "Asia/Tokyo" }) }
-  //       }
-  //     });
-
-  //     // VisitRecord の各レコードに対して、児童名（childId → 氏名）を解決
-  //     const mapped = records.map((record) => ({
-  //       id: record.id,
-  //       userName:
-  //         record.childId && childMap.has(record.childId)
-  //           ? childMap.get(record.childId)!
-  //           : "未設定",
-  //       scheduledTime: record.plannedArrivalTime ?? "",
-  //       contractTime: record.contractedDuration != null
-  //         ? convertMinutesToHHMM(record.contractedDuration)
-  //         : "--:--",
-  //       arrivalTime: record.actualArrivalTime || null,
-  //       departureTime: record.actualLeaveTime || null,
-  //       actualUsageTime: record.actualDuration
-  //         ? convertMinutesToHHMM(record.actualDuration)
-  //         : null,
-  //       isShortUsage: false,
-  //       reason: record.earlyLeaveReasonCode || null,
-  //       note: record.remarks || null,
-  //     }));
-
-  //     setAttendanceData(mapped);
-  //   };
-
-  //   fetchRecords();
-  // }, []);
-
-
   // 現在の日付
   const formattedDate = format(selectedDate, "yyyy年MM月dd日(E)", { locale: ja })
 
@@ -302,7 +279,6 @@ export default function AttendanceManagement() {
   // 退所ボタンのハンドラー
   const handleDeparture = async (id: string) => {
     const now = new Date();
-    // const currentTime = format(now, "HH:mm");
 
     // 更新対象の item を state から先に取得
     const target = attendanceData.find((item) => item.id === id);
@@ -358,7 +334,13 @@ export default function AttendanceManagement() {
     setEditingTime(null)
   }
 
-  // 時間編集の保存
+  /**
+ * 来所・退所時刻の編集を保存し、DynamoDB に反映する。
+ * @param id レコードID
+ * @param type "arrival" または "departure"
+ * @param newValue 編集後の時刻 (HH:mm)
+ */
+
   const saveEditedTime = async (id: string, type: "arrival" | "departure", newValue: string) => {
     // 時刻形式のバリデーション (HH:mm)
     const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -485,7 +467,12 @@ export default function AttendanceManagement() {
     })
   }
 
-  // 利用時間（分）を "HH:mm" 形式に変換するユーティリティ
+  /**
+  * 分数を "HH:mm" 形式に変換するユーティリティ関数。
+  * @param {number} minutes
+  * @returns {string}
+  */
+
   const convertMinutesToHHMM = (minutes: number): string => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -494,11 +481,31 @@ export default function AttendanceManagement() {
 
 
   // 時刻を比較する関数 (a < b なら負、a > b なら正、a = b なら 0)
+  /** 
+* 2つのDateオブジェクトを比較する。
+* @param a 比較対象の日時1
+* @param b 比較対象の日時2
+* @returns a < b: 負数, a > b: 正数, 同一: 0
+*/
   const compareTime = (a: Date, b: Date): number => {
     return a.getTime() - b.getTime();
   }
 
-  // 実利用時間を計算する関数
+  /**
+ * 実利用時間（arrivalTime 〜 departureTime）を計算し、短時間利用かどうかも判定。
+ * @param {AttendanceData} item 計算対象の1件データ
+ * @param {Date} departureTime 退所時刻
+ * @returns {AttendanceData} 実利用時間・退所時刻を反映したデータ
+ */
+
+  /**
+* 実利用時間を arrivalTime と departureTime から算出。
+* 契約利用時間と比較して短時間利用フラグも付与。
+*
+* @param item AttendanceData型の1件（来所済みであること）
+* @param departureTime 退所時刻
+* @returns 利用時間と短時間利用情報を含んだ更新済みAttendanceData
+*/
   const calculateUsageTime = (item: AttendanceData, departureTime: Date): AttendanceData => {
     if (!item.arrivalTime) {
       return {
@@ -536,59 +543,59 @@ export default function AttendanceManagement() {
 
 
   // 時刻をリセットする関数
-const resetTime = async (id: string, type: "arrival" | "departure") => {
-  setAttendanceData((prev) =>
-    prev.map((item: AttendanceData) => {
-      if (item.id === id) {
-        if (type === "arrival") {
-          return {
-            ...item,
-            arrivalTime: null,
-            departureTime: null,
-            actualUsageTime: null,
-            isShortUsage: false,
-          }
-        } else {
-          return {
-            ...item,
-            departureTime: null,
-            actualUsageTime: null,
-            isShortUsage: false,
+  const resetTime = async (id: string, type: "arrival" | "departure") => {
+    setAttendanceData((prev) =>
+      prev.map((item: AttendanceData) => {
+        if (item.id === id) {
+          if (type === "arrival") {
+            return {
+              ...item,
+              arrivalTime: null,
+              departureTime: null,
+              actualUsageTime: null,
+              isShortUsage: false,
+            }
+          } else {
+            return {
+              ...item,
+              departureTime: null,
+              actualUsageTime: null,
+              isShortUsage: false,
+            }
           }
         }
-      }
-      return item
-    })
-  );
+        return item
+      })
+    );
 
-  setEditingTime(null);
+    setEditingTime(null);
 
-  try {
-    const now = new Date();
+    try {
+      const now = new Date();
 
-    await client.models.VisitRecord.update({
-      id,
-      ...(type === "arrival"
-        ? { actualArrivalTime: null, actualLeaveTime: null, actualDuration: null }
-        : { actualLeaveTime: null, actualDuration: null }),
-      earlyLeaveReasonCode: undefined,
-      updatedAt: now.toISOString(),
-      updatedBy: "admin",
-    });
+      await client.models.VisitRecord.update({
+        id,
+        ...(type === "arrival"
+          ? { actualArrivalTime: null, actualLeaveTime: null, actualDuration: null }
+          : { actualLeaveTime: null, actualDuration: null }),
+        earlyLeaveReasonCode: undefined,
+        updatedAt: now.toISOString(),
+        updatedBy: "admin",
+      });
 
-    toast({
-      title: `${type === "arrival" ? "来所" : "退所"}時刻をリセットしました`,
-      description: "DynamoDB にも反映されました",
-    });
-  } catch (error) {
-    console.error("リセット時のDB更新失敗:", error);
-    toast({
-      variant: "destructive",
-      title: "リセットエラー",
-      description: "DynamoDBへのリセット反映に失敗しました",
-    });
-  }
-};
+      toast({
+        title: `${type === "arrival" ? "来所" : "退所"}時刻をリセットしました`,
+        description: "DynamoDB にも反映されました",
+      });
+    } catch (error) {
+      console.error("リセット時のDB更新失敗:", error);
+      toast({
+        variant: "destructive",
+        title: "リセットエラー",
+        description: "DynamoDBへのリセット反映に失敗しました",
+      });
+    }
+  };
 
 
   // ソート関数
@@ -800,7 +807,7 @@ const resetTime = async (id: string, type: "arrival" | "departure") => {
                           setDatePickerOpen(false)
                         }
                       }}
-                      // autoFocus
+                    // autoFocus
                     />
                   </PopoverContent>
                 </Popover>

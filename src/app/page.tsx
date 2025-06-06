@@ -4,6 +4,16 @@
 import AttendanceManagement from "@/components/attendance-management";
 import { SeedButton } from "@/components/seed-button";
 
+/**
+ * 通所実績管理ページのルートコンポーネント
+ *
+ * - タイトル表示
+ * - 実績管理コンポーネントの表示
+ * - 開発/検証用途の SeedButton を環境変数によって制御付きで表示
+ *
+ * @returns {JSX.Element} 通所実績管理画面のJSX要素
+ */
+
 export default function AttendancePage() {
   return (
     <main className="p-6 space-y-4">

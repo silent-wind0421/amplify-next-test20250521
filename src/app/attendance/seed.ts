@@ -1,4 +1,15 @@
 // src/app/attendance/seed.ts
+
+/**
+ * @file seed.ts
+ * @description Amplify Data Client を用いて Child および VisitRecord の初期データを投入する開発用ユーティリティ。
+ * 
+ * 利用用途：
+ * - 開発/検証環境でのデータセットアップ
+ * - `/components/seed-button.tsx` から呼び出される
+ * 
+ * ⚠️ 本番環境での使用は想定していないため、環境変数などで制御すること。
+ */
 "use server";
 
 import { v4 as uuidv4 } from "uuid";
@@ -11,7 +22,16 @@ configureAmplify();
 
 const client = generateClient<Schema>();
 
-// ✅ Child データも登録
+/**
+ * 子ども（Child）モデルに初期データを投入する。
+ * 
+ * - すでに登録済みの childId はスキップ。
+ * - Amplify Data Client を通じて Child モデルへ登録。
+ * 
+ * @async
+ * @returns {Promise<void>} 非同期で完了を返す
+ */
+
 async function seedChildren() {
     const children = [
         { childId: "C001", lastName: "山田", firstName: "太郎" },
@@ -28,9 +48,20 @@ async function seedChildren() {
     }
 }
 
+
+/**
+ * VisitRecord モデルに当日の初期データを投入する。
+ * 
+ * - 先に `seedChildren` を実行して Child レコードを確保。
+ * - 子どもごとに visitDate が重複していなければ新規作成。
+ * - 作成後はトップページを再検証（`revalidatePath("/")`）。
+ * 
+ * @async
+ * @throws {Error} 初期化に失敗した場合はエラーログを出力し再送出
+ * @returns {Promise<void>}
+ */
 export async function seedVisitRecords() {
     try {
-        // ✅ Childを先に登録
         await seedChildren();
 
         const today = new Date().toISOString().slice(0, 10); // 例: 2025-05-27
