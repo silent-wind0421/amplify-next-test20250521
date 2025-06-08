@@ -29,6 +29,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+//20250606-added
+import { useSignOutHandler } from '@/hooks/use-signout';  
+import { useAuthenticator } from "@aws-amplify/ui-react";
+import { useRouter } from "next/navigation";
 
 // 利用者データの型定義
 type AttendanceData = {
@@ -491,6 +495,20 @@ export default function AttendanceManagement() {
   // ソート済みのデータを取得
   const sortedData = getSortedData()
 
+  //20250606-added
+  const handleSignOut = useSignOutHandler();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
+  const { user, authStatus } = useAuthenticator();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (authStatus === 'unauthenticated') {
+      router.replace('/'); // 🔁 replace で履歴を残さない
+    }
+  }, [authStatus, router]);
+
+
   return (
     <div className="flex h-screen flex-col bg-gray-50">
       {/* ヘッダー */}
@@ -510,7 +528,7 @@ export default function AttendanceManagement() {
 
         <div className="flex items-center gap-4">
           <div className="flex items-center">
-            <span className="mr-4 text-sm font-medium text-gray-700">真　屋太郎</span>
+            <span className="mr-4 text-sm font-medium text-gray-700">{user?.signInDetails?.loginId}</span>
             <Button
               variant="ghost"
               size="icon"
@@ -908,18 +926,35 @@ export default function AttendanceManagement() {
             <Button variant="outline" onClick={() => setLogoutDialogOpen(false)} className="flex-1 sm:flex-initial">
               キャンセル
             </Button>
+
+             {/* 20250606-added */}
             <Button
-              onClick={() => {
-                // ログアウト処理をここに実装
-                setLogoutDialogOpen(false)
-                // 実際のアプリケーションではログアウト処理を行う
-                toast({
-                  title: "ログアウトしました",
-                })
+             onClick={async () => {
+              console.log("押しました");
+              setIsLoggingOut(true); // ← ログアウト中に切り替え
+              try {
+                    await handleSignOut(); // ← ここで sessionStorage.clear() + signOut + router.push('/')
+                    toast({
+                      title: "ログアウトしました",
+                    });
+                  } catch (error) {
+                    toast({
+                      title: "エラーが発生しました",
+                      description: "ログアウトに失敗しました。",
+                      variant: "destructive",
+                    });
+
+                    setIsLoggingOut(false);
+                  }
               }}
+          
+              disabled={isLoggingOut} // ログアウト中はボタン無効化
               className="flex-1 bg-blue-500 hover:bg-blue-600 sm:flex-initial"
-            >
-              ログアウト
+          >
+          
+          {isLoggingOut ? "ログアウト中..." : "ログアウト"}
+
+                    
             </Button>
           </DialogFooter>
         </DialogContent>

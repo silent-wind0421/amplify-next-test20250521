@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useEffect, useRef, useState } from "react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
@@ -12,7 +13,9 @@ import { Subscription } from 'rxjs';
 import { ThemeProvider, createTheme, defaultTheme } from '@aws-amplify/ui-react';
 import { I18n } from '@aws-amplify/core';
 import { signIn } from 'aws-amplify/auth';
-import { useRouter } from "next/navigation";
+import { useRouter } from 'next/navigation';
+
+
 
 I18n.setLanguage('ja'); 
 I18n.putVocabularies({
@@ -31,22 +34,52 @@ const customTheme = createTheme({
         primary: { value: '#f0f0f0' },
       },
     },
-
-    components: {
-      button: {
-        primary: {
-          backgroundColor: { value: 'blue' },  // 背景色（例：青）
-          color: { value: 'white' },           // テキスト色（例：白）
-          _hover: {
-            backgroundColor: { value: '#003399' }, // ホバー時の色（任意）
-          },
-        },
-      },
-    },
   },
 });
 
-Amplify.configure(outputs);
+Amplify.configure(outputs); 
+
+
+const currentConfig = Amplify.getConfig(); 
+Amplify.configure({
+  ...currentConfig,
+
+  Auth: {
+    Cognito: {
+      userPoolId: "ap-northeast-1_z60CJDdU7",
+      userPoolClientId: "6gnv9qldhuos82bvc7gkcudp7m",
+      identityPoolId: "ap-northeast-1:8390aebf-9353-4adf-9ada-0b096192993f",
+   //   authRoleArn: 'arn:aws:iam::845531086046:role/service-role/IAMFullAccess',
+   //   unauthRoleArn: 'arn:aws:iam::845531086046:role/service-role/unauthorizedrole',
+      loginWith: {
+        username: true,
+      },
+  }},
+
+  /*
+  API: {
+    GraphQL: {
+      endpoint: "https://omptxyz6mzfd7oisdnedptxycu.appsync-api.ap-northeast-1.amazonaws.com/graphql",
+      region: "ap-northeast-1",
+      defaultAuthMode: 'userPool'
+    }
+  },*/
+
+});  
+
+/*
+Amplify.configure({
+  Auth: {
+    Cognito: {
+      userPoolId: "ap-northeast-1_z60CJDdU7",
+      userPoolClientId: "6gnv9qldhuos82bvc7gkcudp7m",
+      identityPoolId: "ap-northeast-1:8390aebf-9353-4adf-9ada-0b096192993f",
+      loginWith: {
+        username: true,
+      },
+}}});*/
+
+
 const client = generateClient<Schema>();
 
 const components = {
@@ -122,7 +155,6 @@ function LoginApp() {
   const [showHistory, setShowHistory] = useState(false);
 //  const subscriptionRef = useRef<ReturnType<typeof client.models.Todo.observeQuery> | null>(null);
   const subscriptionRef = useRef<Subscription | null>(null);
-  const router = useRouter();
 
   const { user, authStatus, signOut } = useAuthenticator(context => [
     context.user,
@@ -147,9 +179,6 @@ function LoginApp() {
 
       isWritingRef.current = true;
 
-      const japanDate = new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" });
-      const isoString = new Date(japanDate).toISOString(); // "2025-06-01T05:00:00.000Z"
-
       const loginTime = new Date().toLocaleString("ja-JP", {
         timeZone: "Asia/Tokyo",
       });
@@ -162,11 +191,6 @@ function LoginApp() {
         console.log("書き込み成功");
         console.log(loginId);
         console.log(loginTime);
-
-        setTimeout(() => {
-          router.push("/list");
-        }, 100);
-        //router.push("/list");
       }).catch(err => {
         console.error("書き込み失敗:", err);
       });
@@ -200,21 +224,36 @@ function LoginApp() {
     };
   }, []);
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     sessionStorage.clear();
-    await signOut();
- //   window.location.reload();
+    signOut();
+    window.location.reload();
   };
 
  
+
   return (
     <main style={{ padding: "1.5rem" }}>
-      <p>現在、更新中・・・</p>
+      <p>こんにちは、{user?.username} さん！</p>
+
+      {!showHistory && (
+        <button onClick={handleShowHistory}>履歴を見る</button>
+      )}
+
+      {showHistory && (
+        <ul>
+          {logins.map((login) => (
+             <li key={login.id} style={{ display: "flex", gap: "1rem", padding: "0.5rem", borderBottom: "1px solid #ccc" }}>
+              <div style={{ flex: 1, fontWeight: "bold" }}>{login.uid}</div>
+              <div style={{ flex: 2 }}>{login.loginTime}</div>
+             </li>
+          ))}
+        </ul>
+      )}
 
       <div style={{ marginTop: "2rem" }}>
         <button onClick={handleSignOut}>サインアウト</button>
       </div>
-
     </main>
   );
 }
@@ -228,3 +267,4 @@ export default function App() {
     </ThemeProvider>
   );
 }
+
