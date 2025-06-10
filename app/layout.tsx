@@ -2,7 +2,7 @@
 
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./app.css";
+// import "./app.css";
 import { Authenticator } from "@aws-amplify/ui-react";
 
 

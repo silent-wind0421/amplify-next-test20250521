@@ -9,11 +9,11 @@ import "@aws-amplify/ui-react/styles.css";
 import { useTheme, View, Image, Heading, Text, Button } from "@aws-amplify/ui-react";
 import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
 import { Subscription } from 'rxjs';
-import { ThemeProvider, createTheme, defaultTheme } from '@aws-amplify/ui-react';
 import { I18n } from '@aws-amplify/core';
 import { signIn } from 'aws-amplify/auth';
 import { useRouter } from "next/navigation";
 
+// 日本語表示
 I18n.setLanguage('ja'); 
 I18n.putVocabularies({
   ja: {
@@ -23,32 +23,14 @@ I18n.putVocabularies({
   },
 });
 
-const customTheme = createTheme({
-  name: 'custom-theme',
-  tokens: {
-    colors: {
-      background: {
-        primary: { value: '#f0f0f0' },
-      },
-    },
-
-    components: {
-      button: {
-        primary: {
-          backgroundColor: { value: 'blue' },  // 背景色（例：青）
-          color: { value: 'white' },           // テキスト色（例：白）
-          _hover: {
-            backgroundColor: { value: '#003399' }, // ホバー時の色（任意）
-          },
-        },
-      },
-    },
-  },
-});
-
+//amplify settingの反映
 Amplify.configure(outputs);
+
+// dynamodbの作成
 const client = generateClient<Schema>();
 
+
+//　Amplify UIのカスタマイズ
 const components = {
 
   SignIn: {
@@ -123,36 +105,51 @@ function LoginApp() {
 //  const subscriptionRef = useRef<ReturnType<typeof client.models.Todo.observeQuery> | null>(null);
   const subscriptionRef = useRef<Subscription | null>(null);
   const router = useRouter();
-
+  
+  //認証情報の取得
   const { user, authStatus, signOut } = useAuthenticator(context => [
     context.user,
     context.authStatus,
     context.signOut,
   ]);
 
-  const isWritingRef = useRef(false);
+  const isWritingRef = useRef(false); //useRefの初期値の設定
 
   // 🔸 書き込み処理（セッション＋useRef）
   useEffect(() => {
+
+    //  認証状態かつ書き込みがまだされてない時
     if (authStatus === "authenticated" && user && !isWritingRef.current) {
       const loginId = user.signInDetails?.loginId;
       console.log("loginId:", JSON.stringify(loginId)); 
+
       if (!loginId) {
         console.log("loginId is none") 
         return;
       }  
 
+      /* sessionStorageにデータがあれば以降の処理はスキップ */
       const sessionKey = `hasLogged_${loginId}`;
       if (sessionStorage.getItem(sessionKey)) return;
 
-      isWritingRef.current = true;
+      isWritingRef.current = true; //useRefのcurrentの書き換え（二重書き込み防止）
 
+      /* ISO形式への変換
       const japanDate = new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" });
       const isoString = new Date(japanDate).toISOString(); // "2025-06-01T05:00:00.000Z"
+      */
 
+      const now = new Date(); // 現在のUTC時間
+      // JST に変換する（UTC+9時間）
+      const jstTimestamp = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+
+      // loginTime に代入
+      const loginTime: Date = jstTimestamp;
+
+      /*
       const loginTime = new Date().toLocaleString("ja-JP", {
         timeZone: "Asia/Tokyo",
-      });
+      });*/
 
       client.models.Login.create({
         uid: loginId,
@@ -161,10 +158,10 @@ function LoginApp() {
         sessionStorage.setItem(sessionKey, "true");
         console.log("書き込み成功");
         console.log(loginId);
-        console.log(loginTime);
+        console.log(loginTime.toISOString());
 
         setTimeout(() => {
-          router.push("/list");
+          router.replace("/list");
         }, 100);
         //router.push("/list");
       }).catch(err => {
@@ -209,11 +206,30 @@ function LoginApp() {
  
   return (
     <main style={{ padding: "1.5rem" }}>
-      <p>現在、更新中・・・</p>
+      <p>こんにちは、{user?.username} さん！</p>
+
+      {!showHistory && (
+        <button onClick={handleShowHistory}>履歴を見る</button>
+      )}
+
+      {showHistory && (
+        <ul>
+          {logins.map((login) => (
+             <li key={login.id} style={{ display: "flex", gap: "1rem", padding: "0.5rem", borderBottom: "1px solid #ccc" }}>
+              <div style={{ flex: 1, fontWeight: "bold" }}>{login.uid}</div>
+              <div style={{ flex: 2 }}>{login.loginTime}</div>
+             </li>
+          ))}
+        </ul>
+      )}
 
       <div style={{ marginTop: "2rem" }}>
         <button onClick={handleSignOut}>サインアウト</button>
       </div>
+
+      <div style={{ marginTop: "1rem" }}>
+      <button onClick={() => router.push('/list')}>一覧ページへ</button>
+    </div> 
 
     </main>
   );
@@ -221,10 +237,10 @@ function LoginApp() {
 
 export default function App() {
   return (
-    <ThemeProvider theme={customTheme}>
+  
       <Authenticator formFields={formFields} components={components} hideSignUp={true} loginMechanisms={["username"]} >
         <LoginApp />
       </Authenticator>
-    </ThemeProvider>
+ 
   );
 }
