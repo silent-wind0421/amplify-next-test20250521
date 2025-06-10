@@ -4,7 +4,7 @@
 import { Authenticator } from '@aws-amplify/ui-react';
 import { ThemeProvider } from '@aws-amplify/ui-react';
 import { createTheme } from '@aws-amplify/ui-react'; 
-
+import "./app.css";
 
 const customTheme = createTheme({
   name: 'custom-theme',
@@ -35,14 +35,12 @@ const customTheme = createTheme({
 export default function RootTemplate({ children }: { children: React.ReactNode }) {
 
   console.log("template");
-  return (
-    <ThemeProvider theme={customTheme}>
-    
 
-    <Authenticator.Provider>  
-        {children}
-    </Authenticator.Provider>  
-     
+  return (
+    <ThemeProvider theme={customTheme}>  
+      <Authenticator.Provider>  
+          {children}
+      </Authenticator.Provider>  
     </ThemeProvider>
   );
 }

@@ -1,5 +1,5 @@
 import type React from "react"
-import "./globals.css"
+import "./app-list.css"  // modified 20250606
 import { Inter } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 

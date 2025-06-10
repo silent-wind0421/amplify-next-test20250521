@@ -19,7 +19,12 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+
+   console.log("root layout");
+
   return (
+
+
     <html lang="ja">
     {/* <body className={inter.className}>{children}</body> 
       <Authenticator.Provider> */}
