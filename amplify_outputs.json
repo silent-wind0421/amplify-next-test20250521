@@ -1,44 +1,42 @@
 {
   "auth": {
-    "user_pool_id": "ap-northeast-1_SuV8kL5db",
+    "user_pool_id": "ap-northeast-1_z60CJDdU7",
     "aws_region": "ap-northeast-1",
-    "user_pool_client_id": "34i95emsl3u17kp1a89gebugcd",
-    "identity_pool_id": "ap-northeast-1:3f2a3d0e-3a2a-49f1-8c7e-c73a8d5ae40b",
+    "user_pool_client_id": "6gnv9qldhuos82bvc7gkcudp7m",
+    "identity_pool_id": "ap-northeast-1:8390aebf-9353-4adf-9ada-0b096192993f",
     "mfa_methods": [],
     "standard_required_attributes": [
+      "sub",
       "email"
     ],
-    "username_attributes": [
-      "email"
-    ],
+    "username_attributes": [],
     "user_verification_types": [
       "email"
     ],
-    "groups": [],
     "mfa_configuration": "NONE",
     "password_policy": {
       "min_length": 8,
       "require_lowercase": true,
       "require_numbers": true,
-      "require_symbols": true,
-      "require_uppercase": true
+      "require_symbols": false,
+      "require_uppercase": false
     },
-    "unauthenticated_identities_enabled": true
+    "unauthenticated_identities_enabled": false
   },
   "data": {
     "url": "https://jbupdbquavauzkf3h6bnfkp75a.appsync-api.ap-northeast-1.amazonaws.com/graphql",
     "aws_region": "ap-northeast-1",
     "api_key": "da2-sq7e2co5uzcojh34wrafutshly",
-    "default_authorization_type": "API_KEY",
+    "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
     "authorization_types": [
-      "AMAZON_COGNITO_USER_POOLS",
+      "API_KEY",
       "AWS_IAM"
     ],
     "model_introspection": {
       "version": 1,
       "models": {
-        "Todo": {
-          "name": "Todo",
+        "Login": {
+          "name": "Login",
           "fields": {
             "id": {
               "name": "id",
@@ -47,73 +45,8 @@
               "isRequired": true,
               "attributes": []
             },
-            "content": {
-              "name": "content",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "createdAt": {
-              "name": "createdAt",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": [],
-              "isReadOnly": true
-            },
-            "updatedAt": {
-              "name": "updatedAt",
-              "isArray": false,
-              "type": "AWSDateTime",
-              "isRequired": false,
-              "attributes": [],
-              "isReadOnly": true
-            }
-          },
-          "syncable": true,
-          "pluralName": "Todos",
-          "attributes": [
-            {
-              "type": "model",
-              "properties": {}
-            },
-            {
-              "type": "auth",
-              "properties": {
-                "rules": [
-                  {
-                    "allow": "public",
-                    "provider": "apiKey",
-                    "operations": [
-                      "create",
-                      "update",
-                      "delete",
-                      "read"
-                    ]
-                  }
-                ]
-              }
-            }
-          ],
-          "primaryKeyInfo": {
-            "isCustomPrimaryKey": false,
-            "primaryKeyFieldName": "id",
-            "sortKeyFieldNames": []
-          }
-        },
-        "Auth": {
-          "name": "Auth",
-          "fields": {
-            "id": {
-              "name": "id",
-              "isArray": false,
-              "type": "ID",
-              "isRequired": true,
-              "attributes": []
-            },
-            "username": {
-              "name": "username",
+            "uid": {
+              "name": "uid",
               "isArray": false,
               "type": "String",
               "isRequired": true,
@@ -123,7 +56,7 @@
               "name": "loginTime",
               "isArray": false,
               "type": "AWSDateTime",
-              "isRequired": true,
+              "isRequired": false,
               "attributes": []
             },
             "createdAt": {
@@ -144,7 +77,7 @@
             }
           },
           "syncable": true,
-          "pluralName": "Auths",
+          "pluralName": "Logins",
           "attributes": [
             {
               "type": "model",
@@ -156,6 +89,15 @@
                 "rules": [
                   {
                     "allow": "private",
+                    "operations": [
+                      "read"
+                    ]
+                  },
+                  {
+                    "provider": "userPools",
+                    "ownerField": "owner",
+                    "allow": "owner",
+                    "identityClaim": "cognito:username",
                     "operations": [
                       "create",
                       "update",
@@ -175,197 +117,7 @@
         }
       },
       "enums": {},
-      "nonModels": {
-        "Post": {
-          "name": "Post",
-          "fields": {
-            "id": {
-              "name": "id",
-              "isArray": false,
-              "type": "ID",
-              "isRequired": true,
-              "attributes": []
-            },
-            "author": {
-              "name": "author",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true,
-              "attributes": []
-            },
-            "title": {
-              "name": "title",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "content": {
-              "name": "content",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "url": {
-              "name": "url",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "ups": {
-              "name": "ups",
-              "isArray": false,
-              "type": "Int",
-              "isRequired": false,
-              "attributes": []
-            },
-            "downs": {
-              "name": "downs",
-              "isArray": false,
-              "type": "Int",
-              "isRequired": false,
-              "attributes": []
-            },
-            "version": {
-              "name": "version",
-              "isArray": false,
-              "type": "Int",
-              "isRequired": false,
-              "attributes": []
-            }
-          }
-        }
-      },
-      "queries": {
-        "getPost": {
-          "name": "getPost",
-          "isArray": false,
-          "type": {
-            "nonModel": "Post"
-          },
-          "isRequired": false,
-          "arguments": {
-            "id": {
-              "name": "id",
-              "isArray": false,
-              "type": "ID",
-              "isRequired": true
-            }
-          }
-        }
-      },
-      "mutations": {
-        "addPost": {
-          "name": "addPost",
-          "isArray": false,
-          "type": {
-            "nonModel": "Post"
-          },
-          "isRequired": false,
-          "arguments": {
-            "id": {
-              "name": "id",
-              "isArray": false,
-              "type": "ID",
-              "isRequired": false
-            },
-            "author": {
-              "name": "author",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true
-            },
-            "title": {
-              "name": "title",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false
-            },
-            "content": {
-              "name": "content",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false
-            },
-            "url": {
-              "name": "url",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false
-            }
-          }
-        },
-        "updatePost": {
-          "name": "updatePost",
-          "isArray": false,
-          "type": {
-            "nonModel": "Post"
-          },
-          "isRequired": false,
-          "arguments": {
-            "id": {
-              "name": "id",
-              "isArray": false,
-              "type": "ID",
-              "isRequired": true
-            },
-            "author": {
-              "name": "author",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false
-            },
-            "title": {
-              "name": "title",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false
-            },
-            "content": {
-              "name": "content",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false
-            },
-            "url": {
-              "name": "url",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false
-            },
-            "expectedVersion": {
-              "name": "expectedVersion",
-              "isArray": false,
-              "type": "Int",
-              "isRequired": true
-            }
-          }
-        },
-        "deletePost": {
-          "name": "deletePost",
-          "isArray": false,
-          "type": {
-            "nonModel": "Post"
-          },
-          "isRequired": false,
-          "arguments": {
-            "id": {
-              "name": "id",
-              "isArray": false,
-              "type": "ID",
-              "isRequired": true
-            },
-            "expectedVersion": {
-              "name": "expectedVersion",
-              "isArray": false,
-              "type": "Int",
-              "isRequired": false
-            }
-          }
-        }
-      }
+      "nonModels": {}
     }
   },
   "version": "1.3"

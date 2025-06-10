@@ -203,35 +203,16 @@ function LoginApp() {
  //   window.location.reload();
   };
 
- 
   return (
     <main style={{ padding: "1.5rem" }}>
-      <p>こんにちは、{user?.username} さん！</p>
-
-      {!showHistory && (
-        <button onClick={handleShowHistory}>履歴を見る</button>
-      )}
-
-      {showHistory && (
-        <ul>
-          {logins.map((login) => (
-             <li key={login.id} style={{ display: "flex", gap: "1rem", padding: "0.5rem", borderBottom: "1px solid #ccc" }}>
-              <div style={{ flex: 1, fontWeight: "bold" }}>{login.uid}</div>
-              <div style={{ flex: 2 }}>{login.loginTime}</div>
-             </li>
-          ))}
-        </ul>
-      )}
+      <p>現在、更新中・・・</p>
 
       <div style={{ marginTop: "2rem" }}>
         <button onClick={handleSignOut}>サインアウト</button>
       </div>
 
-      <div style={{ marginTop: "1rem" }}>
-      <button onClick={() => router.push('/list')}>一覧ページへ</button>
-    </div> 
-
     </main>
+  
   );
 }
 
