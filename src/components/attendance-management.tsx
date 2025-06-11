@@ -6,9 +6,9 @@
 
 //src/componets/attendance-management.tsx
 "use client"
-
+import { cn } from "@/lib/utils"
 import { DialogTrigger } from "@/components/ui/dialog"
-
+import { toast } from "sonner"
 import { useState, useEffect } from "react"
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
@@ -27,12 +27,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Sidebar } from "@/components/sidebar"
+import { useSidebar } from "@/context/sidebar-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { toast } from "@/components/ui/use-toast"
-// import { Toaster } from "@/components/ui/toaster"
+// import { toast } from "@/components/ui/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
@@ -84,15 +83,13 @@ type SortDirection = "asc" | "desc"
  */
 
 export default function AttendanceManagement() {
-  // UIの開閉状態（サイドバー用）
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  //　メニュー開閉
+  const { toggle } = useSidebar()
+  const { isOpen } = useSidebar()
+
   // 現在の画面幅（レスポンシブ表示制御用）
   const [screenWidth, setScreenWidth] = useState<number | null>(null);
 
-  // 開発時の表示確認用トースト（本番では削除）
-  useEffect(() => {
-    toast({ title: "テスト", description: "表示されていればOKです" })
-  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -258,18 +255,25 @@ export default function AttendanceManagement() {
         updatedBy: "admin", // 実際のログインユーザー名に差し替え可
       });
 
-      toast({
-        title: "来所を記録しました",
+      toast("来所を記録しました", {
         description: `現在時刻: ${currentTime}`,
       });
     } catch (error) {
       console.error("来所時刻の更新に失敗しました:", error);
 
-      toast({
-        variant: "destructive",
-        title: "エラー",
-        description: "DynamoDBへの更新に失敗しました",
-      });
+      toast(
+        <div>
+          <div className="font-bold text-destructive">エラー</div>
+          <div className="text-sm text-muted-foreground">
+            DynamoDBへの更新に失敗しました
+          </div>
+        </div>,
+        {
+          duration: 5000,
+          icon: "❌",
+          className: "bg-destructive text-destructive-foreground",
+        }
+      );
 
       // 必要であればここで setAttendanceData をロールバックしてもよい
     }
@@ -310,17 +314,25 @@ export default function AttendanceManagement() {
         prev.map((item: AttendanceData) => (item.id === id ? updatedItem : item))
       );
 
-      toast({
-        title: "退所を記録しました",
+      toast("退所を記録しました", {
+
         description: `現在時刻: ${currentTime}`,
       });
     } catch (error) {
       console.error("退所時刻の更新に失敗:", error);
-      toast({
-        variant: "destructive",
-        title: "エラー",
-        description: "DynamoDBへの退所記録に失敗しました",
-      });
+      toast(
+        <div>
+          <div className="font-bold text-destructive">エラー</div>
+          <div className="text-sm text-muted-foreground">
+            DynamoDBへの退所記録に失敗しました
+          </div>
+        </div>,
+        {
+          icon: "❌",
+          className: "bg-destructive text-destructive-foreground",
+          duration: 5000,
+        }
+      );
     }
   };
 
@@ -345,11 +357,19 @@ export default function AttendanceManagement() {
     // 時刻形式のバリデーション (HH:mm)
     const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
     if (!timeRegex.test(newValue)) {
-      toast({
-        variant: "destructive",
-        title: "無効な時刻形式です",
-        description: "時刻は HH:mm 形式で入力してください (例: 09:30)",
-      });
+      toast(
+        <div>
+          <div className="font-bold text-destructive">無効な時刻形式です</div>
+          <div className="text-sm text-muted-foreground">
+            時刻は HH:mm 形式で入力してください（例: 09:30）
+          </div>
+        </div>,
+        {
+          icon: "⏰",
+          className: "bg-destructive text-destructive-foreground",
+          duration: 5000,
+        }
+      );
       return;
     }
 
@@ -369,11 +389,19 @@ export default function AttendanceManagement() {
             }
           } else {
             if (item.arrivalTime && newDate < item.arrivalTime) {
-              toast({
-                variant: "destructive",
-                title: "無効な退所時刻です",
-                description: "退所時刻は来所時刻より後である必要があります",
-              });
+              toast(
+                <div>
+                  <div className="font-bold text-destructive">無効な退所時刻です</div>
+                  <div className="text-sm text-muted-foreground">
+                    退所時刻は来所時刻より後である必要があります
+                  </div>
+                </div>,
+                {
+                  icon: "⚠️",
+                  className: "bg-destructive text-destructive-foreground",
+                  duration: 5000,
+                }
+              );
               return item;
             }
             temp = calculateUsageTime(temp, newDate);
@@ -407,17 +435,33 @@ export default function AttendanceManagement() {
         updatedBy: "admin",
       });
 
-      toast({
-        title: `${type === "arrival" ? "来所" : "退所"}時刻を更新しました`,
-        description: `新しい時刻: ${newValue}`,
-      });
+      toast(
+        <div>
+          <div className="font-semibold text-foreground">
+            {type === "arrival" ? "来所" : "退所"}時刻を更新しました
+          </div>
+          <div className="text-sm text-muted-foreground">新しい時刻: {newValue}</div>
+        </div>,
+        {
+          icon: "✅",
+          duration: 4000,
+        }
+      );
     } catch (error) {
       console.error("DynamoDB 更新失敗:", error);
-      toast({
-        variant: "destructive",
-        title: "更新エラー",
-        description: "DynamoDBへの反映に失敗しました",
-      });
+      toast(
+        <div>
+          <div className="font-bold text-destructive">更新エラー</div>
+          <div className="text-sm text-muted-foreground">
+            DynamoDBへの反映に失敗しました
+          </div>
+        </div>,
+        {
+          icon: "❌",
+          className: "bg-destructive text-destructive-foreground",
+          duration: 5000,
+        }
+      );
     }
   };
 
@@ -443,8 +487,8 @@ export default function AttendanceManagement() {
 
     setEditingNote(null)
 
-    toast({
-      title: "備考を更新しました",
+    toast("備考を更新しました", {
+
     })
   }
 
@@ -462,8 +506,8 @@ export default function AttendanceManagement() {
       }),
     )
 
-    toast({
-      title: "早退/超過理由を更新しました",
+    toast("早退/超過理由を更新しました", {
+
     })
   }
 
@@ -583,17 +627,35 @@ export default function AttendanceManagement() {
         updatedBy: "admin",
       });
 
-      toast({
-        title: `${type === "arrival" ? "来所" : "退所"}時刻をリセットしました`,
-        description: "DynamoDB にも反映されました",
-      });
+      toast(
+        <div>
+          <div className="font-semibold text-foreground">
+            {type === "arrival" ? "来所" : "退所"}時刻をリセットしました
+          </div>
+          <div className="text-sm text-muted-foreground">
+            DynamoDB にも反映されました
+          </div>
+        </div>,
+        {
+          icon: "♻️",
+          duration: 4000,
+        }
+      );
     } catch (error) {
       console.error("リセット時のDB更新失敗:", error);
-      toast({
-        variant: "destructive",
-        title: "リセットエラー",
-        description: "DynamoDBへのリセット反映に失敗しました",
-      });
+      toast(
+        <div>
+          <div className="font-bold text-destructive">リセットエラー</div>
+          <div className="text-sm text-muted-foreground">
+            DynamoDBへのリセット反映に失敗しました
+          </div>
+        </div>,
+        {
+          icon: "❌",
+          className: "bg-destructive text-destructive-foreground",
+          duration: 5000,
+        }
+      );
     }
   };
 
@@ -741,12 +803,15 @@ export default function AttendanceManagement() {
   return (
     <div className="flex h-screen flex-col bg-gray-50">
       {/* ヘッダー */}
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white px-4 shadow-sm">
+      <header className={cn(
+        "sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white px-4 shadow-sm transition-all duration-300",
+        
+      )}>
         <div className="flex items-center">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
+            onClick={toggle}
             aria-label="メニューを開く"
             className="mr-2 rounded-full hover:bg-gray-100"
           >
@@ -773,12 +838,13 @@ export default function AttendanceManagement() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* サイドメニュー */}
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
+        {/* <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />*/}
+        {/* <Sidebar /> */}
         {/* メインコンテンツ */}
-        <main
-          className={`flex-1 overflow-auto p-4 transition-all duration-300 ${sidebarOpen ? "" : "container mx-auto px-2 md:px-4"
-            }`}
+        <main className={cn(
+          "flex-1 overflow-auto p-4 transition-all duration-300",
+          
+        )}
         >
           <Card className="mb-4 overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between bg-blue-500 py-3 text-white">
@@ -1169,8 +1235,8 @@ export default function AttendanceManagement() {
                 // ログアウト処理をここに実装
                 setLogoutDialogOpen(false)
                 // 実際のアプリケーションではログアウト処理を行う
-                toast({
-                  title: "ログアウトしました",
+                toast("ログアウトしました", {
+
                 })
               }}
               className="flex-1 bg-blue-500 hover:bg-blue-600 sm:flex-initial"

@@ -1,3 +1,4 @@
+//src/components/qr-reception-screen.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -16,7 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { Toaster } from "@/components/ui/toaster"
 
 // メッセージの型定義
@@ -112,8 +113,8 @@ export default function QrReceptionScreen() {
         userName: message.userName,
       })
 
-      toast({
-        title: "退所を記録しました",
+      toast("退所を記録しました",{
+        
         description: `${message.userName}さん - ${currentTime}`,
       })
     }
@@ -303,8 +304,8 @@ export default function QrReceptionScreen() {
                 // ログアウト処理をここに実装
                 setLogoutDialogOpen(false)
                 // 実際のアプリケーションではログアウト処理を行う
-                toast({
-                  title: "ログアウトしました",
+                toast("ログアウトしました",{
+                  
                 })
               }}
               className="flex-1 bg-blue-500 hover:bg-blue-600 sm:flex-initial"
@@ -316,7 +317,7 @@ export default function QrReceptionScreen() {
       </Dialog>
 
       {/* トースト通知 */}
-      <Toaster />
+      {/* <Toaster /> */}
     </div>
   )
 }

@@ -2,7 +2,7 @@
 "use client"
 
 import type React from "react"
-
+import { useSidebar } from "@/context/sidebar-context"
 import { useState, useEffect } from "react"
 import {
   Users,
@@ -31,12 +31,17 @@ interface MenuItem {
   children?: MenuItem[]
 }
 
-interface SidebarProps {
-  isOpen: boolean
-  onClose: () => void
-}
+// interface SidebarProps {
+//   isOpen: boolean
+//   onClose: () => void
+// }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+// export function Sidebar({ isOpen, onClose }: SidebarProps) {
+//   const [isMobile, setIsMobile] = useState(false)
+//   const [expandedItems, setExpandedItems] = useState<string[]>([])
+
+export function Sidebar() {
+  const { isOpen, close } = useSidebar()
   const [isMobile, setIsMobile] = useState(false)
   const [expandedItems, setExpandedItems] = useState<string[]>([])
 
@@ -79,6 +84,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     },
     { icon: ClipboardList, label: "通所実績管理", href: "#", active: true },
     { icon: FileOutput, label: "帳票出力", href: "#" },
+    {
+      icon: FileOutput,
+      label: "QR受付画面",
+      href: "/qr-reception-screen",
+    },
   ]
 
   const sidebarVariants = {
@@ -159,7 +169,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           animate={isOpen ? "open" : "closed"}
           variants={overlayVariants}
           className="fixed inset-0 z-40 bg-black"
-          onClick={onClose}
+          onClick={close}
         />
       )}
 
@@ -180,7 +190,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={onClose}
+            onClick={close}
             className="absolute right-2 top-2 rounded-full hover:bg-gray-100"
           >
             <X className="h-5 w-5" />

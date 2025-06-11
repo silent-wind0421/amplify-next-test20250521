@@ -2,36 +2,20 @@
 import type React from "react"
 import "./globals.css"
 import { Inter } from "next/font/google"
+
 import { Providers } from './providers'
 import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster" 
+import { Toaster } from "@/components/ui/toaster"
+import { Sidebar } from "@/components/sidebar"
+import { SidebarProvider } from "@/context/sidebar-context"
 
 const inter = Inter({ subsets: ["latin"] })
-
-/**
- * アプリケーションのメタデータ設定
- * 
- * - ページタイトル、説明文、ジェネレーター情報を提供。
- * - Next.js の metadata API で使用可能。
- */
 
 export const metadata = {
   title: "利用実績・予定管理",
   description: "モダンなデザインの利用実績・予定管理アプリケーション",
   generator: 'v0.dev'
 }
-
-/**
- * アプリケーションのルートレイアウト
- * 
- * - 全ページに共通のレイアウト構成を提供。
- * - グローバルCSS、フォント、テーマ切替、状態管理プロバイダ、Toaster を含む。
- * 
- * @component
- * @param {Object} props - コンポーネントの props
- * @param {React.ReactNode} props.children - ネストされる子要素（ページコンテンツ）
- * @returns {JSX.Element} HTML構造を返す
- */
 
 export default function RootLayout({
   children,
@@ -43,8 +27,28 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-            {children}
-            <Toaster /> 
+            <SidebarProvider>
+              {/* 共通ヘッダー */}
+              <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b bg-white px-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  {/* サイドバー toggle を使うなら SidebarContext を反映 */}
+                  <h1 className="text-xl font-bold">プロジェクト名</h1>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-700">真　屋太郎</span>
+                </div>
+              </header>
+
+              {/* サイドバーとメインコンテンツ */}
+              <div className="flex min-h-[calc(100vh-4rem)]">
+                <Sidebar />
+                <main className="flex-1 overflow-y-auto bg-gray-50 p-4">
+                  {children}
+                </main>
+              </div>
+
+              <Toaster />
+            </SidebarProvider>
           </ThemeProvider>
         </Providers>
       </body>
