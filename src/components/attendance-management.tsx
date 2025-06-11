@@ -803,7 +803,7 @@ export default function AttendanceManagement() {
   return (
     <div className="flex h-screen flex-col bg-gray-50">
       {/* ヘッダー */}
-      <header className={cn(
+      {/* <header className={cn(
         "sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white px-4 shadow-sm transition-all duration-300",
         
       )}>
@@ -834,7 +834,7 @@ export default function AttendanceManagement() {
             </Button>
           </div>
         </div>
-      </header>
+      </header> */}
 
       <div className="flex flex-1 overflow-hidden">
         {/* サイドメニュー */}

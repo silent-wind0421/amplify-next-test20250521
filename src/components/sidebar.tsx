@@ -1,6 +1,7 @@
 //src/component/sidebar.tsx
 "use client"
 
+import Link from "next/link"
 import type React from "react"
 import { useSidebar } from "@/context/sidebar-context"
 import { useState, useEffect } from "react"
@@ -82,7 +83,7 @@ export function Sidebar() {
         { icon: LayoutGrid, label: "席割り当て管理", href: "#" },
       ],
     },
-    { icon: ClipboardList, label: "通所実績管理", href: "#", active: true },
+    { icon: ClipboardList, label: "通所実績管理", href: "/", active: true },
     { icon: FileOutput, label: "帳票出力", href: "#" },
     {
       icon: FileOutput,
@@ -107,7 +108,7 @@ export function Sidebar() {
 
     return (
       <div key={`${item.label}-${index}`} className="w-full">
-        <a
+        <Link
           href={item.href}
           className={cn(
             "group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
@@ -121,11 +122,12 @@ export function Sidebar() {
               if (isOpen) {
                 toggleExpand(item.label)
               }
+            } else {
+              close() // メニュー閉じるようにするならここで
             }
           }}
         >
           <item.icon className={cn("h-5 w-5", !isOpen && "mx-auto")} />
-
           {isOpen && (
             <>
               <span className="ml-3 flex-1">{item.label}</span>
@@ -135,6 +137,7 @@ export function Sidebar() {
                   size="icon"
                   className="h-5 w-5 p-0"
                   onClick={(e) => {
+                    e.preventDefault()
                     e.stopPropagation()
                     toggleExpand(item.label)
                   }}
@@ -144,13 +147,8 @@ export function Sidebar() {
               )}
             </>
           )}
+        </Link>
 
-          {!isOpen && hasChildren && (
-            <div className="absolute left-full ml-6 hidden rounded-md bg-gray-800 px-2 py-1 text-xs text-white group-hover:block">
-              {item.label}
-            </div>
-          )}
-        </a>
 
         {isOpen && hasChildren && isExpanded && (
           <div className="ml-2 mt-1 space-y-1 border-l border-gray-200 pl-2">
