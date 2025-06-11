@@ -32,7 +32,7 @@ export default function RootLayout({
             <SidebarProvider>
               <Header />
               {/* サイドバーとメインコンテンツ */}
-              <div className="flex min-h-[calc(100vh-4rem)]">
+              <div className="flex min-h-screen">
                 <Sidebar />
                 <div className="flex flex-1 flex-col">
                   

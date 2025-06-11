@@ -775,14 +775,7 @@ export default function AttendanceManagement() {
     }
   }
 
-  // // 備考の表示用テキストを取得
-  // const getNoteDisplayText = (note: string | null) => {
-  //   if (!note) return null
-  //   // 画面サイズに応じて表示文字数を変更（小さい画面では10文字、大きい画面では最大20文字）
-  //   const screenWidth = typeof window !== "undefined" ? window.innerWidth : 0
-  //   const maxLength = screenWidth < 1280 ? 10 : 20
-  //   return note.length > maxLength ? `${note.substring(0, maxLength)}...` : note
-  // }
+
 
   // 児童名の表示用テキストを取得
   const getUserNameDisplayText = (userName: string) => {
@@ -801,48 +794,14 @@ export default function AttendanceManagement() {
   const sortedData = getSortedData()
 
   return (
-    <div className="flex h-screen flex-col bg-gray-50">
-      {/* ヘッダー */}
-      {/* <header className={cn(
-        "sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white px-4 shadow-sm transition-all duration-300",
-        
-      )}>
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggle}
-            aria-label="メニューを開く"
-            className="mr-2 rounded-full hover:bg-gray-100"
-          >
-            <Menu className="h-5 w-5 text-gray-700" />
-          </Button>
-          <h1 className="text-xl font-bold text-gray-800">プロジェクト名</h1>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="flex items-center">
-            <span className="mr-4 text-sm font-medium text-gray-700">真　屋太郎</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setLogoutDialogOpen(true)}
-              aria-label="ログアウト"
-              className="rounded-full hover:bg-gray-100"
-            >
-              <LogOut className="h-5 w-5 text-gray-700" />
-            </Button>
-          </div>
-        </div>
-      </header> */}
+    <div className="flex flex-col bg-gray-50">
+      
 
       <div className="flex flex-1 overflow-hidden">
-        {/* サイドメニュー */}
-        {/* <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />*/}
-        {/* <Sidebar /> */}
+        
         {/* メインコンテンツ */}
-        <main className={cn(
-          "flex-1 overflow-auto p-4 transition-all duration-300",
+        <div className={cn(
+          "flex-1 overflow-auto transition-all duration-300",
           
         )}
         >
@@ -1216,7 +1175,7 @@ export default function AttendanceManagement() {
               </div>
             </CardContent>
           </Card>
-        </main>
+        </div>
       </div>
 
       {/* ログアウト確認ダイアログ */}
