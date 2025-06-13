@@ -48,7 +48,7 @@ export default function RootTemplate({ children }: { children: React.ReactNode }
 
   return (
     <ThemeProvider theme={customTheme}>  
-      <Authenticator.Provider>  
+      <Authenticator.Provider>      
           {children}
       </Authenticator.Provider>  
     </ThemeProvider>
