@@ -1,6 +1,0 @@
-npm run dev
-npm ls aws-amplify
-npm run dev
-npx amplify sandbox
-npm run dev
-git status
