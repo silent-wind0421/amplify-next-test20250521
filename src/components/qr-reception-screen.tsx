@@ -30,8 +30,8 @@ interface Message {
   userName: string
 }
 
-// // デモシナリオの型定義
-// type DemoScenario = "arrival" | "departure" | "early-departure" | "already-departed"
+// デモシナリオの型定義
+type DemoScenario = "arrival" | "departure" | "early-departure" | "already-departed"
 
 export default function QrReceptionScreen() {
   const { toggle } = useSidebar()
