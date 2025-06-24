@@ -4,6 +4,7 @@
 import AttendanceManagement from "@/components/attendance-management";
 import { SeedButton } from "@/components/seed-button";
 
+
 /**
  * 通所実績管理ページのルートコンポーネント
  *

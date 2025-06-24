@@ -7,7 +7,7 @@ import { format } from "date-fns"
 import { ja } from "date-fns/locale"
 import { LogOut, Clock, Calendar, Menu } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-
+import BufferedInputHandler from "@/components/buffered-input-handler"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -30,11 +30,27 @@ interface Message {
   userName: string
 }
 
-// デモシナリオの型定義
-type DemoScenario = "arrival" | "departure" | "early-departure" | "already-departed"
+// // デモシナリオの型定義
+// type DemoScenario = "arrival" | "departure" | "early-departure" | "already-departed"
 
 export default function QrReceptionScreen() {
   const { toggle } = useSidebar()
+  const handleScanComplete = (value: string) => {
+    console.log("🔍 スキャナ入力:", value)
+
+    if (value.includes("arrival")) {
+      simulateQrScan("arrival")
+    } else if (value.includes("departure")) {
+      simulateQrScan("departure")
+    } else {
+      setMessage({
+        text: `読み取り成功: ${value}`,
+        type: "info",
+        userName: "",
+      })
+    }
+  }
+
 
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState("")
@@ -246,6 +262,7 @@ export default function QrReceptionScreen() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <BufferedInputHandler onScanComplete={handleScanComplete} />
     </>
   )
 }

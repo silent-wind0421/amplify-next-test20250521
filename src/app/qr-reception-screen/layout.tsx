@@ -1,5 +1,5 @@
 // src/app/qr-reception-screen/layout.tsx
-import { Sidebar } from "@/components/sidebar" // または ui/sidebar.tsx
+// import { Sidebar } from "@/components/sidebar" // または ui/sidebar.tsx
 import type { ReactNode } from "react"
 
 export default function QrReceptionLayout({ children }: { children: ReactNode }) {
