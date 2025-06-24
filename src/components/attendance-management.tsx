@@ -31,7 +31,6 @@ import { useSidebar } from "@/context/sidebar-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-// import { toast } from "@/components/ui/use-toast"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
@@ -210,13 +209,13 @@ export default function AttendanceManagement() {
   useEffect(() => {
     fetchVisitRecords(); // 初回即実行
 
-    const intervalId = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        fetchVisitRecords();
-      }
-    }, 10000); // 10秒
+    // const intervalId = setInterval(() => {
+    //   if (document.visibilityState === "visible") {
+    //     fetchVisitRecords();
+    //   }
+    // }, 10000); // 10秒
 
-    return () => clearInterval(intervalId);
+    // return () => clearInterval(intervalId);
   }, [childMap, selectedDate]); // childMap に依存（児童マスタ取得完了後に開始）
 
   // 現在の日付
@@ -792,6 +791,39 @@ export default function AttendanceManagement() {
 
   // ソート済みのデータを取得
   const sortedData = getSortedData()
+
+/**
+ * 指定した日付に該当する VisitRecord モデルの変更をリアルタイムで購読する。
+ *
+ * Amplify Gen2 の Data Client を利用して、`visitDate` が選択中の日付と一致する
+ * VisitRecord の変更（追加・更新・削除）を購読し、変更が発生したタイミングで
+ * `fetchVisitRecords` を呼び出して再取得を行う。
+ *
+ * @function
+ * @param {Date} selectedDate - フィルタ対象の日付（Asia/Tokyo タイムゾーン）
+ * @param {() => void} fetchVisitRecords - データ更新時に呼び出すリロード関数
+ * @returns {void}
+ */
+useEffect(() => {
+  const sub = client.models.VisitRecord.observeQuery({
+    filter: {
+      visitDate: {
+        eq: formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd"),
+      },
+    },
+  }).subscribe({
+    next: ({ items }) => {
+      console.log("VisitRecord リアルタイム更新:", items);
+      fetchVisitRecords(); // 最新の一覧データを再取得
+    },
+    error: (err) => {
+      console.error("VisitRecord サブスクリプションエラー:", err);
+    },
+  });
+
+  // コンポーネントのアンマウントや selectedDate の変更時に購読解除
+  return () => sub.unsubscribe();
+}, [selectedDate]);
 
   return (
     <div className="flex flex-col bg-gray-50">

@@ -20,8 +20,10 @@
       }
     ],
     "paths": {
+      "@/amplify/data/*": ["amplify/data/*"],
       "@/amplify/data/resource": ["amplify/data/resource.ts"],
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@amplify/*": ["amplify/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

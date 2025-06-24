@@ -12,7 +12,10 @@ import { Header } from "@/components/layout/header"
 import { Amplify } from 'aws-amplify';
 import outputs from '../../amplify_outputs.json';
 
+
 Amplify.configure(outputs);
+
+
 
 const inter = Inter({ subsets: ["latin"] })
 
