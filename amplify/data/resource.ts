@@ -133,7 +133,6 @@ const schema = a.schema({
    */
 
   VisitRecord: a.model({
-    id: a.id(),
     visitDate: a.date(), // 旧: a.string()
     officeId: a.string(),
     childId: a.string(),
@@ -157,8 +156,7 @@ const schema = a.schema({
 
     version: a.integer(),
     remarks: a.string(),
-  }).identifier(["id"])
-    .authorization((allow) => [allow.publicApiKey()]),
+  }).authorization((allow) => [allow.publicApiKey()]),
     
 
   /**
