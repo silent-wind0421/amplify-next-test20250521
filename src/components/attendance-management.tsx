@@ -825,6 +825,21 @@ useEffect(() => {
   return () => sub.unsubscribe();
 }, [selectedDate]);
 
+useEffect(() => {
+  const sub = client.models.VisitRecord.observeQuery().subscribe({
+    next: ({ items }) => {
+      console.log('[リアルタイム更新] VisitRecord:', items);
+      refetchVisitRecords(); // itemsの変更があったら再取得する
+    },
+    error: (err) => {
+      console.error('[observeQuery エラー]', err);
+    },
+  });
+
+  return () => sub.unsubscribe();
+}, []);
+
+
   return (
     <div className="flex flex-col bg-gray-50">
       
