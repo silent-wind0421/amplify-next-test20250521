@@ -829,7 +829,7 @@ useEffect(() => {
   const sub = client.models.VisitRecord.observeQuery().subscribe({
     next: ({ items }) => {
       console.log('[リアルタイム更新] VisitRecord:', items);
-      refetchVisitRecords(); // itemsの変更があったら再取得する
+      fetchVisitRecords(); // itemsの変更があったら再取得する
     },
     error: (err) => {
       console.error('[observeQuery エラー]', err);
