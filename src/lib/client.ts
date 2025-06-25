@@ -1,4 +1,4 @@
-//sec/lib/client.ts
+//src/lib/client.ts
 import { generateClient } from "aws-amplify/data";
 import { type Schema } from "@/amplify/data/resource";
 import amplifyConfig from "../../amplify_outputs.json"; // ← パスは必要に応じて調整
