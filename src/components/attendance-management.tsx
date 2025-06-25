@@ -825,19 +825,19 @@ useEffect(() => {
   return () => sub.unsubscribe();
 }, [selectedDate]);
 
-useEffect(() => {
-  const sub = client.models.VisitRecord.observeQuery().subscribe({
-    next: ({ items }) => {
-      console.log('[リアルタイム更新] VisitRecord:', items);
-      fetchVisitRecords(); // itemsの変更があったら再取得する
-    },
-    error: (err) => {
-      console.error('[observeQuery エラー]', err);
-    },
-  });
+// useEffect(() => {
+//   const sub = client.models.VisitRecord.observeQuery().subscribe({
+//     next: ({ items }) => {
+//       console.log('[リアルタイム更新] VisitRecord:', items);
+//       fetchVisitRecords(); // itemsの変更があったら再取得する
+//     },
+//     error: (err) => {
+//       console.error('[observeQuery エラー]', err);
+//     },
+//   });
 
-  return () => sub.unsubscribe();
-}, []);
+//   return () => sub.unsubscribe();
+// }, []);
 
 
   return (
