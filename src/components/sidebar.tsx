@@ -174,7 +174,7 @@ export function Sidebar() {
       <motion.aside
         initial="closed"
         animate={isOpen ? "open" : "closed"}
-        variants={isMobile ? sidebarVariants : undefined}
+        variants={isMobile ? sidebarVariants : {}}
         className={cn(
           "w-64 bg-white shadow-lg transition-all duration-300 ease-in-out",
           isMobile

@@ -46,7 +46,8 @@ import config from "../../amplify_outputs.json";
 Amplify.configure(config);
 
 
-const client = generateClient<Schema>();
+const client = generateClient<Schema>({authMode: "userPool",
+});
 
 
 /**
@@ -158,6 +159,7 @@ export default function AttendanceManagement() {
             eq: formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd"),
           },
         },
+        authMode: "apiKey",
       });
 
       // 変更検知用の JSON 化f
@@ -805,12 +807,16 @@ export default function AttendanceManagement() {
  * @returns {void}
  */
 useEffect(() => {
+const dateStr = formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd");
+  console.log("検索日付 (observeQuery):", dateStr);
+
   const sub = client.models.VisitRecord.observeQuery({
     filter: {
       visitDate: {
         eq: formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd"),
       },
     },
+    authMode: "apiKey",
   }).subscribe({
     next: ({ items }) => {
       console.log("VisitRecord リアルタイム更新:", items);
