@@ -39,7 +39,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../amplify/data/resource";
-
+// import { client } from "@/lib/client";
 import { Amplify } from "aws-amplify";
 import config from "../../amplify_outputs.json";
 
@@ -48,6 +48,13 @@ Amplify.configure(config);
 
 const client = generateClient<Schema>({authMode: "userPool",
 });
+
+
+function calcDiffMinutes(start: string, end: string): number {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  return (eh * 60 + em) - (sh * 60 + sm);
+}
 
 
 /**
@@ -188,9 +195,16 @@ export default function AttendanceManagement() {
           departureTime: record.actualLeaveTime
             ? toDateTime(visitDate, record.actualLeaveTime)
             : null,
-          actualUsageTime: record.actualDuration
-            ? convertMinutesToHHMM(record.actualDuration)
-            : null,
+          actualUsageTime:
+  record.actualArrivalTime && record.actualLeaveTime
+    ? convertMinutesToHHMM(
+        calcDiffMinutes(record.actualArrivalTime, record.actualLeaveTime)
+      )
+    : record.actualDuration
+    ? convertMinutesToHHMM(record.actualDuration)
+    : null,
+
+
           isShortUsage: false,
           reason: record.earlyLeaveReasonCode || null,
           note: record.remarks || null,
