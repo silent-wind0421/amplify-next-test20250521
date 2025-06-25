@@ -1,6 +1,8 @@
 // src/app/layout.tsx
+
+
 import type React from "react"
-import { Authenticator } from '@aws-amplify/ui-react';
+// import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import "./globals.css";
 import { Inter } from "next/font/google";

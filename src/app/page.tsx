@@ -1,6 +1,7 @@
 // src/app/page.tsx
 "use client";
 
+import { Authenticator } from '@aws-amplify/ui-react';
 import AttendanceManagement from "@/components/attendance-management";
 import { SeedButton } from "@/components/seed-button";
 
@@ -17,6 +18,9 @@ import { SeedButton } from "@/components/seed-button";
 
 export default function AttendancePage() {
   return (
+
+    <Authenticator>
+      {({ signOut, user }) => (
     <div className="space-y-4">
 
       {/* ✅ 本番環境のみボタン表示制御したい場合 */}
@@ -25,8 +29,9 @@ export default function AttendancePage() {
           <SeedButton />
         </div>
       )}
-
       <AttendanceManagement />
     </div>
+     )}
+    </Authenticator>
   );
 }
