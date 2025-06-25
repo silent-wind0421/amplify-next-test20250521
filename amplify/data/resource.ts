@@ -159,7 +159,7 @@ const schema = a.schema({
     remarks: a.string(),
   })
   .identifier(['id'])
-  .authorization((allow) => [allow.owner(), allow.publicApiKey()])
+  .authorization((allow) => [allow.publicApiKey()])
   ,
     
 

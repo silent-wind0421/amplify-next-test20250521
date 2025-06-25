@@ -12,6 +12,6 @@ import amplifyConfig from "../../amplify_outputs.json"; // ← パスは必要�
  * @see https://docs.amplify.aws/javascript/build-a-backend/data/codegen/
  */
 export const client = generateClient<Schema>({
-  config: amplifyConfig,
+  ...amplifyConfig,
   authMode: "userPool", // ✅ Cognito 認証を使う指定
 });

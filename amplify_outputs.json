@@ -29,9 +29,9 @@
     "url": "https://ciead3jncvdqdhzroyljszosqy.appsync-api.ap-northeast-1.amazonaws.com/graphql",
     "aws_region": "ap-northeast-1",
     "api_key": "da2-xpjko6k7nvfexh2xbhppewfyyu",
-    "default_authorization_type": "API_KEY",
+    "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
     "authorization_types": [
-      "AMAZON_COGNITO_USER_POOLS",
+      "API_KEY",
       "AWS_IAM"
     ],
     "model_introspection": {
