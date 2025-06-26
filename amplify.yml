@@ -3,7 +3,8 @@ backend:
   phases:
     build:
       commands:
-        - amplify pipeline-deploy --branch main
+        - npm ci --cache .npm --prefer-offline
+        - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
 
 frontend:
   phases:
