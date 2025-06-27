@@ -191,4 +191,13 @@ export const data = defineData({
       expiresInDays: 30,
     },
   },
+  resources: {
+    VisitRecord: {
+      override: (model, context) => {
+        if (context.environment.name === "main") {
+          model.ddbTable!.name = "VisitRecord-n6yee7m7w5ao5dympassat3uyy-NONE";
+        }
+      },
+    },
+  },
 });
