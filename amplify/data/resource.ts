@@ -160,12 +160,8 @@ const schema = a.schema({
       remarks: a.string(),
     })
     .identifier(["id"])
-    .authorization((allow) => [allow.publicApiKey()])
-    .ddbTable((table, context) => {
-      if (context.environment.name === "main") {
-        table.name = "VisitRecord-n6yee7m7w5ao5dympassat3uyy-NONE";
-      }
-    }),
+    .authorization((allow) => [allow.publicApiKey()]),
+
   /**
    * @typedef {object} CodeMaster
    * @description 各種コード（理由コードなど）のマスターデータ
