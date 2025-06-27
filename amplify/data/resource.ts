@@ -160,7 +160,12 @@ const schema = a.schema({
       remarks: a.string(),
     })
     .identifier(["id"])
-    .authorization((allow) => [allow.publicApiKey()]),
+    .authorization((allow) => [allow.publicApiKey()])
+    .ddbTable((table, context) => {
+      if (context.environment.name === "main") {
+        table.name = "VisitRecord-n6yee7m7w5ao5dympassat3uyy-NONE";
+      }
+    }),
   /**
    * @typedef {object} CodeMaster
    * @description 各種コード（理由コードなど）のマスターデータ
@@ -189,15 +194,6 @@ export const data = defineData({
     defaultAuthorizationMode: "userPool",
     apiKeyAuthorizationMode: {
       expiresInDays: 30,
-    },
-  },
-  resources: {
-    VisitRecord: {
-      override: (model, context) => {
-        if (context.environment.name === "main") {
-          model.ddbTable!.name = "VisitRecord-n6yee7m7w5ao5dympassat3uyy-NONE";
-        }
-      },
     },
   },
 });
