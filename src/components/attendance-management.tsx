@@ -9,7 +9,7 @@
 import { cn } from "@/lib/utils";
 import { DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { ja } from "date-fns/locale";
@@ -135,6 +135,16 @@ export default function AttendanceManagement() {
       setScreenWidth(window.innerWidth);
     }
   }, []);
+
+  // 編集状態を管理するステートとRefを追加
+  const [isEditing, setIsEditing] = useState(false);
+  const isEditingRef = useRef(false);
+
+  // setEditing関数を使って、両方の状態を同時に更新
+  const setEditing = (value: boolean) => {
+    setIsEditing(value);
+    isEditingRef.current = value;
+  };
 
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
@@ -907,37 +917,26 @@ export default function AttendanceManagement() {
     const sub = client.models.VisitRecord.observeQuery({
       filter: {
         visitDate: {
-          eq: formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd"),
+          eq: dateStr,
         },
       },
       authMode: "apiKey",
     }).subscribe({
       next: ({ items }) => {
-        console.log("VisitRecord リアルタイム更新:", items);
-        fetchVisitRecords(); // 最新の一覧データを再取得
+        if (!isEditingRef.current) {
+          console.log("VisitRecord リアルタイム更新:", items);
+          fetchVisitRecords(); // 編集していなければ更新
+        } else {
+          console.log("編集中のため fetchVisitRecords() をスキップ");
+        }
       },
       error: (err) => {
         console.error("VisitRecord サブスクリプションエラー:", err);
       },
     });
 
-    // コンポーネントのアンマウントや selectedDate の変更時に購読解除
     return () => sub.unsubscribe();
-  }, [selectedDate]);
-
-  // useEffect(() => {
-  //   const sub = client.models.VisitRecord.observeQuery().subscribe({
-  //     next: ({ items }) => {
-  //       console.log('[リアルタイム更新] VisitRecord:', items);
-  //       fetchVisitRecords(); // itemsの変更があったら再取得する
-  //     },
-  //     error: (err) => {
-  //       console.error('[observeQuery エラー]', err);
-  //     },
-  //   });
-
-  //   return () => sub.unsubscribe();
-  // }, []);
+  }, [selectedDate, isEditing]); // isEditing を依存に追加
 
   return (
     <div className="flex flex-col bg-gray-50">
@@ -1102,9 +1101,12 @@ export default function AttendanceManagement() {
                                             value: e.target.value,
                                           })
                                         }
+                                        onFocus={() => setEditing(true)} // 追加
+                                        onBlur={() => setEditing(false)} // 追加
                                         className="w-20 text-sm text-center"
                                         placeholder="HH:mm"
                                       />
+
                                       <Button
                                         size="icon"
                                         variant="ghost"
@@ -1191,9 +1193,12 @@ export default function AttendanceManagement() {
                                             value: e.target.value,
                                           })
                                         }
+                                        onFocus={() => setEditing(true)} // 編集開始
+                                        onBlur={() => setEditing(false)} // 編集終了
                                         className="w-20 text-sm text-center"
                                         placeholder="HH:mm"
                                       />
+
                                       <Button
                                         size="icon"
                                         variant="ghost"
@@ -1288,7 +1293,11 @@ export default function AttendanceManagement() {
                                           updateReason(data.id, value)
                                         }
                                       >
-                                        <SelectTrigger className="w-[75px] lg:w-[95px] h-7 text-xs mx-auto">
+                                        <SelectTrigger
+                                          onFocus={() => setEditing(true)} // ✅ こちらが発火する
+                                          onBlur={() => setEditing(false)} // ✅ こちらもOK
+                                          className="w-[75px] lg:w-[95px] h-7 text-xs mx-auto"
+                                        >
                                           <SelectValue placeholder="理由を選択">
                                             {getReasonDisplayText(data.reason)}
                                           </SelectValue>
@@ -1380,6 +1389,8 @@ export default function AttendanceManagement() {
                                           value: e.target.value,
                                         })
                                       }
+                                      onFocus={() => setEditing(true)} // 追加
+                                      onBlur={() => setEditing(false)} // 追加
                                       placeholder="備考を入力"
                                       className="min-h-[100px]"
                                     />
