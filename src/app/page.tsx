@@ -24,7 +24,7 @@ export default function AttendancePage() {
             className="text-sm text-blue-600 underline"
             onClick={() => {
               // サインアウトを明示的に実行
-              signOut();
+              signOut?.();
             }}
           >
             サインアウト
