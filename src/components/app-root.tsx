@@ -23,6 +23,9 @@ export function AppRoot() {
       const config = Amplify.getConfig();
       const signedIn = await isSignedIn();
 
+      console.log("Amplify.getConfig()", config); // ★ 確認用
+      console.log("isSignedIn():", signedIn); // ★ 確認用
+
       if (!config?.API?.GraphQL?.endpoint || !signedIn) {
         console.warn("未認証または未初期化のため watcher を起動しません");
         return;
