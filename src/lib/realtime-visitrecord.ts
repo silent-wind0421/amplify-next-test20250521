@@ -1,37 +1,44 @@
 // src/lib/realtime-visitrecord.ts
 
-import { client } from '@/lib/client';
-import { differenceInMinutes, parse } from 'date-fns';
+// ✅ 遅延初期化で Amplify.configure 後に generateClient() を安全に実行
+import { generateClient } from "aws-amplify/data";
+import type { Schema } from "../../amplify/data/resource";
 
 /**
- * VisitRecord モデルに対するリアルタイム監視を開始します。
+ * クライアントのシングルトンインスタンス（遅延初期化）
+ */
+let clientInstance: ReturnType<typeof generateClient<Schema>> | null = null;
+
+function getClient() {
+  if (!clientInstance) {
+    clientInstance = generateClient<Schema>({ authMode: "userPool" });
+  }
+  return clientInstance;
+}
+
+/**
+ * VisitRecord のリアルタイム購読を開始し、変更イベントごとに処理を実行する。
  *
- * observeQuery() により、VisitRecord の変更を購読し、実来所・退所時刻の変化に応じて
- * actualDuration（実利用時間）を自動計算・保存します。
+ * - Amplify.configure() 実行後に呼び出す必要がある。
  */
 export function startVisitRecordRealtimeWatcher() {
+  const client = getClient();
+
   const sub = client.models.VisitRecord.observeQuery().subscribe({
     next: async ({ items }) => {
       for (const record of items) {
-        const { id, actualArrivalTime, actualLeaveTime, actualDuration } = record;
-        if (!actualArrivalTime || !actualLeaveTime) continue;
-
-        const arrival = parse(actualArrivalTime, 'HH:mm:ss', new Date());
-        const leave = parse(actualLeaveTime, 'HH:mm:ss', new Date());
-        const minutes = differenceInMinutes(leave, arrival);
-
-        if (minutes === actualDuration) continue;
-
-        try {
-          await client.models.VisitRecord.update({ id, actualDuration: minutes });
-          console.log(`[AutoUpdate] ${id}: ${minutes}分に更新`);
-        } catch (err) {
-          console.error(`[AutoUpdate] エラー:`, err);
-        }
+        const { id, actualArrivalTime, actualLeaveTime, actualDuration } =
+          record;
+        console.log("リアルタイム更新:", {
+          id,
+          actualArrivalTime,
+          actualLeaveTime,
+          actualDuration,
+        });
       }
     },
     error: (err) => {
-      console.error('[observeQuery エラー]', err);
+      console.error("[observeQuery エラー]", err);
     },
   });
 

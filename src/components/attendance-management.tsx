@@ -71,11 +71,6 @@ import {
 
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../amplify/data/resource";
-// import { client } from "@/lib/client";
-import { Amplify } from "aws-amplify";
-import config from "../../amplify_outputs.json";
-
-Amplify.configure(config);
 
 const client = generateClient<Schema>({ authMode: "userPool" });
 
