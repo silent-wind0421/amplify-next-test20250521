@@ -1,4 +1,6 @@
-//src/lib/amplify-auth.ts
+// src/lib/amplify-auth.ts
+import { signIn, signOut, getCurrentUser } from "aws-amplify/auth";
+
 /**
  * 現在のユーザーがサインインしているかどうかを判定します。
  *
