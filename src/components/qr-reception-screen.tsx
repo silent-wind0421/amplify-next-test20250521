@@ -1,14 +1,17 @@
 //src/components/qr-reception-screen.tsx
-"use client"
+"use client";
 
-import { useSidebar } from "@/context/sidebar-context"
-import { useState, useEffect } from "react"
-import { format } from "date-fns"
-import { ja } from "date-fns/locale"
-import { LogOut, Clock, Calendar, Menu } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-import BufferedInputHandler from "@/components/buffered-input-handler"
-import { Button } from "@/components/ui/button"
+import { useSidebar } from "@/context/sidebar-context";
+import { useState, useEffect, useRef } from "react";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
+import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Toaster } from "@/components/ui/toaster";
+import BufferedInputHandler from "@/components/buffered-input-handler";
 import {
   Dialog,
   DialogContent,
@@ -16,253 +19,444 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { toast } from "sonner"
-// import { Toaster } from "@/components/ui/toaster"
+} from "@/components/ui/dialog";
 
 // メッセージの型定義
-type MessageType = "info" | "success" | "warning" | "error" | "question"
+type MessageType = "info" | "success" | "warning" | "error" | "question";
 
 interface Message {
-  text: string
-  type: MessageType
-  userName: string
+  text: string;
+  type: MessageType;
+  userName: string;
 }
 
 // デモシナリオの型定義
-type DemoScenario = "arrival" | "departure" | "early-departure" | "already-departed"
+type DemoScenario =
+  | "arrival"
+  | "departure"
+  | "early-departure"
+  | "already-departed";
+
+// キャラクターの型定義
+type Character = "cat" | "dog" | "rabbit" | "bear" | "fox";
+
+// キャラクター設定
+const characters = {
+  cat: {
+    name: "ニャンタ",
+    color: "bg-amber-100",
+    accent: "text-amber-600",
+    border: "border-amber-300",
+  },
+  dog: {
+    name: "ワンタ",
+    color: "bg-blue-100",
+    accent: "text-blue-600",
+    border: "border-blue-300",
+  },
+  rabbit: {
+    name: "ピョンタ",
+    color: "bg-pink-100",
+    accent: "text-pink-600",
+    border: "border-pink-300",
+  },
+  bear: {
+    name: "クマタ",
+    color: "bg-brown-100",
+    accent: "text-amber-800",
+    border: "border-amber-500",
+  },
+  fox: {
+    name: "コンタ",
+    color: "bg-orange-100",
+    accent: "text-orange-600",
+    border: "border-orange-300",
+  },
+};
 
 export default function QrReceptionScreen() {
-  const { toggle } = useSidebar()
+  const [currentTime, setCurrentTime] = useState("");
+  const [currentDate, setCurrentDate] = useState("");
+  const [message, setMessage] = useState<Message | null>(null);
+  const [character, setCharacter] = useState<Character>("cat");
+  const [showAnimation, setShowAnimation] = useState(false);
+  const [animationType, setAnimationType] = useState<
+    "arrival" | "departure" | "warning" | "question" | null
+  >(null);
+
+  const [showButtons, setShowButtons] = useState(false);
+  const confettiRef = useRef<HTMLDivElement>(null);
+  const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const { toggle } = useSidebar();
   const handleScanComplete = (value: string) => {
-    console.log("🔍 スキャナ入力:", value)
+    console.log("🔍 スキャナ入力:", value);
 
     if (value.includes("arrival")) {
-      simulateQrScan("arrival")
+      simulateQrScan("arrival");
     } else if (value.includes("departure")) {
-      simulateQrScan("departure")
+      simulateQrScan("departure");
     } else {
       setMessage({
         text: `読み取り成功: ${value}`,
         type: "info",
         userName: "",
-      })
+      });
     }
-  }
-
-
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
-  const [currentTime, setCurrentTime] = useState("")
-  const [message, setMessage] = useState<Message | null>(null)
+  };
 
   // 現在の日付
-  const today = new Date()
-  const formattedDate = format(today, "yyyy年MM月dd日(E)", { locale: ja })
+  const today = new Date();
+  const formattedDate = format(today, "yyyy年MM月dd日(E)", { locale: ja });
 
   // 現在時刻の更新
   useEffect(() => {
     const updateCurrentTime = () => {
-      const now = new Date()
-      setCurrentTime(format(now, "HH:mm:ss"))
-    }
+      const now = new Date();
+      setCurrentTime(format(now, "HH:mm:ss"));
+    };
 
-    updateCurrentTime()
-    const interval = setInterval(updateCurrentTime, 1000)
-    return () => clearInterval(interval)
-  }, [])
+    updateCurrentTime();
+    const interval = setInterval(updateCurrentTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // 現在の日付と時刻の更新
+  useEffect(() => {
+    const updateDateTime = () => {
+      const now = new Date();
+      const timeStr = format(now, "HH時mm分");
+      const dateStr = format(now, "yyyy年MM月dd日(E)", { locale: ja });
+      setCurrentTime(timeStr);
+      setCurrentDate(dateStr);
+    };
+
+    updateDateTime();
+    const interval = setInterval(updateDateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // 初期メッセージの設定
   useEffect(() => {
     setMessage({
-      text: "QRコードをスキャンしてください",
+      text: "QRコードをよみこませてね！",
       type: "info",
       userName: "",
-    })
-  }, [])
+    });
+  }, []);
+
+  // 5秒後に待ち受け状態に戻す関数
+  const scheduleReset = () => {
+    if (resetTimeoutRef.current) {
+      clearTimeout(resetTimeoutRef.current);
+    }
+
+    resetTimeoutRef.current = setTimeout(() => {
+      setMessage({
+        text: "QRコードをよみこませてね！",
+        type: "info",
+        userName: "",
+      });
+      setShowAnimation(false);
+      setAnimationType(null);
+      setShowButtons(false);
+    }, 5000);
+  };
+
+  // 紙吹雪エフェクト
+  const triggerConfetti = () => {
+    if (confettiRef.current) {
+      const rect = confettiRef.current.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { x: x / window.innerWidth, y: y / window.innerHeight },
+        colors: ["#FFC107", "#FF9800", "#FF5722", "#4CAF50", "#2196F3"],
+      });
+    }
+  };
 
   // QRコードスキャンのシミュレーション
   const simulateQrScan = (scenario: DemoScenario) => {
+    // 既存のタイマーをクリア
+    if (resetTimeoutRef.current) {
+      clearTimeout(resetTimeoutRef.current);
+    }
+
     // ランダムなユーザー名を生成
-    const users = ["山田太郎", "佐藤花子", "鈴木一郎", "田中美咲"]
-    const randomUser = users[Math.floor(Math.random() * users.length)]
+    const users = ["山田太郎", "佐藤花子", "鈴木一郎", "田中美咲"];
+    const randomUser = users[Math.floor(Math.random() * users.length)];
+
+    // ランダムなキャラクターを選択
+    const characterTypes: Character[] = ["cat", "dog", "rabbit", "bear", "fox"];
+    const randomCharacter =
+      characterTypes[Math.floor(Math.random() * characterTypes.length)];
+    setCharacter(randomCharacter);
 
     switch (scenario) {
       case "arrival":
         setMessage({
-          text: "こんにちは！",
+          text: "こんにちは！\n今日もがんばろう！",
           type: "success",
           userName: randomUser,
-        })
-        break
+        });
+        setAnimationType("arrival");
+        setShowAnimation(true);
+        setShowButtons(false);
+        triggerConfetti();
+        scheduleReset();
+        break;
       case "departure":
         setMessage({
-          text: "おつかれさまでした",
+          text: "おつかれさま！\n気を付けて帰ってね！",
           type: "success",
           userName: randomUser,
-        })
-        break
+        });
+        setAnimationType("departure");
+        setShowAnimation(true);
+        setShowButtons(false);
+        triggerConfetti();
+        scheduleReset();
+        break;
       case "early-departure":
         setMessage({
-          text: "契約時間に達していませんが、帰宅されますか？",
+          text: "帰るのが早いかも？\n先生にきいてみて！",
           type: "question",
           userName: randomUser,
-        })
-        break
+        });
+        setAnimationType("question");
+        setShowAnimation(true);
+        setShowButtons(true);
+        // 早退時は自動リセットしない
+        break;
       case "already-departed":
         setMessage({
-          text: "退所時刻が登録されています。スタッフに声をかけてください。",
+          text: "もうよみこんでるかも？\n先生にきいてみて！",
           type: "warning",
           userName: randomUser,
-        })
-        break
+        });
+        setAnimationType("warning");
+        setShowAnimation(true);
+        setShowButtons(false);
+        scheduleReset();
+        break;
       default:
-        break
+        break;
     }
-  }
+  };
 
   // 「はい」ボタンのハンドラー
   const handleYes = () => {
-    if (!message) return
+    if (!message) return;
 
-    if (message.text.includes("契約時間に達していません")) {
+    if (message.text.includes("帰るのが早いかも？")) {
       setMessage({
-        text: "おつかれさまでした",
+        text: "おつかれさま！\n気を付けて帰ってね！",
         type: "success",
         userName: message.userName,
-      })
+      });
+      setAnimationType("departure");
+      setShowAnimation(true);
+      setShowButtons(false);
+      triggerConfetti();
 
-      toast("退所を記録しました", {
-
-        description: `${message.userName}さん - ${currentTime}`,
-      })
+      scheduleReset();
     }
-
-    // 3秒後にメッセージをクリア
-    setTimeout(() => {
-      setMessage({
-        text: "QRコードをスキャンしてください",
-        type: "info",
-        userName: "",
-      })
-    }, 3000)
-  }
+  };
 
   // 「いいえ」ボタンのハンドラー
   const handleNo = () => {
     setMessage({
-      text: "操作をキャンセルしました",
+      text: "もう少しいるんだね！\nたのしんでね！",
       type: "info",
-      userName: "",
-    })
+      userName: message?.userName || "",
+    });
+    setShowButtons(false);
 
-    // 2秒後にメッセージをクリア
-    setTimeout(() => {
-      setMessage({
-        text: "QRコードをスキャンしてください",
-        type: "info",
-        userName: "",
-      })
-    }, 2000)
-  }
+    scheduleReset();
+  };
 
-  // メッセージタイプに基づくスタイルを取得
-  const getMessageStyles = () => {
-    switch (message?.type) {
-      case "success":
-        return "bg-green-50 border-green-200 text-green-800"
-      case "warning":
-        return "bg-yellow-50 border-yellow-200 text-yellow-800"
-      case "error":
-        return "bg-red-50 border-red-200 text-red-800"
-      case "question":
-        return "bg-blue-50 border-blue-200 text-blue-800"
-      case "info":
-      default:
-        return "bg-gray-50 border-gray-200 text-gray-800"
-    }
-  }
+  // キャラクターコンポーネント
+  const CharacterComponent = () => {
+    const characterConfig = characters[character];
+
+    return (
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className={`relative w-40 h-40 rounded-full ${characterConfig.color} ${characterConfig.border} border-4 overflow-hidden shadow-lg mx-auto mb-4`}
+      >
+        <div className="absolute inset-0 flex items-center justify-center">
+          <img
+            src={`/placeholder.svg?height=160&width=160&text=${characterConfig.name}`}
+            alt={characterConfig.name}
+            className="w-full h-full object-cover"
+          />
+        </div>
+
+        {/* キャラクターの表情（静的表示） */}
+        {showAnimation && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            {animationType === "arrival" && (
+              <span className="text-4xl">😊</span>
+            )}
+            {animationType === "departure" && (
+              <span className="text-4xl">👋</span>
+            )}
+            {animationType === "question" && (
+              <span className="text-4xl">🤔</span>
+            )}
+            {animationType === "warning" && (
+              <span className="text-4xl">😮</span>
+            )}
+          </div>
+        )}
+      </motion.div>
+    );
+  };
 
   return (
-    <>
-      {/* タイトル・日付表示 */}
-      <Card className="mb-6 overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between bg-blue-500 py-3 text-white">
-          <CardTitle className="text-lg font-bold">QR待ち受け画面</CardTitle>
-          <div className="flex items-center rounded bg-white/20 overflow-hidden">
-            <div className="px-3 py-1 text-white text-sm">{formattedDate}</div>
-          </div>
-        </CardHeader>
-      </Card>
+    <div
+      className="flex h-screen flex-col"
+      style={{
+        backgroundImage: "url('/images/sky-background.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
+      {/* ヘッダー */}
+      {/* <header className="sticky top-0 z-30 flex h-16 items-center justify-center border-b bg-white/80 backdrop-blur-sm px-4 shadow-sm">
+        <h1 className="text-2xl font-bold text-black">QRコードよみとり</h1>
+      </header> */}
 
-      {/* メッセージ表示 */}
-      <Card className="mb-6 flex flex-col">
-        <CardContent className="flex flex-1 flex-col items-center justify-center p-8">
-          <AnimatePresence mode="wait">
+      {/* メインコンテンツ */}
+      <main className="flex flex-1 flex-col overflow-auto p-4">
+        <div
+          className="grid flex-1 gap-4"
+          style={{ gridTemplateRows: showButtons ? "1fr auto" : "1fr" }}
+        >
+          {/* メッセージ表示エリア - 透明背景 */}
+          <div className="flex flex-col relative overflow-hidden">
+            <div className="flex flex-1 flex-col items-center justify-center p-6">
+              {/* 紙吹雪のためのref */}
+              <div
+                ref={confettiRef}
+                className="absolute inset-0 pointer-events-none"
+              ></div>
+
+              {/* キャラクター表示 */}
+              {message?.userName && <CharacterComponent />}
+
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={message?.text}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex w-full flex-col items-center text-center"
+                >
+                  {message?.userName && (
+                    <motion.h2
+                      className="mb-4 text-4xl font-bold text-black bg-white/80 rounded-lg px-4 py-2"
+                      initial={{ scale: 0.9 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 0.3, delay: 0.1 }}
+                    >
+                      {message.userName}さん
+                    </motion.h2>
+                  )}
+                  <div className="whitespace-pre-line mb-4">
+                    <div className="text-6xl font-bold text-black bg-white/80 rounded-lg px-6 py-4 inline-block">
+                      {message?.text}
+                    </div>
+                  </div>
+                  {/* 日時表示 */}
+                  <div className="text-2xl text-black bg-white/80 rounded-lg px-4 py-2">
+                    {currentDate} {currentTime}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+
+              {/* デモシナリオボタン（開発者用） */}
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => simulateQrScan("arrival")}
+                  className="border-dashed border-gray-300 bg-white/80 hover:bg-white text-xs h-7 px-2"
+                >
+                  来所QR読み込みデモ
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => simulateQrScan("departure")}
+                  className="border-dashed border-gray-300 bg-white/80 hover:bg-white text-xs h-7 px-2"
+                >
+                  退所QR読み込みデモ
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => simulateQrScan("early-departure")}
+                  className="border-dashed border-gray-300 bg-white/80 hover:bg-white text-xs h-7 px-2"
+                >
+                  契約時間未達QR読み込みデモ
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => simulateQrScan("already-departed")}
+                  className="border-dashed border-gray-300 bg-white/80 hover:bg-white text-xs h-7 px-2"
+                >
+                  既退所QR読み込みデモ
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* 操作ボタンエリア - 早退時のみ表示（低解像度対応） */}
+          {showButtons && (
             <motion.div
-              key={message?.text}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className={`flex w-full flex-col items-center rounded-lg border p-6 text-center shadow-sm ${getMessageStyles()}`}
+              className="h-20"
             >
-              {message?.userName && <h2 className="mb-4 text-3xl">{message.userName}さん</h2>}
-              <p className="text-2xl font-medium">{message?.text}</p>
+              <Card className="bg-white/90 backdrop-blur-sm h-full">
+                <CardContent className="flex items-center justify-center p-4 h-full">
+                  <div className="flex gap-6">
+                    <Button
+                      size="lg"
+                      onClick={handleYes}
+                      className="bg-blue-500 hover:bg-blue-600 px-8 text-lg h-12"
+                    >
+                      <span className="mr-2">👍</span>
+                      はい
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={handleNo}
+                      className="border-2 px-8 text-lg h-12 bg-transparent"
+                    >
+                      <span className="mr-2">👎</span>
+                      いいえ
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
-          </AnimatePresence>
+          )}
+        </div>
+      </main>
 
-          {/* デモボタン */}
-          <div className="mt-8 grid grid-cols-2 gap-4">
-            <Button onClick={() => simulateQrScan("arrival")}>来所QR読み込みデモ</Button>
-            <Button onClick={() => simulateQrScan("departure")}>退所QR読み込みデモ</Button>
-            <Button onClick={() => simulateQrScan("early-departure")}>契約時間未達デモ</Button>
-            <Button onClick={() => simulateQrScan("already-departed")}>既退所デモ</Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 操作ボタン */}
-      <Card>
-        <CardContent className="flex items-center justify-between p-6">
-          <div className="flex gap-4">
-            <Button onClick={handleYes} disabled={message?.type !== "question"}>
-              はい
-            </Button>
-            <Button variant="outline" onClick={handleNo} disabled={message?.type !== "question"}>
-              いいえ
-            </Button>
-          </div>
-          <div className="text-sm text-gray-500">
-            <p>QRコードを読み取り後、操作を選択してください</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ダイアログもこの中でOK */}
-      <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl">ログアウト確認</DialogTitle>
-            <DialogDescription className="text-center">本当にログアウトしますか？</DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex justify-center gap-2">
-            <Button variant="outline" onClick={() => setLogoutDialogOpen(false)}>
-              キャンセル
-            </Button>
-            <Button
-              onClick={() => {
-                setLogoutDialogOpen(false)
-                toast("ログアウトしました")
-              }}
-              className="bg-blue-500 hover:bg-blue-600"
-            >
-              ログアウト
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* トースト通知 */}
+      <Toaster />
       <BufferedInputHandler onScanComplete={handleScanComplete} />
-    </>
-  )
+    </div>
+  );
 }

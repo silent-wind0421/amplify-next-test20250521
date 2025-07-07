@@ -65,6 +65,46 @@ const schema = a.schema({
     .authorization((allow) => [allow.publicApiKey()]),
 
   /**
+   * @typedef {object} VisitRecord
+   * @description 通所実績データ。来所・退所情報などを保持。
+   */
+
+  VisitRecord: a
+    .model({
+      id: a.id().required(),
+      visitDate: a.date(), // 旧: a.string()
+      officeId: a.string(),
+      childId: a.string(),
+      child: a.belongsTo("Child", "childId"),
+      plannedArrivalTime: a.time(), // 旧: a.string()
+      contractedDuration: a.integer(),
+
+      actualArrivalTime: a.time(), // 旧: a.string()
+      actualLeaveTime: a.time(), // 旧: a.string()
+      actualDuration: a.integer(),
+
+      lateReasonCode: a.string(),
+      earlyLeaveReasonCode: a.string(),
+
+      isManuallyEntered: a.boolean(),
+      isDeleted: a.boolean(),
+
+      createdAt: a.datetime(),
+      createdBy: a.string(),
+      updatedAt: a.datetime(),
+      updatedBy: a.string(),
+
+      version: a.integer(),
+      remarks: a.string(),
+    })
+    .identifier(["id"])
+    // .authorization((allow) => [allow.publicApiKey()])
+    .authorization((allow) => [
+      allow.publicApiKey().to(["read"]), // ← APIキー利用者は read のみ許可
+      allow.authenticated().to(["read", "create", "update"]), // ← Cognito認証ユーザー
+    ]),
+
+  /**
    * @typedef {object} Child
    * @description 通所する児童の基本情報
    */
@@ -84,9 +124,14 @@ const schema = a.schema({
       updatedAt: a.datetime(),
       updatedBy: a.string(),
       version: a.integer(),
+      visitRecords: a.hasMany("VisitRecord", "childId"),
     })
     .identifier(["childId"])
-    .authorization((allow) => [allow.publicApiKey()]),
+    // .authorization((allow) => [allow.publicApiKey()])
+    .authorization((allow) => [
+      allow.publicApiKey().to(["read"]),
+      allow.authenticated().to(["read", "create", "update"]),
+    ]),
 
   /**
    * @typedef {object} ChildUser
@@ -125,41 +170,6 @@ const schema = a.schema({
       updatedBy: a.string(),
     })
     .identifier(["staffId"])
-    .authorization((allow) => [allow.publicApiKey()]),
-
-  /**
-   * @typedef {object} VisitRecord
-   * @description 通所実績データ。来所・退所情報などを保持。
-   */
-
-  VisitRecord: a
-    .model({
-      id: a.id().required(),
-      visitDate: a.date(), // 旧: a.string()
-      officeId: a.string(),
-      childId: a.string(),
-      plannedArrivalTime: a.time(), // 旧: a.string()
-      contractedDuration: a.integer(),
-
-      actualArrivalTime: a.time(), // 旧: a.string()
-      actualLeaveTime: a.time(), // 旧: a.string()
-      actualDuration: a.integer(),
-
-      lateReasonCode: a.string(),
-      earlyLeaveReasonCode: a.string(),
-
-      isManuallyEntered: a.boolean(),
-      isDeleted: a.boolean(),
-
-      createdAt: a.datetime(),
-      createdBy: a.string(),
-      updatedAt: a.datetime(),
-      updatedBy: a.string(),
-
-      version: a.integer(),
-      remarks: a.string(),
-    })
-    .identifier(["id"])
     .authorization((allow) => [allow.publicApiKey()]),
 
   /**

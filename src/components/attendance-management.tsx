@@ -6,6 +6,8 @@
 
 //src/componets/attendance-management.tsx
 "use client";
+
+import { fetchAuthSession } from "@aws-amplify/auth";
 import { cn } from "@/lib/utils";
 import { DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -107,6 +109,57 @@ type SortColumn =
   | "actualUsageTime";
 type SortDirection = "asc" | "desc";
 
+const transformVisitRecord = async (record: any) => {
+  let child = record.child;
+  if (typeof child === "function") {
+    try {
+      child = await child();
+    } catch (e) {
+      console.warn("child の取得失敗:", e);
+      child = null;
+    }
+  }
+
+  const childData = child?.data;
+
+  const arrivalTime = record.actualArrivalTime
+    ? new Date(`${record.visitDate}T${record.actualArrivalTime}`)
+    : null;
+
+  const departureTime = record.actualLeaveTime
+    ? new Date(`${record.visitDate}T${record.actualLeaveTime}`)
+    : null;
+
+  const contractTime = record.contractedDuration
+    ? `${Math.floor(record.contractedDuration / 60)}:${`${record.contractedDuration % 60}`.padStart(2, "0")}`
+    : "";
+
+  const actualUsageTime = record.actualDuration
+    ? `${Math.floor(record.actualDuration / 60)}:${`${record.actualDuration % 60}`.padStart(2, "0")}`
+    : "";
+
+  const isShortUsage =
+    typeof record.contractedDuration === "number" &&
+    typeof record.actualDuration === "number"
+      ? record.actualDuration < record.contractedDuration
+      : false;
+
+  return {
+    id: record.id,
+    userName: childData
+      ? `${childData.lastName ?? ""} ${childData.firstName ?? ""}`.trim()
+      : "未設定",
+    scheduledTime: record.plannedArrivalTime ?? "",
+    contractTime,
+    arrivalTime,
+    departureTime,
+    actualUsageTime,
+    reason: record.earlyLeaveReasonCode ?? record.lateReasonCode ?? "未選択",
+    note: record.remarks ?? "-",
+    isShortUsage,
+  };
+};
+
 /**
  * 通所実績管理画面のメインコンポーネント。
  *
@@ -202,64 +255,62 @@ export default function AttendanceManagement() {
 
   /**
    * 選択中の日付に該当する通所実績を取得し、state に反映する。
-   * 同一データはスキップして再描画を抑制。
+   * VisitRecord.child のリレーションから児童名を取得する。
    */
   const fetchVisitRecords = async () => {
     try {
+      console.log(
+        "検索日付:",
+        formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd")
+      );
+
       const { data: records } = await client.models.VisitRecord.list({
         filter: {
           visitDate: {
             eq: formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd"),
           },
         },
-        authMode: "apiKey",
+        selection: (record) => [
+          record.id(),
+          record.visitDate(),
+          record.plannedArrivalTime(),
+          record.contractedDuration(),
+          record.actualArrivalTime(),
+          record.actualLeaveTime(),
+          record.actualDuration(),
+          record.earlyLeaveReasonCode(),
+          record.lateReasonCode(),
+          record.remarks(),
+          record.child({
+            select: (child) => [
+              child.childId(),
+              child.lastName(),
+              child.firstName(),
+            ],
+          }),
+        ],
+        authMode: "apiKey", // 必要に応じて変更
       });
 
-      // 変更検知用の JSON 化f
-      const currentJson = JSON.stringify(records);
-      if (currentJson === lastFetchedJson) return;
+      if (!records) {
+        console.warn("VisitRecordデータが取得できませんでした");
+        return;
+      }
 
+      const currentJson = JSON.stringify(records);
+      if (currentJson === lastFetchedJson) {
+        console.log("同一データのため再描画をスキップ");
+        return;
+      }
       setLastFetchedJson(currentJson);
 
-      const mapped: AttendanceData[] = records.map((record): AttendanceData => {
-        const visitDate = new Date(record.visitDate!);
-
-        return {
-          id: record.id,
-          userName:
-            record.childId && childMap.has(record.childId)
-              ? childMap.get(record.childId)!
-              : "未設定",
-          scheduledTime: record.plannedArrivalTime ?? "",
-          contractTime:
-            record.contractedDuration != null
-              ? convertMinutesToHHMM(record.contractedDuration)
-              : "--:--",
-          arrivalTime: record.actualArrivalTime
-            ? toDateTime(visitDate, record.actualArrivalTime)
-            : null,
-          departureTime: record.actualLeaveTime
-            ? toDateTime(visitDate, record.actualLeaveTime)
-            : null,
-          actualUsageTime:
-            record.actualArrivalTime && record.actualLeaveTime
-              ? convertMinutesToHHMM(
-                  calcDiffMinutes(
-                    record.actualArrivalTime,
-                    record.actualLeaveTime
-                  )
-                )
-              : record.actualDuration
-                ? convertMinutesToHHMM(record.actualDuration)
-                : null,
-
-          isShortUsage: false,
-          reason: record.earlyLeaveReasonCode || null,
-          note: record.remarks || null,
-        };
-      });
+      // ✅ 共通関数を使って変換
+      const mapped: AttendanceData[] = await Promise.all(
+        records.map(transformVisitRecord)
+      );
 
       setAttendanceData(mapped);
+      console.log("AttendanceData 更新完了:", mapped);
     } catch (error) {
       console.error("通所実績の取得に失敗:", error);
     }
@@ -312,12 +363,18 @@ export default function AttendanceManagement() {
 
     try {
       // DynamoDBの更新
-      await client.models.VisitRecord.update({
-        id: id,
-        actualArrivalTime: currentTime,
-        updatedAt: now.toISOString(),
-        updatedBy: "admin", // 実際のログインユーザー名に差し替え可
-      });
+      await client.models.VisitRecord.update(
+        {
+          id: id,
+          actualArrivalTime: currentTime,
+          updatedAt: now.toISOString(),
+          updatedBy: "admin", // 実際のログインユーザー名に差し替え可
+        },
+        {
+          // authMode: "apiKey",
+          authMode: "userPool",
+        }
+      );
 
       toast("来所を記録しました", {
         description: `現在時刻: ${currentTime}`,
@@ -363,14 +420,20 @@ export default function AttendanceManagement() {
           })()
         : 0;
 
-      await client.models.VisitRecord.update({
-        id,
-        actualLeaveTime: currentTime,
-        actualDuration: actualDuration,
-        earlyLeaveReasonCode: updatedItem.reason ?? undefined,
-        updatedAt: now.toISOString(),
-        updatedBy: "admin",
-      });
+      await client.models.VisitRecord.update(
+        {
+          id,
+          actualLeaveTime: currentTime,
+          actualDuration: actualDuration,
+          earlyLeaveReasonCode: updatedItem.reason ?? undefined,
+          updatedAt: now.toISOString(),
+          updatedBy: "admin",
+        },
+        {
+          // authMode: "apiKey",
+          authMode: "userPool",
+        }
+      );
 
       // ローカル状態の更新
       setAttendanceData((prev) =>
@@ -492,23 +555,29 @@ export default function AttendanceManagement() {
     if (!updatedItem) return;
 
     try {
-      await client.models.VisitRecord.update({
-        id,
-        ...(type === "arrival"
-          ? { actualArrivalTime: format(newDate, "HH:mm") }
-          : { actualLeaveTime: format(newDate, "HH:mm") }),
-        actualDuration: updatedItem.actualUsageTime
-          ? (() => {
-              const [h, m] = updatedItem
-                .actualUsageTime!.split(":")
-                .map(Number);
-              return h * 60 + m;
-            })()
-          : undefined,
-        earlyLeaveReasonCode: updatedItem.reason ?? undefined,
-        updatedAt: new Date().toISOString(),
-        updatedBy: "admin",
-      });
+      await client.models.VisitRecord.update(
+        {
+          id,
+          ...(type === "arrival"
+            ? { actualArrivalTime: format(newDate, "HH:mm") }
+            : { actualLeaveTime: format(newDate, "HH:mm") }),
+          actualDuration: updatedItem.actualUsageTime
+            ? (() => {
+                const [h, m] = updatedItem
+                  .actualUsageTime!.split(":")
+                  .map(Number);
+                return h * 60 + m;
+              })()
+            : undefined,
+          earlyLeaveReasonCode: updatedItem.reason ?? undefined,
+          updatedAt: new Date().toISOString(),
+          updatedBy: "admin",
+        },
+        {
+          // authMode: "apiKey",
+          authMode: "userPool",
+        }
+      );
 
       toast(
         <div>
@@ -548,13 +617,16 @@ export default function AttendanceManagement() {
   };
 
   // 備考の保存
-  const saveNote = (id: string, newValue: string) => {
+  const saveNote = async (id: string, newValue: string) => {
+    const trimmed = newValue.trim() === "" ? null : newValue.trim();
+
+    // ローカル状態を更新
     setAttendanceData((prev) =>
       prev.map((item: AttendanceData) => {
         if (item.id === id) {
           return {
             ...item,
-            note: newValue.trim() === "" ? null : newValue.trim(),
+            note: trimmed,
           };
         }
         return item;
@@ -563,11 +635,45 @@ export default function AttendanceManagement() {
 
     setEditingNote(null);
 
-    toast("備考を更新しました", {});
+    try {
+      // データベースを更新
+      await client.models.VisitRecord.update(
+        {
+          id,
+          remarks: trimmed,
+          updatedAt: new Date().toISOString(),
+          updatedBy: "admin",
+        },
+        {
+          // authMode: "apiKey",
+          authMode: "userPool",
+        }
+      );
+
+      toast("備考を更新しました", {
+        description: trimmed || "（空欄）",
+      });
+    } catch (error) {
+      console.error("備考の保存に失敗:", error);
+      toast(
+        <div>
+          <div className="font-bold text-destructive">備考の保存エラー</div>
+          <div className="text-sm text-muted-foreground">
+            DynamoDBへの保存に失敗しました
+          </div>
+        </div>,
+        {
+          icon: "❌",
+          duration: 5000,
+          className: "bg-destructive text-destructive-foreground",
+        }
+      );
+    }
   };
 
   // 理由の更新
-  const updateReason = (id: string, reason: string) => {
+  const updateReason = async (id: string, reason: string) => {
+    // ローカル状態の更新
     setAttendanceData((prev) =>
       prev.map((item: AttendanceData) => {
         if (item.id === id) {
@@ -580,7 +686,40 @@ export default function AttendanceManagement() {
       })
     );
 
-    toast("早退/超過理由を更新しました", {});
+    try {
+      // DynamoDB の更新
+      await client.models.VisitRecord.update(
+        {
+          id,
+          earlyLeaveReasonCode: reason,
+          updatedAt: new Date().toISOString(),
+          updatedBy: "admin",
+        },
+        {
+          // authMode: "apiKey",
+          authMode: "userPool",
+        }
+      );
+
+      toast("早退/超過理由を更新しました", {
+        description: reason,
+      });
+    } catch (error) {
+      console.error("早退/超過理由の保存に失敗:", error);
+      toast(
+        <div>
+          <div className="font-bold text-destructive">保存エラー</div>
+          <div className="text-sm text-muted-foreground">
+            DynamoDBへの保存に失敗しました
+          </div>
+        </div>,
+        {
+          icon: "❌",
+          className: "bg-destructive text-destructive-foreground",
+          duration: 5000,
+        }
+      );
+    }
   };
 
   /**
@@ -693,19 +832,25 @@ export default function AttendanceManagement() {
     try {
       const now = new Date();
 
-      await client.models.VisitRecord.update({
-        id,
-        ...(type === "arrival"
-          ? {
-              actualArrivalTime: null,
-              actualLeaveTime: null,
-              actualDuration: null,
-            }
-          : { actualLeaveTime: null, actualDuration: null }),
-        earlyLeaveReasonCode: undefined,
-        updatedAt: now.toISOString(),
-        updatedBy: "admin",
-      });
+      await client.models.VisitRecord.update(
+        {
+          id,
+          ...(type === "arrival"
+            ? {
+                actualArrivalTime: null,
+                actualLeaveTime: null,
+                actualDuration: null,
+              }
+            : { actualLeaveTime: null, actualDuration: null }),
+          earlyLeaveReasonCode: undefined,
+          updatedAt: now.toISOString(),
+          updatedBy: "admin",
+        },
+        {
+          // authMode: "apiKey",
+          authMode: "userPool",
+        }
+      );
 
       toast(
         <div>
@@ -874,12 +1019,15 @@ export default function AttendanceManagement() {
   };
 
   // 児童名の表示用テキストを取得
-  const getUserNameDisplayText = (userName: string) => {
-    const maxLength = 5;
-    return userName.length > maxLength
-      ? `${userName.substring(0, maxLength)}...`
-      : userName;
-  };
+  // const getUserNameDisplayText = (userName: string) => {
+  //   const maxLength = 5;
+  //   return userName.length > maxLength
+  //     ? `${userName.substring(0, maxLength)}...`
+  //     : userName;
+  // };
+
+  // 完全に表示したい場合：
+  const getUserNameDisplayText = (userName: string) => userName;
 
   // 理由の表示用テキストを取得
   const getReasonDisplayText = (reason: string | null) => {
@@ -906,32 +1054,76 @@ export default function AttendanceManagement() {
    * @returns {void}
    */
   useEffect(() => {
-    const dateStr = formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd");
-    console.log("検索日付 (observeQuery):", dateStr);
+    const subscriptions = {
+      unsubscribe: () => {},
+    };
 
-    const sub = client.models.VisitRecord.observeQuery({
-      filter: {
-        visitDate: {
-          eq: dateStr,
+    const runSubscription = async () => {
+      const session = await fetchAuthSession();
+      const token = session.tokens?.accessToken;
+
+      if (!token || token.isExpired) {
+        console.warn(
+          "未認証状態またはトークン期限切れのため observeQuery をスキップ"
+        );
+        return;
+      }
+
+      const sub = client.models.VisitRecord.observeQuery({
+        filter: {
+          visitDate: {
+            eq: formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd"),
+          },
         },
-      },
-      authMode: "apiKey",
-    }).subscribe({
-      next: ({ items }) => {
-        if (!isEditingRef.current) {
-          console.log("VisitRecord リアルタイム更新:", items);
-          fetchVisitRecords(); // 編集していなければ更新
-        } else {
-          console.log("編集中のため fetchVisitRecords() をスキップ");
-        }
-      },
-      error: (err) => {
-        console.error("VisitRecord サブスクリプションエラー:", err);
-      },
-    });
+        selection: (record) => [
+          record.id(),
+          record.visitDate(),
+          record.actualArrivalTime(),
+          record.actualLeaveTime(),
+          record.actualDuration(),
+          record.plannedArrivalTime(),
+          record.contractedDuration(),
+          record.earlyLeaveReasonCode(),
+          record.lateReasonCode(),
+          record.remarks(),
+          record.child({
+            select: (child) => [
+              child.childId(),
+              child.lastName(),
+              child.firstName(),
+            ],
+          }),
+        ],
+        authMode: "userPool",
+      }).subscribe({
+        next: async ({ items }) => {
+          console.log("生データ確認:", items);
 
-    return () => sub.unsubscribe();
-  }, [selectedDate, isEditing]); // isEditing を依存に追加
+          const resolvedRecords = await Promise.all(
+            items.map(transformVisitRecord)
+          );
+
+          console.log("AttendanceData 更新完了:", resolvedRecords);
+
+          if (!isEditingRef.current) {
+            setAttendanceData(resolvedRecords);
+          }
+        },
+
+        error: (err) => {
+          console.error("VisitRecord サブスクリプションエラー:", err);
+        },
+      });
+
+      subscriptions.unsubscribe = () => sub.unsubscribe();
+    };
+
+    runSubscription();
+
+    return () => {
+      subscriptions.unsubscribe();
+    };
+  }, [selectedDate, isEditing]);
 
   return (
     <div className="flex flex-col bg-gray-50">
