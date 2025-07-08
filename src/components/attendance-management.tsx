@@ -270,6 +270,7 @@ export default function AttendanceManagement() {
             eq: formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd"),
           },
         },
+        // @ts-expect-error: Amplify Gen2 の型に selection はまだ含まれていないが、実行時には問題なく動作する
         selection: (record) => [
           record.id(),
           record.visitDate(),
@@ -1075,6 +1076,7 @@ export default function AttendanceManagement() {
             eq: formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd"),
           },
         },
+        // @ts-expect-error: Amplify Gen2 の型に selection はまだ含まれていないが、実行時には問題なく動作する
         selection: (record) => [
           record.id(),
           record.visitDate(),
