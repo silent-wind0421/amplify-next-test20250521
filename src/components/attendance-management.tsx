@@ -1089,7 +1089,7 @@ export default function AttendanceManagement() {
           record.lateReasonCode(),
           record.remarks(),
           record.child({
-            select: (child) => [
+            select: (child: any) => [
               child.childId(),
               child.lastName(),
               child.firstName(),
@@ -1495,8 +1495,8 @@ export default function AttendanceManagement() {
                                           <SelectItem value="未選択">
                                             未選択
                                           </SelectItem>
-                                          <SelectItem value="利用者都合">
-                                            利用者都合
+                                          <SelectItem value="児童都合">
+                                            児童都合
                                           </SelectItem>
                                           <SelectItem value="保護者都合">
                                             保護者都合
