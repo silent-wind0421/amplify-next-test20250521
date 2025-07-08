@@ -1063,7 +1063,17 @@ export default function AttendanceManagement() {
       const session = await fetchAuthSession();
       const token = session.tokens?.accessToken;
 
-      if (!token || token.isExpired) {
+      // if (!token || token.isExpired) {
+      //   console.warn(
+      //     "未認証状態またはトークン期限切れのため observeQuery をスキップ"
+      //   );
+      //   return;
+      // }
+
+      const exp = token?.payload?.exp;
+      const isExpired = typeof exp === "number" && Date.now() >= exp * 1000;
+
+      if (!token || isExpired) {
         console.warn(
           "未認証状態またはトークン期限切れのため observeQuery をスキップ"
         );
