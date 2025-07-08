@@ -282,7 +282,7 @@ export default function AttendanceManagement() {
           record.earlyLeaveReasonCode(),
           record.lateReasonCode(),
           record.remarks(),
-          // @ts-expect-error Amplify Gen2 の型未対応のため一時的に無視
+
           record.child({
             select: (child: any) => [
               child.childId(),
@@ -1099,7 +1099,7 @@ export default function AttendanceManagement() {
           record.earlyLeaveReasonCode(),
           record.lateReasonCode(),
           record.remarks(),
-          // @ts-expect-error Amplify Gen2 の型未対応のため一時的に無視
+
           record.child({
             select: (child: any) => [
               child.childId(),
