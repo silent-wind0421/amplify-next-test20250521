@@ -283,7 +283,7 @@ export default function AttendanceManagement() {
           record.lateReasonCode(),
           record.remarks(),
           record.child({
-            select: (child) => [
+            select: (child: any) => [
               child.childId(),
               child.lastName(),
               child.firstName(),
