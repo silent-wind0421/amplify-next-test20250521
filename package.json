@@ -67,6 +67,7 @@
     "@aws-amplify/backend-cli": "^1.7.2",
     "@aws-amplify/backend-function": "^1.14.1",
     "@types/aws-lambda": "^8.10.149",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/json-schema": "^7.0.15",
     "@types/lodash": "^4.17.17",
     "@types/node": "^20",
