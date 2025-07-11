@@ -43,6 +43,7 @@ import type { Schema } from "../../amplify/data/resource";
 
 import { Amplify } from "aws-amplify";
 import config from "../../amplify_outputs.json";
+import { Message } from "../components/common/message"
 
 Amplify.configure(config);
 
@@ -255,7 +256,7 @@ export default function AttendanceManagement() {
         updatedBy: "admin", // 実際のログインユーザー名に差し替え可
       });
 
-      toast("来所を記録しました", {
+      toast(Message.IA000001, {
         description: `現在時刻: ${currentTime}`,
       });
     } catch (error) {
@@ -314,7 +315,7 @@ export default function AttendanceManagement() {
         prev.map((item: AttendanceData) => (item.id === id ? updatedItem : item))
       );
 
-      toast("退所を記録しました", {
+      toast(Message.IA000002, {
 
         description: `現在時刻: ${currentTime}`,
       });
@@ -438,7 +439,7 @@ export default function AttendanceManagement() {
       toast(
         <div>
           <div className="font-semibold text-foreground">
-            {type === "arrival" ? "来所" : "退所"}時刻を更新しました
+            {type === "arrival" ? Message.IA000005 : Message.IA000006}
           </div>
           <div className="text-sm text-muted-foreground">新しい時刻: {newValue}</div>
         </div>,
@@ -487,7 +488,7 @@ export default function AttendanceManagement() {
 
     setEditingNote(null)
 
-    toast("備考を更新しました", {
+    toast(Message.IA000003, {
 
     })
   }
@@ -506,7 +507,7 @@ export default function AttendanceManagement() {
       }),
     )
 
-    toast("早退/超過理由を更新しました", {
+    toast(Message.IA000004, {
 
     })
   }
@@ -940,6 +941,7 @@ export default function AttendanceManagement() {
                                         type="text"
                                         value={editingTime.value}
                                         onChange={(e) => setEditingTime({ ...editingTime, value: e.target.value })}
+                                        
                                         className="w-20 text-sm text-center"
                                         placeholder="HH:mm"
                                       />
