@@ -1,8 +1,6 @@
-// next.config.js
+// next.config.jcs
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    appDir: true,
-    output: 'standalone',
     transpilePackages: ['@aws-amplify/ui-react'],
 };
 

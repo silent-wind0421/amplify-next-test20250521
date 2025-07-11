@@ -6,7 +6,7 @@ const config = {
     "./pages/**/*.{ts,tsx}",
     "./src/components/**/*.{ts,tsx}",
     "./src/app/**/*.{ts,tsx}",
-    "./src/**/*.{js,ts,jsx,tsx,mdx,}",
+    "./src/**/*.{ts,tsx}",
     "*.{js,ts,jsx,tsx,mdx}",
     "./node_modules/sonner/**/*.js"
 
