@@ -20,9 +20,7 @@
       }
     ],
     "paths": {
-      "@/components/*": ["src/components/*"],
-      "@/hooks/*": ["src/hooks/*"],
-      "@/lib/*": ["src/lib/*"],
+      "@/amplify/data/*": ["amplify/data/*"],
       "@/amplify/data/resource": ["amplify/data/resource.ts"],
       "@/*": ["src/*"],
       "@amplify/*": ["amplify/*"]
