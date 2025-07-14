@@ -5,7 +5,9 @@ static readonly IA000001 = "来所を記録しました";
 
 /** 退所登録完了メッセージ */
 static readonly IA000002 = "退所を記録しました";
-//static readonly 
+
+/** 退所時刻の更新・失敗メッセージ */
+static readonly EA000004 = "退所時刻の更新に失敗しました";
 
 /** 備考欄入力完了メッセージ */
 static readonly IA000003 = "備考を更新しました";

@@ -1,6 +1,7 @@
 // src/components/BufferedInputHandler.tsx
 "use client";
 
+import { last } from "lodash";
 import React, { useEffect, useRef, useCallback } from "react";
 
 /**
@@ -45,6 +46,25 @@ const BufferedInputHandler: React.FC<Props> = ({
    *
    * @param {React.FormEvent<HTMLInputElement>} e - 入力イベント。
    */
+
+  const playBeep = () => {
+    const audio = new Audio("/audios/btn15.mp3");
+    audio.play().catch((e) => {
+    console.warn("音の再生に失敗しました：", e);
+  });
+  };
+
+  //const lastPlayTimeRef = useRef<number>(0);
+
+  const handlKeydown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const now = Date.now();
+    if (e.key
+    ) {
+      playBeep();
+      //lastPlayTimeRef.current = now;
+    }
+  };
+
   const handleInput = useCallback(
     (e: React.FormEvent<HTMLInputElement>) => {
       const rawValue = e.currentTarget.value;
@@ -59,12 +79,14 @@ const BufferedInputHandler: React.FC<Props> = ({
       const reversed = cleaned.split("").reverse().join(""); // QRスキャナ逆転対策
 
       if (rawValue.includes("\n") || rawValue.includes("\r")) {
+        playBeep(); // 即ビープ音
         onScanComplete(reversed);
         if (inputRef.current) inputRef.current.value = "";
         clearTimeout(timeoutRef.current!);
       } else {
         clearTimeout(timeoutRef.current!);
         timeoutRef.current = setTimeout(() => {
+          playBeep(); // タイムアウト後ビープ
           onScanComplete(cleaned);
           if (inputRef.current) inputRef.current.value = "";
         }, timeoutMs);
@@ -89,6 +111,7 @@ const BufferedInputHandler: React.FC<Props> = ({
     <input
       ref={inputRef}
       type="text"
+      onKeyDown={handlKeydown}
       onInput={handleInput}
       autoComplete="off"
       inputMode="none"

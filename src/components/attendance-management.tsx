@@ -215,6 +215,17 @@ export default function AttendanceManagement() {
   } | null>(null);
   const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([]);
 
+  const formatToHHMM = (value: string): string => {
+    const digits = value.replace(/\D/g, ""); //数字のみ取り出す
+
+    if (digits.length === 3) {
+      return `0${digits[0]}:${digits.slice(1)}`; // 900 → 09:00
+    } else if (digits.length === 4) {
+      return `${digits.slice(0, 2)}:${digits.slice(2)}`; // 1234 → 12:34
+    } else {
+      return value; // 変換できない場合はそのまま
+    }
+  };
   // State: 児童マスタと前回取得データのキャッシュ
   const [childMap, setChildMap] = useState<Map<string, string>>(new Map());
   const [lastFetchedJson, setLastFetchedJson] = useState<string>("");
@@ -380,7 +391,7 @@ export default function AttendanceManagement() {
         }
       );
 
-      toast("来所を記録しました", {
+      toast(Message.IA000001, {
         description: `現在時刻: ${currentTime}`,
       });
     } catch (error) {
@@ -446,7 +457,7 @@ export default function AttendanceManagement() {
         )
       );
 
-      toast("退所を記録しました", {
+      toast(Message.IA000002, {
         description: `現在時刻: ${currentTime}`,
       });
     } catch (error) {
@@ -654,7 +665,7 @@ export default function AttendanceManagement() {
         }
       );
 
-      toast("備考を更新しました", {
+      toast( Message.IA000003,{
         description: trimmed || "（空欄）",
       });
     } catch (error) {
@@ -705,7 +716,7 @@ export default function AttendanceManagement() {
         }
       );
 
-      toast("早退/超過理由を更新しました", {
+      toast(Message.IA000004, {
         description: reason,
       });
     } catch (error) {
@@ -1397,7 +1408,15 @@ export default function AttendanceManagement() {
                                           })
                                         }
                                         onFocus={() => setEditing(true)} // 編集開始
-                                        onBlur={() => setEditing(false)} // 編集終了
+                                        onBlur={(e) => {
+                                          const rawValue = e.target.value;
+                                          const formated = formatToHHMM(rawValue);
+                                          setEditingTime({
+                                            ...editingTime,
+                                            value: formated,
+                                          });
+                                        setEditing(false); // 編集終了
+                                        }}
                                         className="w-20 text-sm text-center"
                                         placeholder="HH:mm"
                                       />
