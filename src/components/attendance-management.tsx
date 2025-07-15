@@ -82,6 +82,20 @@ function calcDiffMinutes(start: string, end: string): number {
   return eh * 60 + em - (sh * 60 + sm);
 }
 
+//時刻入力補完
+function normalizeTimeInput(raw: string): string | null {
+  const trimmed = raw.replace(/[^\d]/g, "");
+  if (trimmed.length === 4) {
+    return `${trimmed.slice(0, 2)}:${trimmed.slice(2, 4)}`;
+  } else if (trimmed.length === 3) {
+    return `0${trimmed[0]}:${trimmed.slice(1, 3)}`;
+  } else if (trimmed.length === 2) {
+    return `${trimmed}:00`;
+  } else {
+    return null;
+  }
+}
+
 /**
  * 通所実績データを表す型。
  * 各児童に対して、当日の来所・退所・利用状況などを表現する。
@@ -1147,6 +1161,7 @@ export default function AttendanceManagement() {
           <Card className="mb-4 overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between bg-blue-500 py-3 text-white">
               <CardTitle className="text-lg font-bold">通所実績管理</CardTitle>
+
               <div className="flex items-center rounded bg-white/20 overflow-hidden">
                 <div
                   className="px-3 py-1 text-white cursor-text hover:bg-white/10 transition-colors text-sm"
@@ -1302,8 +1317,19 @@ export default function AttendanceManagement() {
                                             value: e.target.value,
                                           })
                                         }
-                                        onFocus={() => setEditing(true)} // 追加
-                                        onBlur={() => setEditing(false)} // 追加
+                                        onBlur={() => {
+                                          const normalized = normalizeTimeInput(
+                                            editingTime.value
+                                          );
+                                          if (normalized) {
+                                            setEditingTime((prev) => ({
+                                              ...prev!,
+                                              value: normalized,
+                                            }));
+                                          }
+                                          setEditing(false);
+                                        }} //編集終了
+                                        onFocus={() => setEditing(true)} //編集開始
                                         className="w-20 text-sm text-center"
                                         placeholder="HH:mm"
                                       />

@@ -1,4 +1,4 @@
-// src/components/BufferedInputHandler.tsx
+// src/components/buffered-input-Handler.tsx
 "use client";
 
 import React, { useEffect, useRef, useCallback } from "react";
@@ -12,6 +12,7 @@ import React, { useEffect, useRef, useCallback } from "react";
  */
 type Props = {
   onScanComplete: (value: string) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   timeoutMs?: number;
 };
 
@@ -30,14 +31,55 @@ type Props = {
 const BufferedInputHandler: React.FC<Props> = ({
   onScanComplete,
   timeoutMs = 500,
+  onKeyDown,
 }) => {
+
+
+  //QR読み取り成功音  qr-reception-screen.tsx側に記載
+
+//   const successAudio = useRef<HTMLAudioElement | null>(null);
+
+//   useEffect(() => {
+//     successAudio.current = new Audio("/sounds/maou_se_system23.mp3");
+//     successAudio.current.preload = "auto";
+//     successAudio.current.load();
+//   },[]);
+
+//   const playSuccessSound = () => {
+//   if (successAudio.current) {
+//     successAudio.current.currentTime = 0; // 先頭に戻す
+//     successAudio.current.play().catch(console.warn);
+//   }
+// };
+
+// const lastPlayTimeRef = useRef<number>(0);
+
+// const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+//   const now = Date.now();
+//   if (now - lastPlayTimeRef.current > 300) {
+//     playSuccessSound();
+//     lastPlayTimeRef.current = now;
+//   }
+// };
+
+
   const inputRef = useRef<HTMLInputElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const toHalfWidth = (str: string) =>
-    str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) =>
-      String.fromCharCode(s.charCodeAt(0) - 0xfee0)
-    );
+
+
+  // const toHalfWidth = (str: string) =>
+  //   str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) =>
+  //     String.fromCharCode(s.charCodeAt(0) - 0xfee0)
+  //   );
+
+  const toHalfWidth = (str: string): string => {
+    return str
+      .replace(/[\uFF01-\uFF5E]/g, (ch) =>
+        String.fromCharCode(ch.charCodeAt(0) - 0xfee0)
+      ) // 一般的な全角記号・英数
+      .replace(/\u3000/g, " "); // 全角スペースを半角スペースに
+  };
 
   /**
    * 入力イベントの処理関数。
@@ -58,20 +100,25 @@ const BufferedInputHandler: React.FC<Props> = ({
       );
       const reversed = cleaned.split("").reverse().join(""); // QRスキャナ逆転対策
 
+      clearTimeout(timeoutRef.current!);
+
       if (rawValue.includes("\n") || rawValue.includes("\r")) {
-        onScanComplete(reversed);
+      onScanComplete(reversed);
+      if (inputRef.current) inputRef.current.value = "";
+    } else if (cleaned.length >= 20) {
+      // ✅ 20文字以上で即時確定
+      onScanComplete(cleaned);
+      if (inputRef.current) inputRef.current.value = "";
+    } else {
+      // それ以外はタイムアウトで処理
+      timeoutRef.current = setTimeout(() => {
+        onScanComplete(cleaned);
         if (inputRef.current) inputRef.current.value = "";
-        clearTimeout(timeoutRef.current!);
-      } else {
-        clearTimeout(timeoutRef.current!);
-        timeoutRef.current = setTimeout(() => {
-          onScanComplete(cleaned);
-          if (inputRef.current) inputRef.current.value = "";
-        }, timeoutMs);
-      }
-    },
-    [onScanComplete, timeoutMs]
-  );
+      }, timeoutMs);
+    }
+  },
+  [onScanComplete, timeoutMs]
+);
   /**
    * コンポーネントマウント時にフォーカス維持用のタイマーを設定。
    * スキャナ入力が常に受け付けられるよう、500msごとにフォーカスをチェックする。
@@ -86,8 +133,15 @@ const BufferedInputHandler: React.FC<Props> = ({
   }, []);
 
   return (
+    
     <input
       ref={inputRef}
+
+      onKeyDown={(e) => {
+    // handleKeyDown?.(e); 
+     onKeyDown?.(e);// ← 親から受け取った処理を呼び出す
+  }}
+
       type="text"
       onInput={handleInput}
       autoComplete="off"

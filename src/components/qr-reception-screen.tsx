@@ -88,6 +88,38 @@ export default function QrReceptionScreen() {
   const confettiRef = useRef<HTMLDivElement>(null);
   const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  //ミュート判定
+  const [isMuted, setIsMuted] = useState(false);
+
+  //QR読み取り成功音
+
+  const successAudio = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    successAudio.current = new Audio("/sounds/maou_se_system23.mp3");
+    successAudio.current.preload = "auto";
+    successAudio.current.load();
+  },[]);
+
+  const playSuccessSound = () => {
+  if (!isMuted && successAudio.current) {
+    successAudio.current.currentTime = 0; // 先頭に戻す
+    successAudio.current.play().catch(console.warn);
+  }
+};
+
+const lastPlayTimeRef = useRef<number>(0);
+
+const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const now = Date.now();
+  if (!isMuted && now - lastPlayTimeRef.current > 300) {
+    playSuccessSound();
+    lastPlayTimeRef.current = now;
+  }
+};
+
+
+
   const { toggle } = useSidebar();
   const handleScanComplete = (value: string) => {
     console.log("🔍 スキャナ入力:", value);
@@ -329,11 +361,6 @@ export default function QrReceptionScreen() {
         backgroundRepeat: "no-repeat",
       }}
     >
-      {/* ヘッダー */}
-      {/* <header className="sticky top-0 z-30 flex h-16 items-center justify-center border-b bg-white/80 backdrop-blur-sm px-4 shadow-sm">
-        <h1 className="text-2xl font-bold text-black">QRコードよみとり</h1>
-      </header> */}
-
       {/* メインコンテンツ */}
       <main className="flex flex-1 flex-col overflow-auto p-4">
         <div
@@ -342,6 +369,14 @@ export default function QrReceptionScreen() {
         >
           {/* メッセージ表示エリア - 透明背景 */}
           <div className="flex flex-col relative overflow-hidden">
+            {/* ミュートボタン */}
+            <Button
+              onClick={() => setIsMuted((prev) => !prev)}
+              variant="outline"
+              className="absolute top-4 right-4 z-50 bg-white/90 backdrop-blur-sm text-black shadow-md px-4 py-1 rounded-lg"
+            >
+              {isMuted ? "🔇 ミュート中" : "🔊 音あり"}
+            </Button>
             <div className="flex flex-1 flex-col items-center justify-center p-6">
               {/* 紙吹雪のためのref */}
               <div
@@ -456,7 +491,9 @@ export default function QrReceptionScreen() {
 
       {/* トースト通知 */}
       <Toaster />
-      <BufferedInputHandler onScanComplete={handleScanComplete} />
+      <BufferedInputHandler 
+      onKeyDown={handleKeyDown} 
+      onScanComplete={handleScanComplete} />
     </div>
   );
 }
