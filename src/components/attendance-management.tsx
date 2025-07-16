@@ -120,7 +120,8 @@ type SortColumn =
   | "contractTime"
   | "arrivalTime"
   | "departureTime"
-  | "actualUsageTime";
+  | "actualUsageTime"
+  | "Badge";
 type SortDirection = "asc" | "desc";
 
 const transformVisitRecord = async (record: any) => {
@@ -943,6 +944,16 @@ export default function AttendanceManagement() {
           );
         }
 
+        case "Badge": {
+          const getStatusRank = (data: AttendanceData): number => {
+            if (!data.arrivalTime) return 0; // 未来所
+            if (!data.departureTime) return 1; // 利用中
+            if (data.isShortUsage) return 2; // 短時間利用
+            return 3; // 利用完了
+          };
+          return (getStatusRank(a) - getStatusRank(b)) * directionMultiplier;
+        }
+
         case "contractTime":
           // 契約時間を分に変換して比較
           const getContractMinutes = (time: string) => {
@@ -987,6 +998,7 @@ export default function AttendanceManagement() {
               getUsageMinutes(b.actualUsageTime)) *
             directionMultiplier
           );
+
         default:
           return 0;
       }
@@ -1265,8 +1277,12 @@ export default function AttendanceManagement() {
                         <TableHead className="w-[70px] lg:w-[120px] xl:w-[150px] whitespace-nowrap">
                           備考
                         </TableHead>
-                        <TableHead className="w-[90px] whitespace-nowrap">
+                        <TableHead
+                          className="w-[90px] cursor-pointer whitespace-nowrap hover:bg-gray-100"
+                          onClick={() => handleSort("Badge")}
+                        >
                           ステータス
+                          {getSortIcon("Badge")}
                         </TableHead>
                       </TableRow>
                     </TableHeader>
