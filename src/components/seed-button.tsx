@@ -2,7 +2,7 @@
 'use client';
 
 import { useTransition } from "react";
-import { seedVisitRecords } from "@/app/attendance/seed";
+import { seedVisitRecords } from "@/app/list/attendance/seed";
 
 /**
  * SeedButton コンポーネント

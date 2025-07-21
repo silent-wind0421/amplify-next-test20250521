@@ -190,6 +190,17 @@ const schema = a.schema({
     })
     .identifier(["codeType", "codeValue"]) // 複合キーで識別
     .authorization((allow) => [allow.publicApiKey()]),
+
+
+  Login: a
+    .model({
+      uid: a.string().required(),
+      loginTime: a.datetime(),
+    })
+    .authorization(allow => [
+    allow.authenticated().to(["read"]),
+    allow.owner()
+  
 });
 
 export type Schema = ClientSchema<typeof schema>;

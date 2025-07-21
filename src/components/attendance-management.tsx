@@ -74,6 +74,12 @@ import {
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../amplify/data/resource";
 
+//20250606-added　by yoshida
+import { useSignOutHandler } from '@/hooks/use-signout';  
+import { useAuthenticator } from "@aws-amplify/ui-react";
+import { useRouter } from "next/navigation";
+
+
 const client = generateClient<Schema>({ authMode: "userPool" });
 
 function calcDiffMinutes(start: string, end: string): number {
@@ -1165,6 +1171,20 @@ export default function AttendanceManagement() {
     };
   }, [selectedDate, isEditing]);
 
+//20250606-added by yoshida
+  const handleSignOut = useSignOutHandler();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
+  const { user, authStatus } = useAuthenticator();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (authStatus === 'unauthenticated') {
+      router.replace('/'); // 🔁 replace で履歴を残さない
+    }
+  }, [authStatus, router]);
+
+
   return (
     <div className="flex flex-col bg-gray-50">
       <div className="flex flex-1 overflow-hidden">
@@ -1675,36 +1695,47 @@ export default function AttendanceManagement() {
       <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-center text-xl">
-              ログアウト確認
-            </DialogTitle>
-            <DialogDescription className="text-center">
-              本当にログアウトしますか？
-            </DialogDescription>
+            <DialogTitle className="text-center text-xl">ログアウト確認</DialogTitle>
+            <DialogDescription className="text-center">本当にログアウトしますか？</DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex flex-row justify-center gap-2 sm:justify-center">
-            <Button
-              variant="outline"
-              onClick={() => setLogoutDialogOpen(false)}
-              className="flex-1 sm:flex-initial"
-            >
+            <Button variant="outline" onClick={() => setLogoutDialogOpen(false)} className="flex-1 sm:flex-initial">
               キャンセル
             </Button>
+
+             {/* 20250606-added by yoshida*/}
             <Button
-              onClick={() => {
-                // ログアウト処理をここに実装
-                setLogoutDialogOpen(false);
-                // 実際のアプリケーションではログアウト処理を行う
-                toast("ログアウトしました", {});
+             onClick={async () => {
+              console.log("押しました");
+              setIsLoggingOut(true); // ← ログアウト中に切り替え
+              try {
+                    await handleSignOut(); // ← ここで sessionStorage.clear() + signOut + router.push('/')
+                    toast({
+                      title: "ログアウトしました",
+                    });
+                  } catch (error) {
+                    toast({
+                      title: "エラーが発生しました",
+                      description: "ログアウトに失敗しました。",
+                      variant: "destructive",
+                    });
+
+                    setIsLoggingOut(false);
+                  }
               }}
+          
+              disabled={isLoggingOut} // ログアウト中はボタン無効化
               className="flex-1 bg-blue-500 hover:bg-blue-600 sm:flex-initial"
-            >
-              ログアウト
+          >
+          
+          {isLoggingOut ? "ログアウト中..." : "ログアウト"}
+
+                    
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
-
+      </Dialog>                  
+      
       {/* トースト通知 */}
       {/* <Toaster /> */}
     </div>
