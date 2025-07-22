@@ -176,14 +176,15 @@ export function Sidebar() {
         animate={isOpen ? "open" : "closed"}
         variants={isMobile ? sidebarVariants : {}}
         className={cn(
-          "w-64 bg-white shadow-lg transition-all duration-300 ease-in-out",
+          "w-64 bg-white shadow-lg transition-all duration-300 ease-in-out pt-8", 
           isMobile
             ? "fixed inset-y-0 left-0 z-50 pt-16"
             : isOpen
               ? "relative translate-x-0"
-              : "relative -translate-x-full lg:w-20",
+              : "relative -translate-x-full lg:w-20 lg:bg-white",
         )}
       >
+
         {isMobile && (
           <Button
             variant="ghost"
