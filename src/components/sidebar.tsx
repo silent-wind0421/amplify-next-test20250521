@@ -32,6 +32,11 @@ interface MenuItem {
   children?: MenuItem[]
 }
 
+type SidebarProps = {
+  className?: string;
+};
+
+
 // interface SidebarProps {
 //   isOpen: boolean
 //   onClose: () => void
@@ -41,7 +46,7 @@ interface MenuItem {
 //   const [isMobile, setIsMobile] = useState(false)
 //   const [expandedItems, setExpandedItems] = useState<string[]>([])
 
-export function Sidebar() {
+export function Sidebar({ className = '' }: SidebarProps) {
   const { isOpen, close } = useSidebar()
   const [isMobile, setIsMobile] = useState(false)
   const [expandedItems, setExpandedItems] = useState<string[]>([])

@@ -42,7 +42,7 @@ export function useLoginTracker(user: any, authStatus: string, redirectPath: str
       try {
         await client.models.Login.create({
           uid: loginId,
-          loginTime,
+          loginTime: loginTime.toISOString(),
         });
         sessionStorage.setItem(sessionKey, "true");
 

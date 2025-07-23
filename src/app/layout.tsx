@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
 
-   console.log("root layout");
+//   console.log("root layout");
 
   return (
 

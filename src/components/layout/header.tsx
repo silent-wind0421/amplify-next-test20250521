@@ -20,9 +20,12 @@ import { useSignOutHandler } from '@/hooks/use-signout';
 import { useAuthenticator } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
 
+type HeaderProps = {
+  className?: string;
+};
 
 
-export function Header() {
+export function Header({ className = '' }: HeaderProps) {
   const { toggle } = useSidebar();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   
