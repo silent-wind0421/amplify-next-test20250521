@@ -1,8 +1,6 @@
 body {
     margin: 0;
-   /* background: linear-gradient(180deg, rgb(117, 81, 194), rgb(255, 255, 255)); */
-    background-color: #ADD8E6;  
-   /* background-color: #F4F4F4;*/
+    background: linear-gradient(180deg, rgb(117, 81, 194), rgb(255, 255, 255));
     display: flex;
     font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
     height: 100vh;
@@ -30,7 +28,7 @@ body {
     color: white;
   }
   button:hover {
-    border-color: lightgreen;
+    border-color: #646cff;
   }
   button:focus,
   button:focus-visible {
@@ -65,18 +63,3 @@ body {
     font-weight: 800;
     text-decoration: none;
   }
-
-  /*
-  .amplify-button--primary {
-  background: linear-gradient(
-    to right,
-    var(--amplify-colors-green-80),
-    var(--amplify-colors-blue-40)
-  );
-}
-*/
-
-.amplify-button--primary {
-  background: #007BFF
-   
-}

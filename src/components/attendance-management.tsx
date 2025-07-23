@@ -74,6 +74,8 @@ import {
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../amplify/data/resource";
 
+
+
 const client = generateClient<Schema>({ authMode: "userPool" });
 
 function calcDiffMinutes(start: string, end: string): number {
@@ -1165,9 +1167,12 @@ export default function AttendanceManagement() {
     };
   }, [selectedDate, isEditing]);
 
+
+
   return (
     <div className="flex flex-col bg-gray-50">
       <div className="flex flex-1 overflow-hidden">
+
         {/* メインコンテンツ */}
         <div className={cn("flex-1 overflow-auto transition-all duration-300")}>
           <Card className="mb-4 overflow-hidden">
@@ -1671,40 +1676,8 @@ export default function AttendanceManagement() {
         </div>
       </div>
 
-      {/* ログアウト確認ダイアログ */}
-      <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl">
-              ログアウト確認
-            </DialogTitle>
-            <DialogDescription className="text-center">
-              本当にログアウトしますか？
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex flex-row justify-center gap-2 sm:justify-center">
-            <Button
-              variant="outline"
-              onClick={() => setLogoutDialogOpen(false)}
-              className="flex-1 sm:flex-initial"
-            >
-              キャンセル
-            </Button>
-            <Button
-              onClick={() => {
-                // ログアウト処理をここに実装
-                setLogoutDialogOpen(false);
-                // 実際のアプリケーションではログアウト処理を行う
-                toast("ログアウトしました", {});
-              }}
-              className="flex-1 bg-blue-500 hover:bg-blue-600 sm:flex-initial"
-            >
-              ログアウト
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+     
+      
       {/* トースト通知 */}
       {/* <Toaster /> */}
     </div>
