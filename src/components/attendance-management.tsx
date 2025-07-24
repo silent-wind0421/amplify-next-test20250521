@@ -74,7 +74,10 @@ import {
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../amplify/data/resource";
 
-
+//20250606-added
+import { useSignOutHandler } from '@/hooks/use-signout';  
+import { useAuthenticator } from "@aws-amplify/ui-react";
+import { useRouter } from "next/navigation";
 
 const client = generateClient<Schema>({ authMode: "userPool" });
 
@@ -1166,6 +1169,19 @@ export default function AttendanceManagement() {
       subscriptions.unsubscribe();
     };
   }, [selectedDate, isEditing]);
+
+  //20250606-added
+  const handleSignOut = useSignOutHandler();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
+  const { user, authStatus } = useAuthenticator();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (authStatus === 'unauthenticated') {
+      router.replace('/'); // 🔁 replace で履歴を残さない
+    }
+  }, [authStatus, router]);
 
 
 

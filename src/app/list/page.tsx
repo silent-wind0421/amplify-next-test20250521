@@ -17,6 +17,8 @@ export default function AttendancePage() {
          const [isReady, setIsReady] = useState(false); // 描画制御用
   
         // 認証済みなら画像URLを設定
+        console.log(isReady)
+
          useEffect(() => {
             if (authStatus === 'authenticated') {
                 setIsReady(true); // 認証OK → 描画許可
@@ -32,24 +34,27 @@ export default function AttendancePage() {
             }
           }, [authStatus, router]);
 
-          if (!isReady) return null;
-
+          if (authStatus === 'configuring' || !isReady) {
+            
+            return null;
+          }else{
   
-  
-          return (
+            console.log(authStatus);
+            return (
    
 
-          <div className="space-y-4">
+              <div className="space-y-4">
           
 
-          {process.env.NEXT_PUBLIC_SHOW_SEED_BUTTON === "true" && (
-            <div className="flex justify-end">
-              <SeedButton />
-            </div>
-          )}
+              {process.env.NEXT_PUBLIC_SHOW_SEED_BUTTON === "true" && (
+              <div className="flex justify-end">
+                  <SeedButton />
+              </div>
+              )}
 
-          <AttendanceManagement />
-          </div>
+              <AttendanceManagement />
+              </div>
     
-  );
+            );
+          };
 }

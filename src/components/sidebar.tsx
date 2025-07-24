@@ -88,12 +88,12 @@ export function Sidebar({ className = '' }: SidebarProps) {
         { icon: LayoutGrid, label: "席割り当て管理", href: "#" },
       ],
     },
-    { icon: ClipboardList, label: "通所実績管理", href: "/", active: true },
+    { icon: ClipboardList, label: "通所実績管理", href: "/list/", active: true },
     { icon: FileOutput, label: "帳票出力", href: "#" },
     {
       icon: FileOutput,
       label: "QR受付画面",
-      href: "/qr-reception-screen",
+      href: "/list/qr-reception-screen",
     },
   ]
 
