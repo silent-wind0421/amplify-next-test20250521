@@ -14,9 +14,9 @@
 
 import { v4 as uuidv4 } from "uuid";
 import { generateClient } from "aws-amplify/data";
-import type { Schema } from "../../../amplify/data/resource";
+import type { Schema } from "../../../../amplify/data/resource"; //modified by yoshida
 import { revalidatePath } from "next/cache";
-import { configureAmplify } from "../../../amplify/configureAmplify";
+import { configureAmplify } from "../../../../amplify/configureAmplify"; // modified by yoshida
 
 configureAmplify();
 

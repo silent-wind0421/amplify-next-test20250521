@@ -16,7 +16,7 @@ import { isSignedIn } from "@/lib/amplify-auth";
  */
 export function AppRoot() {
   const startedRef = useRef(false);
-  const unsubscribeRef = useRef<() => void>();
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const init = async () => {

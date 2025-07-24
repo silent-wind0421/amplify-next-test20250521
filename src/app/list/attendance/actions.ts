@@ -3,7 +3,7 @@
 "use client";
 
 import { generateClient } from "aws-amplify/data";
-import type { Schema } from "../../../amplify/data/resource"; // ← 相対パス推奨
+import type { Schema } from "../../../../amplify/data/resource"; // ← 相対パス推奨
 
 const client = generateClient<Schema>();
 

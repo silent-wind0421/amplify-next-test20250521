@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { configureAmplify } from '../../amplify/configureAmplify';
+import { configureAmplify } from '../../../amplify/configureAmplify'; //modified 0718 by yoshida
 
 /**
  * アプリ全体に適用されるプロバイダラッパーコンポーネント。

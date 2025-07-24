@@ -73,7 +73,6 @@ import {
 
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "../../amplify/data/resource";
-
 import { Message } from "../components/common/message";
 
 const client = generateClient<Schema>({ authMode: "userPool" });
@@ -82,6 +81,20 @@ function calcDiffMinutes(start: string, end: string): number {
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
   return eh * 60 + em - (sh * 60 + sm);
+}
+
+//時刻入力補完
+function normalizeTimeInput(raw: string): string | null {
+  const trimmed = raw.replace(/[^\d]/g, "");
+  if (trimmed.length === 4) {
+    return `${trimmed.slice(0, 2)}:${trimmed.slice(2, 4)}`;
+  } else if (trimmed.length === 3) {
+    return `0${trimmed[0]}:${trimmed.slice(1, 3)}`;
+  } else if (trimmed.length === 2) {
+    return `${trimmed}:00`;
+  } else {
+    return null;
+  }
 }
 
 /**
@@ -108,7 +121,8 @@ type SortColumn =
   | "contractTime"
   | "arrivalTime"
   | "departureTime"
-  | "actualUsageTime";
+  | "actualUsageTime"
+  | "Badge";
 type SortDirection = "asc" | "desc";
 
 const transformVisitRecord = async (record: any) => {
@@ -942,6 +956,16 @@ export default function AttendanceManagement() {
           );
         }
 
+        case "Badge": {
+          const getStatusRank = (data: AttendanceData): number => {
+            if (!data.arrivalTime) return 0; // 未来所
+            if (!data.departureTime) return 1; // 利用中
+            if (data.isShortUsage) return 2; // 短時間利用
+            return 3; // 利用完了
+          };
+          return (getStatusRank(a) - getStatusRank(b)) * directionMultiplier;
+        }
+
         case "contractTime":
           // 契約時間を分に変換して比較
           const getContractMinutes = (time: string) => {
@@ -986,6 +1010,7 @@ export default function AttendanceManagement() {
               getUsageMinutes(b.actualUsageTime)) *
             directionMultiplier
           );
+
         default:
           return 0;
       }
@@ -1152,14 +1177,18 @@ export default function AttendanceManagement() {
     };
   }, [selectedDate, isEditing]);
 
+
+
   return (
     <div className="flex flex-col bg-gray-50">
       <div className="flex flex-1 overflow-hidden">
+
         {/* メインコンテンツ */}
         <div className={cn("flex-1 overflow-auto transition-all duration-300")}>
           <Card className="mb-4 overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between bg-blue-500 py-3 text-white">
               <CardTitle className="text-lg font-bold">通所実績管理</CardTitle>
+
               <div className="flex items-center rounded bg-white/20 overflow-hidden">
                 <div
                   className="px-3 py-1 text-white cursor-text hover:bg-white/10 transition-colors text-sm"
@@ -1263,8 +1292,12 @@ export default function AttendanceManagement() {
                         <TableHead className="w-[70px] lg:w-[120px] xl:w-[150px] whitespace-nowrap">
                           備考
                         </TableHead>
-                        <TableHead className="w-[90px] whitespace-nowrap">
+                        <TableHead
+                          className="w-[90px] cursor-pointer whitespace-nowrap hover:bg-gray-100"
+                          onClick={() => handleSort("Badge")}
+                        >
                           ステータス
+                          {getSortIcon("Badge")}
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1315,8 +1348,19 @@ export default function AttendanceManagement() {
                                             value: e.target.value,
                                           })
                                         }
-                                        onFocus={() => setEditing(true)} // 追加
-                                        onBlur={() => setEditing(false)} // 追加
+                                        onBlur={() => {
+                                          const normalized = normalizeTimeInput(
+                                            editingTime.value
+                                          );
+                                          if (normalized) {
+                                            setEditingTime((prev) => ({
+                                              ...prev!,
+                                              value: normalized,
+                                            }));
+                                          }
+                                          setEditing(false);
+                                        }} //編集終了
+                                        onFocus={() => setEditing(true)} //編集開始
                                         className="w-20 text-sm text-center"
                                         placeholder="HH:mm"
                                       />
@@ -1650,40 +1694,8 @@ export default function AttendanceManagement() {
         </div>
       </div>
 
-      {/* ログアウト確認ダイアログ */}
-      <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-center text-xl">
-              ログアウト確認
-            </DialogTitle>
-            <DialogDescription className="text-center">
-              本当にログアウトしますか？
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex flex-row justify-center gap-2 sm:justify-center">
-            <Button
-              variant="outline"
-              onClick={() => setLogoutDialogOpen(false)}
-              className="flex-1 sm:flex-initial"
-            >
-              キャンセル
-            </Button>
-            <Button
-              onClick={() => {
-                // ログアウト処理をここに実装
-                setLogoutDialogOpen(false);
-                // 実際のアプリケーションではログアウト処理を行う
-                toast("ログアウトしました", {});
-              }}
-              className="flex-1 bg-blue-500 hover:bg-blue-600 sm:flex-initial"
-            >
-              ログアウト
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+     
+      
       {/* トースト通知 */}
       {/* <Toaster /> */}
     </div>
