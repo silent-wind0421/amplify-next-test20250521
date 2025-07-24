@@ -1,6 +1,7 @@
 // src/components/buffered-input-Handler.tsx
 "use client";
 
+import { last } from "lodash";
 import React, { useEffect, useRef, useCallback } from "react";
 
 /**
@@ -87,6 +88,25 @@ const BufferedInputHandler: React.FC<Props> = ({
    *
    * @param {React.FormEvent<HTMLInputElement>} e - 入力イベント。
    */
+
+  const playBeep = () => {
+    const audio = new Audio("/audios/btn15.mp3");
+    audio.play().catch((e) => {
+    console.warn("音の再生に失敗しました：", e);
+  });
+  };
+
+  //const lastPlayTimeRef = useRef<number>(0);
+
+  const handlKeydown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const now = Date.now();
+    if (e.key
+    ) {
+      playBeep();
+      //lastPlayTimeRef.current = now;
+    }
+  };
+
   const handleInput = useCallback(
     (e: React.FormEvent<HTMLInputElement>) => {
       const rawValue = e.currentTarget.value;
@@ -103,22 +123,22 @@ const BufferedInputHandler: React.FC<Props> = ({
       clearTimeout(timeoutRef.current!);
 
       if (rawValue.includes("\n") || rawValue.includes("\r")) {
-      onScanComplete(reversed);
-      if (inputRef.current) inputRef.current.value = "";
-    } else if (cleaned.length >= 20) {
-      // ✅ 20文字以上で即時確定
-      onScanComplete(cleaned);
-      if (inputRef.current) inputRef.current.value = "";
-    } else {
-      // それ以外はタイムアウトで処理
-      timeoutRef.current = setTimeout(() => {
-        onScanComplete(cleaned);
+        playBeep(); // 即ビープ音
+        onScanComplete(reversed);
         if (inputRef.current) inputRef.current.value = "";
-      }, timeoutMs);
-    }
-  },
-  [onScanComplete, timeoutMs]
-);
+        clearTimeout(timeoutRef.current!);
+      } else {
+        clearTimeout(timeoutRef.current!);
+        timeoutRef.current = setTimeout(() => {
+          playBeep(); // タイムアウト後ビープ
+          onScanComplete(cleaned);
+          if (inputRef.current) inputRef.current.value = "";
+        }, timeoutMs);
+      }
+    },
+    [onScanComplete, timeoutMs]
+  );
+
   /**
    * コンポーネントマウント時にフォーカス維持用のタイマーを設定。
    * スキャナ入力が常に受け付けられるよう、500msごとにフォーカスをチェックする。
@@ -143,6 +163,7 @@ const BufferedInputHandler: React.FC<Props> = ({
   }}
 
       type="text"
+      onKeyDown={handlKeydown}
       onInput={handleInput}
       autoComplete="off"
       inputMode="none"
