@@ -99,26 +99,24 @@ export default function QrReceptionScreen() {
     successAudio.current = new Audio("/sounds/maou_se_system23.mp3");
     successAudio.current.preload = "auto";
     successAudio.current.load();
-  },[]);
+  }, []);
 
   const playSuccessSound = () => {
-  if (!isMuted && successAudio.current) {
-    successAudio.current.currentTime = 0; // 先頭に戻す
-    successAudio.current.play().catch(console.warn);
-  }
-};
+    if (!isMuted && successAudio.current) {
+      successAudio.current.currentTime = 0; // 先頭に戻す
+      successAudio.current.play().catch(console.warn);
+    }
+  };
 
-const lastPlayTimeRef = useRef<number>(0);
+  const lastPlayTimeRef = useRef<number>(0);
 
-const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-  const now = Date.now();
-  if (!isMuted && now - lastPlayTimeRef.current > 300) {
-    playSuccessSound();
-    lastPlayTimeRef.current = now;
-  }
-};
-
-
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const now = Date.now();
+    if (!isMuted && now - lastPlayTimeRef.current > 300) {
+      playSuccessSound();
+      lastPlayTimeRef.current = now;
+    }
+  };
 
   const { toggle } = useSidebar();
   const handleScanComplete = (value: string) => {
@@ -491,9 +489,10 @@ const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 
       {/* トースト通知 */}
       <Toaster />
-      <BufferedInputHandler 
-      onKeyDown={handleKeyDown} 
-      onScanComplete={handleScanComplete} />
+      <BufferedInputHandler
+        onKeyDown={handleKeyDown}
+        onScanComplete={handleScanComplete}
+      />
     </div>
   );
 }
