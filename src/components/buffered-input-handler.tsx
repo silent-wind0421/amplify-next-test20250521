@@ -153,15 +153,8 @@ const BufferedInputHandler: React.FC<Props> = ({
   }, []);
 
   return (
-    
     <input
       ref={inputRef}
-
-      onKeyDown={(e) => {
-    // handleKeyDown?.(e); 
-     onKeyDown?.(e);// ← 親から受け取った処理を呼び出す
-  }}
-
       type="text"
       onKeyDown={handlKeydown}
       onInput={handleInput}
