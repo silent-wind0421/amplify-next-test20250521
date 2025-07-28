@@ -1,10 +1,10 @@
 //src/component/sidebar.tsx
-"use client"
+"use client";
 
-import Link from "next/link"
-import type React from "react"
-import { useSidebar } from "@/context/sidebar-context"
-import { useState, useEffect } from "react"
+import Link from "next/link";
+import type React from "react";
+import { useSidebar } from "@/context/sidebar-context";
+import { useState, useEffect } from "react";
 import {
   Users,
   Settings,
@@ -19,23 +19,22 @@ import {
   Shield,
   LayoutGrid,
   BabyIcon as Child,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { motion } from "framer-motion"
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 
 interface MenuItem {
-  icon: React.ElementType
-  label: string
-  href: string
-  active?: boolean
-  children?: MenuItem[]
+  icon: React.ElementType;
+  label: string;
+  href: string;
+  active?: boolean;
+  children?: MenuItem[];
 }
 
 type SidebarProps = {
   className?: string;
 };
-
 
 // interface SidebarProps {
 //   isOpen: boolean
@@ -46,24 +45,28 @@ type SidebarProps = {
 //   const [isMobile, setIsMobile] = useState(false)
 //   const [expandedItems, setExpandedItems] = useState<string[]>([])
 
-export function Sidebar({ className = '' }: SidebarProps) {
-  const { isOpen, close } = useSidebar()
-  const [isMobile, setIsMobile] = useState(false)
-  const [expandedItems, setExpandedItems] = useState<string[]>([])
+export function Sidebar({ className = "" }: SidebarProps) {
+  const { isOpen, close } = useSidebar();
+  const [isMobile, setIsMobile] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024)
-    }
+      setIsMobile(window.innerWidth < 1024);
+    };
 
-    checkMobile()
-    window.addEventListener("resize", checkMobile)
-    return () => window.removeEventListener("resize", checkMobile)
-  }, [])
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const toggleExpand = (label: string) => {
-    setExpandedItems((prev) => (prev.includes(label) ? prev.filter((item) => item !== label) : [...prev, label]))
-  }
+    setExpandedItems((prev) =>
+      prev.includes(label)
+        ? prev.filter((item) => item !== label)
+        : [...prev, label]
+    );
+  };
 
   const menuItems: MenuItem[] = [
     {
@@ -93,23 +96,29 @@ export function Sidebar({ className = '' }: SidebarProps) {
     {
       icon: FileOutput,
       label: "QR受付画面",
-      href: "/qr-reception-screen",
+      href: "/list/qr-reception-screen",
     },
-  ]
+  ];
 
   const sidebarVariants = {
-    open: { x: 0, transition: { type: "spring" as const, stiffness: 300, damping: 30 } },
-    closed: { x: "-100%", transition: { type: "spring" as const, stiffness: 300, damping: 30 } },
-  }
+    open: {
+      x: 0,
+      transition: { type: "spring" as const, stiffness: 300, damping: 30 },
+    },
+    closed: {
+      x: "-100%",
+      transition: { type: "spring" as const, stiffness: 300, damping: 30 },
+    },
+  };
 
   const overlayVariants = {
     open: { opacity: 0.5, transition: { duration: 0.3 } },
     closed: { opacity: 0, transition: { duration: 0.3 } },
-  }
+  };
 
   const renderMenuItem = (item: MenuItem, index: number, level = 0) => {
-    const isExpanded = expandedItems.includes(item.label)
-    const hasChildren = item.children && item.children.length > 0
+    const isExpanded = expandedItems.includes(item.label);
+    const hasChildren = item.children && item.children.length > 0;
 
     return (
       <div key={`${item.label}-${index}`} className="w-full">
@@ -117,18 +126,20 @@ export function Sidebar({ className = '' }: SidebarProps) {
           href={item.href}
           className={cn(
             "group flex items-center rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
-            item.active ? "bg-blue-500 text-white" : "text-gray-700 hover:bg-gray-100",
+            item.active
+              ? "bg-blue-500 text-white"
+              : "text-gray-700 hover:bg-gray-100",
             !isOpen && "justify-center px-2",
-            level > 0 && "ml-4 pl-2",
+            level > 0 && "ml-4 pl-2"
           )}
           onClick={(e) => {
             if (hasChildren) {
-              e.preventDefault()
+              e.preventDefault();
               if (isOpen) {
-                toggleExpand(item.label)
+                toggleExpand(item.label);
               }
             } else {
-              close() // メニュー閉じるようにするならここで
+              close(); // メニュー閉じるようにするならここで
             }
           }}
         >
@@ -142,27 +153,32 @@ export function Sidebar({ className = '' }: SidebarProps) {
                   size="icon"
                   className="h-5 w-5 p-0"
                   onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    toggleExpand(item.label)
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleExpand(item.label);
                   }}
                 >
-                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
                 </Button>
               )}
             </>
           )}
         </Link>
 
-
         {isOpen && hasChildren && isExpanded && (
           <div className="ml-2 mt-1 space-y-1 border-l border-gray-200 pl-2">
-            {item.children!.map((child, childIndex) => renderMenuItem(child, childIndex, level + 1))}
+            {item.children!.map((child, childIndex) =>
+              renderMenuItem(child, childIndex, level + 1)
+            )}
           </div>
         )}
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <>
@@ -181,15 +197,14 @@ export function Sidebar({ className = '' }: SidebarProps) {
         animate={isOpen ? "open" : "closed"}
         variants={isMobile ? sidebarVariants : {}}
         className={cn(
-          "w-64 bg-white shadow-lg transition-all duration-300 ease-in-out pt-8", 
+          "w-64 bg-white shadow-lg transition-all duration-300 ease-in-out pt-8",
           isMobile
             ? "fixed inset-y-0 left-0 z-50 pt-16"
             : isOpen
               ? "relative translate-x-0"
-              : "relative -translate-x-full lg:w-20 lg:bg-white",
+              : "relative -translate-x-full lg:w-20 lg:bg-white"
         )}
       >
-
         {isMobile && (
           <Button
             variant="ghost"
@@ -203,11 +218,17 @@ export function Sidebar({ className = '' }: SidebarProps) {
 
         <div className="space-y-4 py-4">
           <div className="px-4 py-2">
-            {isOpen && <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight text-gray-800">メニュー</h2>}
-            <div className="space-y-1">{menuItems.map((item, index) => renderMenuItem(item, index))}</div>
+            {isOpen && (
+              <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight text-gray-800">
+                メニュー
+              </h2>
+            )}
+            <div className="space-y-1">
+              {menuItems.map((item, index) => renderMenuItem(item, index))}
+            </div>
           </div>
         </div>
       </motion.aside>
     </>
-  )
+  );
 }
