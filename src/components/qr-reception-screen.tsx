@@ -140,11 +140,20 @@ export default function QrReceptionScreen() {
       console.log("✅ match:", match);
 
       if (match) {
-        let userName = "";
-        if (match.child) {
-          const childData = (await match.child()) as any; // LazyLoaderを解決
+        let userName = cleanedChildId;
+        if (match.childId) {
+          const childResult = await client.models.Child.list({
+            filter: { childId: { eq: match.childId } },
+            authMode: "userPool",
+          });
+          const childData = childResult.data[0];
           if (childData) {
-            userName = `${childData.lastName}${childData.firstName}`;
+            const lastName = childData.lastName ?? "";
+            const firstName = childData.firstName ?? "";
+            userName =
+              lastName || firstName
+                ? `${lastName} ${firstName}`.trim()
+                : match.childId;
           }
         }
 
