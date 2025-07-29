@@ -679,7 +679,7 @@ export default function AttendanceManagement() {
         }
       );
 
-      toast( Message.IA000003,{
+      toast(Message.IA000003, {
         description: trimmed || "（空欄）",
       });
     } catch (error) {
@@ -832,6 +832,7 @@ export default function AttendanceManagement() {
 
   // 時刻をリセットする関数
   const resetTime = async (id: string, type: "arrival" | "departure") => {
+    const now = new Date();
     setAttendanceData((prev) =>
       prev.map((item: AttendanceData) => {
         if (item.id === id) {
@@ -871,7 +872,7 @@ export default function AttendanceManagement() {
                 actualDuration: null,
               }
             : { actualLeaveTime: null, actualDuration: null }),
-          earlyLeaveReasonCode: undefined,
+          earlyLeaveReasonCode: null,
           updatedAt: now.toISOString(),
           updatedBy: "admin",
         },
@@ -1177,12 +1178,9 @@ export default function AttendanceManagement() {
     };
   }, [selectedDate, isEditing]);
 
-
-
   return (
     <div className="flex flex-col bg-gray-50">
       <div className="flex flex-1 overflow-hidden">
-
         {/* メインコンテンツ */}
         <div className={cn("flex-1 overflow-auto transition-all duration-300")}>
           <Card className="mb-4 overflow-hidden">
@@ -1454,12 +1452,13 @@ export default function AttendanceManagement() {
                                         onFocus={() => setEditing(true)} // 編集開始
                                         onBlur={(e) => {
                                           const rawValue = e.target.value;
-                                          const formated = formatToHHMM(rawValue);
+                                          const formated =
+                                            formatToHHMM(rawValue);
                                           setEditingTime({
                                             ...editingTime,
                                             value: formated,
                                           });
-                                        setEditing(false); // 編集終了
+                                          setEditing(false); // 編集終了
                                         }}
                                         className="w-20 text-sm text-center"
                                         placeholder="HH:mm"
@@ -1694,8 +1693,6 @@ export default function AttendanceManagement() {
         </div>
       </div>
 
-     
-      
       {/* トースト通知 */}
       {/* <Toaster /> */}
     </div>

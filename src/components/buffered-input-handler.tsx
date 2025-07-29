@@ -34,40 +34,35 @@ const BufferedInputHandler: React.FC<Props> = ({
   timeoutMs = 500,
   onKeyDown,
 }) => {
-
-
   //QR読み取り成功音  qr-reception-screen.tsx側に記載
 
-//   const successAudio = useRef<HTMLAudioElement | null>(null);
+  //   const successAudio = useRef<HTMLAudioElement | null>(null);
 
-//   useEffect(() => {
-//     successAudio.current = new Audio("/sounds/maou_se_system23.mp3");
-//     successAudio.current.preload = "auto";
-//     successAudio.current.load();
-//   },[]);
+  //   useEffect(() => {
+  //     successAudio.current = new Audio("/sounds/maou_se_system23.mp3");
+  //     successAudio.current.preload = "auto";
+  //     successAudio.current.load();
+  //   },[]);
 
-//   const playSuccessSound = () => {
-//   if (successAudio.current) {
-//     successAudio.current.currentTime = 0; // 先頭に戻す
-//     successAudio.current.play().catch(console.warn);
-//   }
-// };
+  //   const playSuccessSound = () => {
+  //   if (successAudio.current) {
+  //     successAudio.current.currentTime = 0; // 先頭に戻す
+  //     successAudio.current.play().catch(console.warn);
+  //   }
+  // };
 
-// const lastPlayTimeRef = useRef<number>(0);
+  // const lastPlayTimeRef = useRef<number>(0);
 
-// const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-//   const now = Date.now();
-//   if (now - lastPlayTimeRef.current > 300) {
-//     playSuccessSound();
-//     lastPlayTimeRef.current = now;
-//   }
-// };
-
+  // const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  //   const now = Date.now();
+  //   if (now - lastPlayTimeRef.current > 300) {
+  //     playSuccessSound();
+  //     lastPlayTimeRef.current = now;
+  //   }
+  // };
 
   const inputRef = useRef<HTMLInputElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-
 
   // const toHalfWidth = (str: string) =>
   //   str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) =>
@@ -89,24 +84,24 @@ const BufferedInputHandler: React.FC<Props> = ({
    * @param {React.FormEvent<HTMLInputElement>} e - 入力イベント。
    */
 
-  const playBeep = () => {
-    const audio = new Audio("/audios/btn15.mp3");
-    audio.play().catch((e) => {
-    console.warn("音の再生に失敗しました：", e);
-  });
-  };
+  // const playBeep = () => {
+  //   const audio = new Audio("/audios/btn15.mp3");
+  //   audio.play().catch((e) => {
+  //     console.warn("音の再生に失敗しました：", e);
+  //   });
+  // };
 
   //const lastPlayTimeRef = useRef<number>(0);
 
   const handlKeydown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const now = Date.now();
-    if (e.key
-    ) {
-      playBeep();
+    if (e.key) {
+      // playBeep();
       //lastPlayTimeRef.current = now;
     }
   };
 
+  //QRコード読み取り時
   const handleInput = useCallback(
     (e: React.FormEvent<HTMLInputElement>) => {
       const rawValue = e.currentTarget.value;
@@ -123,14 +118,18 @@ const BufferedInputHandler: React.FC<Props> = ({
       clearTimeout(timeoutRef.current!);
 
       if (rawValue.includes("\n") || rawValue.includes("\r")) {
-        playBeep(); // 即ビープ音
+        // playBeep(); // 即ビープ音
         onScanComplete(reversed);
         if (inputRef.current) inputRef.current.value = "";
-        clearTimeout(timeoutRef.current!);
+      } else if (cleaned.length >= 20) {
+        // 20文字に達したら即確定
+        // playBeep();
+        onScanComplete(cleaned);
+        if (inputRef.current) inputRef.current.value = "";
       } else {
         clearTimeout(timeoutRef.current!);
         timeoutRef.current = setTimeout(() => {
-          playBeep(); // タイムアウト後ビープ
+          // playBeep(); // タイムアウト後ビープ
           onScanComplete(cleaned);
           if (inputRef.current) inputRef.current.value = "";
         }, timeoutMs);
@@ -155,8 +154,11 @@ const BufferedInputHandler: React.FC<Props> = ({
   return (
     <input
       ref={inputRef}
+      onKeyDown={(e) => {
+        onKeyDown?.(e);
+      }}
       type="text"
-      onKeyDown={handlKeydown}
+      // onKeyDown={handlKeydown}
       onInput={handleInput}
       autoComplete="off"
       inputMode="none"

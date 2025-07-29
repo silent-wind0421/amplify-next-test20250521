@@ -3,23 +3,19 @@
 
 import { useSidebar } from "@/context/sidebar-context";
 import { useState, useEffect, useRef } from "react";
-import { format } from "date-fns";
+import { format, differenceInMinutes } from "date-fns";
 import { ja } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
-
+import { QR_SCAN_COOLDOWN_MINUTES } from "@/config/scan-config";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Toaster } from "@/components/ui/toaster";
 import BufferedInputHandler from "@/components/buffered-input-handler";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+
+import { generateClient } from "aws-amplify/data";
+import { Schema } from "../../amplify/data/resource";
+const client = generateClient<Schema>();
 
 // メッセージの型定義
 type MessageType = "info" | "success" | "warning" | "error" | "question";
@@ -112,27 +108,167 @@ export default function QrReceptionScreen() {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const now = Date.now();
-    if (!isMuted && now - lastPlayTimeRef.current > 300) {
+    if (!isMuted && now - lastPlayTimeRef.current > 3000) {
       playSuccessSound();
       lastPlayTimeRef.current = now;
     }
   };
 
   const { toggle } = useSidebar();
-  const handleScanComplete = (value: string) => {
-    console.log("🔍 スキャナ入力:", value);
+  const handleScanComplete = async (rawChildId: string) => {
+    console.log("✅ QRスキャン受信:", rawChildId);
+    const cleanedChildId = rawChildId
+      .trim()
+      .replace(/\s/g, "")
+      .normalize("NFKC");
+    const visitDate = format(new Date(), "yyyy-MM-dd");
+    const now = new Date();
 
-    if (value.includes("arrival")) {
-      simulateQrScan("arrival");
-    } else if (value.includes("departure")) {
-      simulateQrScan("departure");
-    } else {
+    try {
+      const visitRecordResult = await client.models.VisitRecord.list({
+        filter: { visitDate: { eq: visitDate } },
+        authMode: "userPool",
+      });
+
+      console.log("✅ VisitRecord.list 完了:", visitRecordResult);
+
+      const records: Schema["VisitRecord"]["type"][] =
+        (visitRecordResult as any).data ?? [];
+      console.log("✅ records:", records);
+
+      const match = records.find((r) => r.childId === cleanedChildId);
+      console.log("✅ match:", match);
+
+      if (match) {
+        let userName = "";
+        if (match.child) {
+          const childData = (await match.child()) as any; // LazyLoaderを解決
+          if (childData) {
+            userName = `${childData.lastName}${childData.firstName}`;
+          }
+        }
+
+        // ✅ 退所済みなら受け付けない
+        if (match.actualLeaveTime) {
+          console.log("退所済み → スキップ");
+
+          return;
+        }
+
+        // ✅ arrival 済みなら15分以内は無効
+        if (match.actualArrivalTime) {
+          const lastArrival = parseTime(match.actualArrivalTime);
+          if (
+            differenceInMinutes(now, lastArrival) < QR_SCAN_COOLDOWN_MINUTES
+          ) {
+            console.log("15分以内の再読み取り → スキップ");
+
+            return;
+          }
+        }
+
+        // ✅ arrival 未登録 → arrival 記録
+        if (!match.actualArrivalTime) {
+          await client.models.VisitRecord.update(
+            {
+              id: match.id,
+              actualArrivalTime: format(now, "HH:mm"),
+              updatedAt: now.toISOString(),
+              updatedBy: "qr-reader",
+            },
+            { authMode: "userPool" }
+          );
+
+          setMessage({
+            text: "こんにちは！\n今日もがんばろう！",
+            type: "success",
+            userName,
+          });
+          scheduleReset();
+          return;
+        }
+
+        // ✅ arrival 済みで leave 未実施 → leave 記録
+
+        const leaveTime = format(now, "HH:mm");
+        const duration = match.actualArrivalTime
+          ? differenceInMinutes(
+              parseTime(leaveTime),
+              parseTime(match.actualArrivalTime)
+            )
+          : null;
+
+        await client.models.VisitRecord.update(
+          {
+            id: match.id,
+            actualLeaveTime: leaveTime,
+            actualDuration: duration ?? undefined, // ← 実利用時間を保存
+            updatedAt: now.toISOString(),
+            updatedBy: "qr-reader",
+          },
+          { authMode: "userPool" }
+        );
+
+        setMessage({
+          text: "おつかれさま！\n気を付けて帰ってね！",
+          type: "success",
+          userName,
+        });
+        scheduleReset();
+        return;
+      }
+
+      // ✅ レコードがない場合 → Child 確認して新規作成
+      console.log("🔍 Child.list 開始");
+      const childResult = await client.models.Child.list({
+        filter: { childId: { eq: cleanedChildId } },
+        authMode: "userPool",
+      });
+      console.log("✅ Child.list 完了:", childResult);
+
+      const children: Schema["Child"]["type"][] =
+        (childResult as any).data ?? [];
+
+      if (!children || children.length === 0) return;
+
+      const childData = children[0];
+      const userName = `${childData.lastName}${childData.firstName}`;
+
+      // ✅ 新規作成処理
+      console.log("✅ VisitRecord.create 開始:", cleanedChildId);
+      await client.models.VisitRecord.create(
+        {
+          visitDate,
+          actualArrivalTime: format(now, "HH:mm"),
+          childId: childData.childId, // ✅ スキーマ準拠
+          updatedAt: now.toISOString(),
+          updatedBy: "qr-reader",
+        },
+        { authMode: "userPool" }
+      );
+      console.log("✅ VisitRecord.create 完了");
       setMessage({
-        text: `読み取り成功: ${value}`,
-        type: "info",
+        text: "こんにちは！\n今日もがんばろう！",
+        type: "success",
+        userName,
+      });
+      scheduleReset();
+    } catch (error) {
+      console.error("エラー:", error);
+      setMessage({
+        text: "エラーが発生しました。ネットワークや認証を確認してください。",
+        type: "error",
         userName: "",
       });
+      scheduleReset();
     }
+  };
+
+  const parseTime = (time: string): Date => {
+    const [h, m] = time.split(":").map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d;
   };
 
   // 現在の日付
