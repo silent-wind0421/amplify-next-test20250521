@@ -7,7 +7,11 @@ import { format, differenceInMinutes } from "date-fns";
 import { ja } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
-import { QR_SCAN_COOLDOWN_MINUTES } from "@/config/scan-config";
+import {
+  QR_SCAN_COOLDOWN_MINUTES,
+  SCAN_LOCK_DURATION_MS,
+  UI_RESET_DURATION_MS,
+} from "@/config/scan-config";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Toaster } from "@/components/ui/toaster";
@@ -84,6 +88,8 @@ export default function QrReceptionScreen() {
   const confettiRef = useRef<HTMLDivElement>(null);
   const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [isScanLocked, setIsScanLocked] = useState(false);
+
   //ミュート判定
   const [isMuted, setIsMuted] = useState(false);
 
@@ -116,6 +122,14 @@ export default function QrReceptionScreen() {
 
   const { toggle } = useSidebar();
   const handleScanComplete = async (rawChildId: string) => {
+    //確認用sound
+    playSuccessSound();
+    if (isScanLocked) {
+      console.log("スキャンはロック中（再試行不可）");
+      return;
+    }
+    setIsScanLocked(true);
+
     playSuccessSound(); // 音声ファイル呼び出し
     console.log("✅ QRスキャン受信:", rawChildId);
     const cleanedChildId = rawChildId
@@ -271,6 +285,9 @@ export default function QrReceptionScreen() {
         userName: "",
       });
       scheduleReset();
+    } finally {
+      // 3秒後に再スキャン許可
+      setTimeout(() => setIsScanLocked(false), SCAN_LOCK_DURATION_MS);
     }
   };
 
@@ -336,7 +353,7 @@ export default function QrReceptionScreen() {
       setShowAnimation(false);
       setAnimationType(null);
       setShowButtons(false);
-    }, 5000);
+    }, UI_RESET_DURATION_MS);
   };
 
   // 紙吹雪エフェクト
@@ -374,7 +391,7 @@ export default function QrReceptionScreen() {
 
     switch (scenario) {
       case "arrival":
-        playSuccessSound();  // クリックして音が鳴る（本番時に消す）
+        playSuccessSound(); // クリックして音が鳴る（本番時に消す）
         setMessage({
           text: "こんにちは！\n今日もがんばろう！",
           type: "success",
@@ -637,7 +654,7 @@ export default function QrReceptionScreen() {
       {/* トースト通知 */}
       <Toaster />
       <BufferedInputHandler
-        onKeyDown={handleKeyDown}
+        // onKeyDown={handleKeyDown}
         onScanComplete={handleScanComplete}
       />
     </div>
