@@ -116,6 +116,7 @@ export default function QrReceptionScreen() {
 
   const { toggle } = useSidebar();
   const handleScanComplete = async (rawChildId: string) => {
+    playSuccessSound(); // 音声ファイル呼び出し
     console.log("✅ QRスキャン受信:", rawChildId);
     const cleanedChildId = rawChildId
       .trim()
@@ -373,6 +374,7 @@ export default function QrReceptionScreen() {
 
     switch (scenario) {
       case "arrival":
+        playSuccessSound();  // クリックして音が鳴る（本番時に消す）
         setMessage({
           text: "こんにちは！\n今日もがんばろう！",
           type: "success",
