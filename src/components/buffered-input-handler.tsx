@@ -154,9 +154,9 @@ const BufferedInputHandler: React.FC<Props> = ({
   return (
     <input
       ref={inputRef}
-      onKeyDown={(e) => {
-        onKeyDown?.(e);
-      }}
+      // onKeyDown={(e) => {
+      //   onKeyDown?.(e);
+      // }}
       type="text"
       // onKeyDown={handlKeydown}
       onInput={handleInput}
