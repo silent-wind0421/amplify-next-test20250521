@@ -1,29 +1,29 @@
 // app/template.tsx
 "use client";
 
-import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react';
-import { ThemeProvider } from '@aws-amplify/ui-react';
-import { createTheme } from '@aws-amplify/ui-react'; 
-import { useEffect } from 'react';
+import { Authenticator, useAuthenticator } from "@aws-amplify/ui-react";
+import { ThemeProvider } from "@aws-amplify/ui-react";
+import { createTheme } from "@aws-amplify/ui-react";
+import { useEffect } from "react";
 import "./app.css";
 
 //　ログインフォームの設定
 const customTheme = createTheme({
-  name: 'custom-theme',
+  name: "custom-theme",
   tokens: {
     colors: {
       background: {
-        primary: { value: '#f0f0f0' },
+        primary: { value: "#f0f0f0" },
       },
     },
 
     components: {
       button: {
         primary: {
-          backgroundColor: { value: 'blue' },  // 背景色（例：青）
-          color: { value: 'white' },           // テキスト色（例：白）
+          backgroundColor: { value: "blue" }, // 背景色（例：青）
+          color: { value: "white" }, // テキスト色（例：白）
           _hover: {
-            backgroundColor: { value: '#003399' }, // ホバー時の色（任意）
+            backgroundColor: { value: "#003399" }, // ホバー時の色（任意）
           },
         },
       },
@@ -31,26 +31,26 @@ const customTheme = createTheme({
   },
 });
 
-
-export default function RootTemplate({ children }: { children: React.ReactNode }) {
-
+export default function RootTemplate({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   console.log("template");
 
-  // 背景色をマウント時に設定　
-   useEffect(() => {
+  // 背景色をマウント時に設定
+  useEffect(() => {
     document.body.style.backgroundColor = "#ADD8E6";
 
     // クリーンアップ（必要に応じて元に戻す）
-   /* return () => {
+    /* return () => {
       document.body.style.backgroundColor = "";
     };*/
   }, []);
 
   return (
-    <ThemeProvider theme={customTheme}>  
-      <Authenticator.Provider>      
-          {children}
-      </Authenticator.Provider>  
+    <ThemeProvider theme={customTheme}>
+      <Authenticator.Provider>{children}</Authenticator.Provider>
     </ThemeProvider>
   );
 }
