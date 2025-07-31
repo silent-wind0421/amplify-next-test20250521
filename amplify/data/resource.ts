@@ -201,6 +201,45 @@ const schema = a.schema({
     allow.authenticated().to(["read"]),
     allow.owner()
     ]),
+
+  UserGuardian: a.customType({
+    userId: a.string().required(),
+    lastName: a.string(),
+    firstName: a.string(),
+    lastNameKana: a.string(),
+    firstNameKana: a.string(),
+    officeId: a.string(),
+    phoneNo: a.string(),
+    email: a.string(),
+    lineUserId: a.string(),
+    isEmailArrivalRequired: a.boolean(),
+    isEmailLeaveRequired: a.boolean(),
+    isLineArrivalRequired: a.boolean(),
+    isLineLeaveRequired: a.boolean(),
+    isDeleted: a.boolean()
+  }),
+
+  UserRecipientProfiles: a
+    .model({
+      recipientId: a.string().required(),
+      lastName: a.string(),
+      firstName: a.string(),
+      lastNameKana: a.string(),
+      firstNameKana: a.string(),
+      dob: a.string(),
+      qrCodeName: a.string(),
+      guardians: a.ref('UserGuardian').array(),
+      officeId: a.string(),
+      isDeleted: a.boolean(), 
+      createdBy:a.string(),
+      updatedBy:a.string(),
+      version: a.integer()
+    })
+    .identifier(['recipientId'])
+    .authorization(allow => [
+      allow.publicApiKey(),   
+    ]),
+
 });
 
 export type Schema = ClientSchema<typeof schema>;
