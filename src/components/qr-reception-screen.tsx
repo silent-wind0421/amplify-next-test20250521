@@ -208,6 +208,10 @@ export default function QrReceptionScreen() {
             type: "success",
             userName,
           });
+          setAnimationType("arrival");
+          setShowAnimation(true);
+          triggerConfetti();
+
           scheduleReset();
           return;
         }
@@ -238,6 +242,10 @@ export default function QrReceptionScreen() {
           type: "success",
           userName,
         });
+        setAnimationType("departure");
+        setShowAnimation(true);
+        triggerConfetti();
+
         scheduleReset();
         return;
       }
@@ -276,6 +284,9 @@ export default function QrReceptionScreen() {
         type: "success",
         userName,
       });
+      setAnimationType("arrival");
+      setShowAnimation(true);
+      triggerConfetti();
       scheduleReset();
     } catch (error) {
       console.error("エラー:", error);
@@ -656,6 +667,7 @@ export default function QrReceptionScreen() {
       <BufferedInputHandler
         // onKeyDown={handleKeyDown}
         onScanComplete={handleScanComplete}
+        reverse={true}
       />
     </div>
   );
