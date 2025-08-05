@@ -11,6 +11,9 @@
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.5.5",
+    "@aws-sdk/client-dynamodb": "^3.857.0",
+    "@aws-sdk/lib-dynamodb": "^3.857.0",
+    "@aws-sdk/util-dynamodb": "^3.857.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-aspect-ratio": "^1.1.7",
@@ -39,14 +42,18 @@
     "@radix-ui/react-toggle-group": "^1.1.10",
     "@radix-ui/react-tooltip": "^1.2.7",
     "aws-amplify": "^6.15.1",
+    "axios": "^1.11.0",
     "canvas-confetti": "^1.9.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "csv-parser": "^3.2.0",
     "date-fns": "^2.30.0",
     "date-fns-tz": "^2.0.0",
+    "dayjs": "^1.11.13",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.15.0",
+    "graphql-request": "^7.2.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.511.0",
     "next": "^14.2.29",
@@ -60,7 +67,8 @@
     "sonner": "^2.0.5",
     "tailwind-merge": "^3.3.0",
     "uuid": "^11.1.0",
-    "vaul": "^1.1.2"
+    "vaul": "^1.1.2",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "@aws-amplify/backend": "^1.16.1",
