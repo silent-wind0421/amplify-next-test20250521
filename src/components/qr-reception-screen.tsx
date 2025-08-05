@@ -1,6 +1,7 @@
 //src/components/qr-reception-screen.tsx
 "use client";
 
+import { SCANNER_SETTINGS } from "@/config/scan-config";
 import { useSidebar } from "@/context/sidebar-context";
 import { useState, useEffect, useRef } from "react";
 import { format, differenceInMinutes } from "date-fns";
@@ -208,6 +209,10 @@ export default function QrReceptionScreen() {
             type: "success",
             userName,
           });
+          setAnimationType("arrival");
+          setShowAnimation(true);
+          triggerConfetti();
+
           scheduleReset();
           return;
         }
@@ -238,6 +243,10 @@ export default function QrReceptionScreen() {
           type: "success",
           userName,
         });
+        setAnimationType("departure");
+        setShowAnimation(true);
+        triggerConfetti();
+
         scheduleReset();
         return;
       }
@@ -276,6 +285,9 @@ export default function QrReceptionScreen() {
         type: "success",
         userName,
       });
+      setAnimationType("arrival");
+      setShowAnimation(true);
+      triggerConfetti();
       scheduleReset();
     } catch (error) {
       console.error("エラー:", error);
@@ -656,6 +668,7 @@ export default function QrReceptionScreen() {
       <BufferedInputHandler
         // onKeyDown={handleKeyDown}
         onScanComplete={handleScanComplete}
+        reverse={SCANNER_SETTINGS.reverse}
       />
     </div>
   );

@@ -15,6 +15,7 @@ type Props = {
   onScanComplete: (value: string) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   timeoutMs?: number;
+  reverse?: boolean; // 反転するかどうかをオプションで指定
 };
 
 /**
@@ -33,41 +34,10 @@ const BufferedInputHandler: React.FC<Props> = ({
   onScanComplete,
   timeoutMs = 500,
   onKeyDown,
+  reverse = false, // デフォルトは反転しない
 }) => {
-  //QR読み取り成功音  qr-reception-screen.tsx側に記載
-
-  //   const successAudio = useRef<HTMLAudioElement | null>(null);
-
-  //   useEffect(() => {
-  //     successAudio.current = new Audio("/sounds/maou_se_system23.mp3");
-  //     successAudio.current.preload = "auto";
-  //     successAudio.current.load();
-  //   },[]);
-
-  //   const playSuccessSound = () => {
-  //   if (successAudio.current) {
-  //     successAudio.current.currentTime = 0; // 先頭に戻す
-  //     successAudio.current.play().catch(console.warn);
-  //   }
-  // };
-
-  // const lastPlayTimeRef = useRef<number>(0);
-
-  // const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-  //   const now = Date.now();
-  //   if (now - lastPlayTimeRef.current > 300) {
-  //     playSuccessSound();
-  //     lastPlayTimeRef.current = now;
-  //   }
-  // };
-
   const inputRef = useRef<HTMLInputElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // const toHalfWidth = (str: string) =>
-  //   str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) =>
-  //     String.fromCharCode(s.charCodeAt(0) - 0xfee0)
-  //   );
 
   const toHalfWidth = (str: string): string => {
     return str
@@ -83,15 +53,6 @@ const BufferedInputHandler: React.FC<Props> = ({
    *
    * @param {React.FormEvent<HTMLInputElement>} e - 入力イベント。
    */
-
-  // const playBeep = () => {
-  //   const audio = new Audio("/audios/btn15.mp3");
-  //   audio.play().catch((e) => {
-  //     console.warn("音の再生に失敗しました：", e);
-  //   });
-  // };
-
-  //const lastPlayTimeRef = useRef<number>(0);
 
   const handlKeydown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const now = Date.now();
@@ -114,28 +75,29 @@ const BufferedInputHandler: React.FC<Props> = ({
           .normalize("NFKC")
       );
       const reversed = cleaned.split("").reverse().join(""); // QRスキャナ逆転対策
+      const processedValue = reverse ? reversed : cleaned; // オプションで切り替え
 
       clearTimeout(timeoutRef.current!);
 
       if (rawValue.includes("\n") || rawValue.includes("\r")) {
         // playBeep(); // 即ビープ音
-        onScanComplete(reversed);
+        onScanComplete(processedValue);
         if (inputRef.current) inputRef.current.value = "";
       } else if (cleaned.length >= 20) {
         // 20文字に達したら即確定
         // playBeep();
-        onScanComplete(cleaned);
+        onScanComplete(processedValue);
         if (inputRef.current) inputRef.current.value = "";
       } else {
         clearTimeout(timeoutRef.current!);
         timeoutRef.current = setTimeout(() => {
           // playBeep(); // タイムアウト後ビープ
-          onScanComplete(cleaned);
+          onScanComplete(processedValue);
           if (inputRef.current) inputRef.current.value = "";
         }, timeoutMs);
       }
     },
-    [onScanComplete, timeoutMs]
+    [onScanComplete, timeoutMs, reverse]
   );
 
   /**
