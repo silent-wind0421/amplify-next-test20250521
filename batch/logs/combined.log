@@ -18,3 +18,11 @@
 {"durationSeconds":"2.17","endTime":"2025-07-31T04:21:00.494Z","level":"info","message":"✅ バッチ処理完了","processedItemCount":0,"timestamp":"2025-07-31T04:21:00.500Z"}
 {"level":"info","message":"📌 バッチ処理開始","startTime":"2025-07-31T04:22:04.660Z","timestamp":"2025-07-31T04:22:04.661Z"}
 {"PK":"2000018140","context":"重複データ検出","level":"error","message":"同一IDに対して異なる児童情報があります。","timestamp":"2025-07-31T04:22:04.685Z","元の児童情報（障害児カナ）":"ハコネミチ タケシ","元の児童情報（障害児名）":"箱根路 武","元の児童情報（障害児生年月日）":"2015/3/3","元の行番号":2,"児童情報（障害児カナ）":"ノボリベツ カイト","児童情報（障害児名）":"登別 海斗","児童情報（障害児生年月日）":"2013/2/28","行番号":3}
+{"level":"info","message":"📌 バッチ処理開始","startTime":"2025-07-31T08:55:41.458Z","timestamp":"2025-07-31T08:55:41.458Z"}
+{"durationSeconds":"0.69","endTime":"2025-07-31T08:55:42.144Z","level":"info","message":"✅ バッチ処理完了","processedItemCount":0,"timestamp":"2025-07-31T08:55:42.144Z"}
+{"level":"info","message":"📌 バッチ処理開始","startTime":"2025-08-01T00:39:33.381Z","timestamp":"2025-08-01T00:39:33.392Z"}
+{"level":"info","message":"📌 バッチ処理開始","startTime":"2025-08-01T00:41:42.439Z","timestamp":"2025-08-01T00:41:42.440Z"}
+{"level":"info","message":"📌 バッチ処理開始","startTime":"2025-08-01T00:47:48.833Z","timestamp":"2025-08-01T00:47:48.834Z"}
+{"durationSeconds":"1.67","endTime":"2025-08-01T00:47:50.501Z","level":"info","message":"✅ バッチ処理完了","processedItemCount":0,"timestamp":"2025-08-01T00:47:50.503Z"}
+{"level":"info","message":"📌 バッチ処理開始","startTime":"2025-08-04T02:23:26.650Z","timestamp":"2025-08-04T02:23:26.651Z"}
+{"durationSeconds":"0.58","endTime":"2025-08-04T02:23:27.234Z","level":"info","message":"✅ バッチ処理完了","processedItemCount":0,"timestamp":"2025-08-04T02:23:27.235Z"}
