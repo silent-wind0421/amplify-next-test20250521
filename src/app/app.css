@@ -9,6 +9,19 @@ html, body {
     overflow: hidden; /* ← スクロールを防止 */
 }
 
+[data-amplify-authenticator] [data-amplify-container] {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* フォームの横幅を固定＋画面幅に応じて縮小 */
+[data-amplify-authenticator] [data-amplify-router-content] {
+  width: 520px;         
+  max-width: 92vw;      
+}
+
 .main-center { /* 更新中画面専用クラス */
     display: flex;
     justify-content: center;
