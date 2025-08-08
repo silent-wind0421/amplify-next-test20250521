@@ -39,8 +39,15 @@ next-env.d.ts
 
 # amplify
 .amplify
+amplify_outputs.json
+
 # amplify_outputs*
 amplifyconfiguration*amplify-next-app-backup.git.zip
 Microsoft/
 kotayori-backup/
 kotayori-backup/
+
+# ビルド済み出力物
+dist/
+src/components/dist/
+src/config/dist/
