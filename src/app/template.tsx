@@ -36,17 +36,17 @@ export default function RootTemplate({
 }: {
   children: React.ReactNode;
 }) {
-  console.log("template");
+  //console.log("template");
 
   // 背景色をマウント時に設定
-  useEffect(() => {
-    document.body.style.backgroundColor = "#ADD8E6";
+  /*useEffect(() => {
+    document.body.style.backgroundColor = "#ADD8E6";*/
 
     // クリーンアップ（必要に応じて元に戻す）
     /* return () => {
       document.body.style.backgroundColor = "";
     };*/
-  }, []);
+/*  }, []);*/
 
   return (
     <ThemeProvider theme={customTheme}>

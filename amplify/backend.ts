@@ -8,3 +8,5 @@ export const backend = defineBackend({
   auth,
   data,
 });
+
+export const { groups } = backend.auth.resources

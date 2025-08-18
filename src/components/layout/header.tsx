@@ -35,12 +35,15 @@ export function Header({ className = '' }: HeaderProps) {
   const { user, authStatus } = useAuthenticator();
   const router = useRouter();
 
+  
   useEffect(() => {
     if (authStatus === "unauthenticated") {
-      router.replace("/"); // 未認証時にリダイレクト
+      console.log("header is passed");
+      console.log(user);
+      router.replace("/");  未認証時にリダイレクト
     }
   }, [authStatus, router]);
-
+  
 
   return (
     <>

@@ -13,7 +13,7 @@ const client = generateClient<Schema>();
   その間に書き込みが複数回起こる可能性があるので、useRefでの制御が必要
 */
 
-export function useLoginTracker(user: any, authStatus: string, redirectPath: string = "/list")
+export function useLoginTracker(user: any, authStatus: string, redirectPath: string)
  {
   const isWritingRef = useRef(false); //useRefの初期値の設定
   const router = useRouter();
@@ -22,6 +22,7 @@ export function useLoginTracker(user: any, authStatus: string, redirectPath: str
     const writeLoginDataOnce = async () => {
       if (authStatus !== "authenticated" || !user || isWritingRef.current) return;
 
+      
       const loginId = user.signInDetails?.loginId;
       if (!loginId) {
         if (process.env.NODE_ENV === "development") {
