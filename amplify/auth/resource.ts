@@ -7,5 +7,8 @@ export const auth = referenceAuth({
   unauthRoleArn: 'arn:aws:iam::845531086046:role/service-role/guest',
   userPoolClientId: '1li0b757gut3kav5eounnu6f8t',
     
-  groups: ["admin", "user"],
+  groups: {
+    admin:"arn:aws:iam::845531086046:role/service-role/adminrole", 
+    user:"arn:aws:iam::845531086046:role/service-role/guest",
+  },
 });

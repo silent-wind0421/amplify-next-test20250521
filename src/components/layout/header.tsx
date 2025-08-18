@@ -37,10 +37,26 @@ export function Header({ className = '' }: HeaderProps) {
 
   
   useEffect(() => {
+    if (authStatus === "configuring") return; 
     if (authStatus === "unauthenticated") {
-      console.log("header is passed");
-      console.log(user);
-      router.replace("/");  未認証時にリダイレクト
+
+      (async () => {
+      try {
+        const { tokens } = await fetchAuthSession();
+        if (!tokens) {
+          console.log("not signed in -> show login or stay minimal UI");
+          console.log("header is passed");
+          console.log(user);
+          router.replace("/");  未認証時にリダイレクト
+          
+        } 
+      } catch {
+        console.log("header is passed");
+        console.log(user);
+        router.replace("/");  未認証時にリダイレクト
+      }
+    })();
+      
     }
   }, [authStatus, router]);
   
