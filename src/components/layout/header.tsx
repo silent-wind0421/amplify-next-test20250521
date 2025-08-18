@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useSignOutHandler } from '@/hooks/use-signout';  
 import { useAuthenticator } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
+import { fetchAuthSession } from "aws-amplify/auth";
 
 type HeaderProps = {
   className?: string;
@@ -47,13 +48,13 @@ export function Header({ className = '' }: HeaderProps) {
           console.log("not signed in -> show login or stay minimal UI");
           console.log("header is passed");
           console.log(user);
-          router.replace("/");  未認証時にリダイレクト
+          router.replace("/"); // 未認証時にリダイレクト
           
         } 
       } catch {
         console.log("header is passed");
         console.log(user);
-        router.replace("/");  未認証時にリダイレクト
+        router.replace("/");  //未認証時にリダイレクト
       }
     })();
       
