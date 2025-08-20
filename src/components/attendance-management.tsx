@@ -318,7 +318,7 @@ export default function AttendanceManagement() {
             ],
           }),
         ],
-        authMode: "apiKey", // 必要に応じて変更
+       // authMode: "apiKey", // 必要に応じて変更
       });
 
       if (!records) {

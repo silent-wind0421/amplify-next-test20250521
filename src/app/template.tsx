@@ -6,6 +6,12 @@ import { ThemeProvider } from "@aws-amplify/ui-react";
 import { createTheme } from "@aws-amplify/ui-react";
 import { useEffect } from "react";
 import "./app.css";
+import { Amplify } from "aws-amplify";
+import outputs from "../../amplify_outputs.json";
+
+
+// Amplify設定を反映
+Amplify.configure(outputs, { ssr: true });
 
 //　ログインフォームの設定
 const customTheme = createTheme({
@@ -36,18 +42,7 @@ export default function RootTemplate({
 }: {
   children: React.ReactNode;
 }) {
-  //console.log("template");
-
-  // 背景色をマウント時に設定
-  /*useEffect(() => {
-    document.body.style.backgroundColor = "#ADD8E6";*/
-
-    // クリーンアップ（必要に応じて元に戻す）
-    /* return () => {
-      document.body.style.backgroundColor = "";
-    };*/
-/*  }, []);*/
-
+  
   return (
     <ThemeProvider theme={customTheme}>
       <Authenticator.Provider>{children}</Authenticator.Provider>

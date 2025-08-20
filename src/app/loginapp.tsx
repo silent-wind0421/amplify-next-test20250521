@@ -37,6 +37,8 @@ export default function LoginApp({destination, loginType}:LoginAppProps) {
   const subscribedRef = useRef(false);
   const signoutTriggeredRef = useRef(false);
 
+  const navigatedRef = useRef(false);
+
   // Hub 購読は一度だけ
   useEffect(() => {
     if (subscribedRef.current) return;
@@ -105,6 +107,16 @@ export default function LoginApp({destination, loginType}:LoginAppProps) {
 
     verify();
   }, [authStatus, user, loginType, router, signOut]);
+
+
+  useEffect(() => {
+    if (allowed && !navigatedRef.current) {
+      navigatedRef.current = true;
+      setTimeout(() => {
+        router.replace(destination);
+      }, 40);
+    }
+  }, [allowed, destination, router]);
 
   // 役割判定が終わるまで何も出さない（チラつき防止）
   if (!checked) return null;

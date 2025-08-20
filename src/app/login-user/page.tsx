@@ -1,7 +1,6 @@
 "use client";
 
-import { Amplify } from "aws-amplify";
-import outputs from "../../../amplify_outputs.json";
+
 import "@aws-amplify/ui-react/styles.css";
 import { Authenticator, useTheme, View, Heading, Button, useAuthenticator } from "@aws-amplify/ui-react";
 import { I18n } from '@aws-amplify/core';
@@ -20,8 +19,7 @@ I18n.putVocabularies({
   },
 });
 
-// Amplify設定を反映
-Amplify.configure(outputs);
+
 
 // Amplify UIのカスタマイズ
 const components = {
