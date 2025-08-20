@@ -1072,11 +1072,19 @@ export default function AttendanceManagement() {
 
   // 理由の表示用テキストを取得
   const getReasonDisplayText = (reason: string | null) => {
-    if (!reason || reason === "未選択") return "未選択";
-    const maxLength = 3;
-    return reason.length > maxLength
-      ? `${reason.substring(0, maxLength)}...`
-      : reason;
+    switch (reason) {
+      case "1":
+        return "児童都合";
+      case "2":
+        return "保護者都合";
+      case "3":
+        return "事業者都合";
+      case "99":
+        return "その他";
+      case "0":
+      default:
+        return "未選択";
+    }
   };
 
   // ソート済みのデータを取得
@@ -1553,7 +1561,7 @@ export default function AttendanceManagement() {
                                   <TooltipTrigger asChild>
                                     <div>
                                       <Select
-                                        value={data.reason || "未選択"}
+                                        value={data.reason || "0"}
                                         onValueChange={(value) =>
                                           updateReason(data.id, value)
                                         }
@@ -1568,19 +1576,19 @@ export default function AttendanceManagement() {
                                           </SelectValue>
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="未選択">
+                                          <SelectItem value="0">
                                             未選択
                                           </SelectItem>
-                                          <SelectItem value="児童都合">
+                                          <SelectItem value="1">
                                             児童都合
                                           </SelectItem>
-                                          <SelectItem value="保護者都合">
+                                          <SelectItem value="2">
                                             保護者都合
                                           </SelectItem>
-                                          <SelectItem value="事業者都合">
+                                          <SelectItem value="3">
                                             事業者都合
                                           </SelectItem>
-                                          <SelectItem value="その他">
+                                          <SelectItem value="99">
                                             その他
                                           </SelectItem>
                                         </SelectContent>
