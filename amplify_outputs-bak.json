@@ -18,15 +18,15 @@
       "min_length": 8,
       "require_lowercase": true,
       "require_numbers": true,
-      "require_symbols": false,
-      "require_uppercase": false
+      "require_symbols": true,
+      "require_uppercase": true
     },
     "unauthenticated_identities_enabled": false
   },
   "data": {
-    "url": "https://7brky2hzojh5zirbqdssnvr7zm.appsync-api.ap-northeast-1.amazonaws.com/graphql",
+    "url": "https://nptsjrzzubdfzckr3xlr6tx6be.appsync-api.ap-northeast-1.amazonaws.com/graphql",
     "aws_region": "ap-northeast-1",
-    "api_key": "da2-4iwvhetckzdkdcgblti63hs6gi",
+    "api_key": "da2-w4g542z7bzduhm2z3ndifoun4a",
     "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
     "authorization_types": [
       "API_KEY",

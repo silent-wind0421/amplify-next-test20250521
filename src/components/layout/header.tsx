@@ -1,7 +1,7 @@
 // src/components/layout/header.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { LogOut, Menu } from "lucide-react";
 import { useSidebar } from "@/context/sidebar-context";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useSignOutHandler } from '@/hooks/use-signout';  
 import { useAuthenticator } from "@aws-amplify/ui-react";
 import { useRouter } from "next/navigation";
+import { fetchAuthSession } from "aws-amplify/auth";
 
 type HeaderProps = {
   className?: string;
@@ -34,13 +35,50 @@ export function Header({ className = '' }: HeaderProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { user, authStatus } = useAuthenticator();
   const router = useRouter();
-
+  const signingOutRef = useRef(false);
+  
   useEffect(() => {
+    if (authStatus === "configuring") return; 
     if (authStatus === "unauthenticated") {
-      router.replace("/"); // 未認証時にリダイレクト
-    }
-  }, [authStatus, router]);
 
+      router.replace("/"); // 未認証時にリダイレクト
+      
+    }
+
+    (async () => {
+      try {
+        const { tokens } = await fetchAuthSession();
+        const raw = tokens?.idToken?.payload?.["cognito:groups"];
+        const groups: string[] = Array.isArray(raw) ? (raw as string[]) : [];
+
+       // const isAdmin = groups.includes("admin");
+        const isUser = groups.includes("user");
+
+       
+        if (isUser && !signingOutRef.current) {
+          signingOutRef.current = true;
+          await handleSignOut(); // ここでセッションを落とす
+          setTimeout(() => {
+          router.replace("/");  //遷移の履歴を残さない(ブラウザーバックを防ぐ)
+          }, 100);
+        
+        }
+      } catch {
+        // 失敗時は安全側で落とす
+        if (!signingOutRef.current) {
+          signingOutRef.current = true;
+          await handleSignOut(); 
+          setTimeout(() => {
+          router.replace("/");  //遷移の履歴を残さない(ブラウザーバックを防ぐ)
+          }, 50);
+        
+        }
+      }
+    })();
+
+
+  }, [authStatus, router]);
+  
 
   return (
     <>

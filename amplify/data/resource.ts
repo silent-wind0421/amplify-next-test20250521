@@ -101,7 +101,7 @@ const schema = a.schema({
     // .authorization((allow) => [allow.publicApiKey()])
     .authorization((allow) => [
       allow.publicApiKey().to(["read"]), // ← APIキー利用者は read のみ許可
-      allow.authenticated().to(["read", "create", "update", "delete"]), // ← Cognito認証ユーザー
+      allow.groups(['admin']).to(['create', 'update', 'delete', 'read']),
     ]),
 
   /**
