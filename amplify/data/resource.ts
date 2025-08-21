@@ -82,6 +82,8 @@ const schema = a.schema({
       actualArrivalTime: a.time(), // 旧: a.string()
       actualLeaveTime: a.time(), // 旧: a.string()
       actualDuration: a.integer(),
+      // 状態コード: "0"未来所 / "1"利用中 / "2"短時間利用 / "3"利用完了
+      status: a.string(),
 
       lateReasonCode: a.string(),
       earlyLeaveReasonCode: a.string(),
@@ -198,8 +200,8 @@ const schema = a.schema({
       loginTime: a.datetime(),
     })
     .authorization(allow => [
-    allow.authenticated().to(["read"]),
-    allow.owner()
+      allow.authenticated().to(["read"]),
+      allow.owner()
     ]),
 
   UserGuardian: a.customType({
@@ -230,14 +232,14 @@ const schema = a.schema({
       qrCodeName: a.string(),
       guardians: a.ref('UserGuardian').array(),
       officeId: a.string(),
-      isDeleted: a.boolean(), 
-      createdBy:a.string(),
-      updatedBy:a.string(),
+      isDeleted: a.boolean(),
+      createdBy: a.string(),
+      updatedBy: a.string(),
       version: a.integer()
     })
     .identifier(['recipientId'])
     .authorization(allow => [
-      allow.publicApiKey(),   
+      allow.publicApiKey(),
     ]),
 
 });

@@ -72,7 +72,7 @@ import {
 } from "@/components/ui/tooltip";
 
 import { generateClient } from "aws-amplify/data";
-import type { Schema } from "../../amplify/data/resource";
+import type { Schema } from "@/amplify/data/resource";
 import { Message } from "../components/common/message";
 
 const client = generateClient<Schema>({ authMode: "userPool" });
@@ -101,6 +101,25 @@ function normalizeTimeInput(raw: string): string | null {
  * 通所実績データを表す型。
  * 各児童に対して、当日の来所・退所・利用状況などを表現する。
  */
+type StatusCode = "0" | "1" | "2" | "3";
+
+const STATUS_LABEL: Record<StatusCode, string> = {
+  "0": "未来所",
+  "1": "利用中",
+  "2": "短時間利用",
+  "3": "利用完了",
+};
+
+const deriveStatus = (
+  arrival: Date | null,
+  leave: Date | null,
+  isShort: boolean
+): StatusCode => {
+  if (!arrival) return "0";
+  if (!leave) return "1";
+  return isShort ? "2" : "3";
+};
+
 type AttendanceData = {
   id: string;
   userName: string;
@@ -112,6 +131,7 @@ type AttendanceData = {
   isShortUsage: boolean;
   reason: string | null;
   note: string | null;
+  status: StatusCode | null;
 };
 
 // ソート用の型定義
@@ -160,6 +180,10 @@ const transformVisitRecord = async (record: any) => {
       ? record.actualDuration < record.contractedDuration
       : false;
 
+  const status: StatusCode =
+    (record.status as StatusCode) ??
+    deriveStatus(arrivalTime, departureTime, isShortUsage);
+
   return {
     id: record.id,
     userName: childData
@@ -173,6 +197,7 @@ const transformVisitRecord = async (record: any) => {
     reason: record.earlyLeaveReasonCode ?? record.lateReasonCode ?? "未選択",
     note: record.remarks ?? "-",
     isShortUsage,
+    status,
   };
 };
 
@@ -303,6 +328,7 @@ export default function AttendanceManagement() {
           record.visitDate(),
           record.plannedArrivalTime(),
           record.contractedDuration(),
+          record.status(),
           record.actualArrivalTime(),
           record.actualLeaveTime(),
           record.actualDuration(),
@@ -318,7 +344,7 @@ export default function AttendanceManagement() {
             ],
           }),
         ],
-       // authMode: "apiKey", // 必要に応じて変更
+        // authMode: "apiKey", // 必要に応じて変更
       });
 
       if (!records) {
@@ -381,7 +407,7 @@ export default function AttendanceManagement() {
   // 来所ボタンのハンドラー
   const handleArrival = async (id: string) => {
     const now = new Date();
-    // const currentTime = format(now, "HH:mm");
+    const currentTime = format(now, "HH:mm");
 
     // ローカルUIの更新
     setAttendanceData((prev) =>
@@ -396,6 +422,7 @@ export default function AttendanceManagement() {
         {
           id: id,
           actualArrivalTime: currentTime,
+          status: "1",
           updatedAt: now.toISOString(),
           updatedBy: "admin", // 実際のログインユーザー名に差し替え可
         },
@@ -432,6 +459,7 @@ export default function AttendanceManagement() {
   // 退所ボタンのハンドラー
   const handleDeparture = async (id: string) => {
     const now = new Date();
+    const currentTime = format(now, "HH:mm");
 
     // 更新対象の item を state から先に取得
     const target = attendanceData.find((item) => item.id === id);
@@ -449,11 +477,22 @@ export default function AttendanceManagement() {
           })()
         : 0;
 
+      // 契約と実利用で status を決定
+      const [ch, cm] = updatedItem.contractTime.split(":").map(Number);
+      const contractedMin = ch * 60 + cm;
+      const nextStatus: StatusCode =
+        actualDuration > 0 &&
+        contractedMin > 0 &&
+        actualDuration < contractedMin
+          ? "2"
+          : "3";
+
       await client.models.VisitRecord.update(
         {
           id,
           actualLeaveTime: currentTime,
           actualDuration: actualDuration,
+          status: nextStatus,
           earlyLeaveReasonCode: updatedItem.reason ?? undefined,
           updatedAt: now.toISOString(),
           updatedBy: "admin",
@@ -584,6 +623,31 @@ export default function AttendanceManagement() {
     if (!updatedItem) return;
 
     try {
+      // 時刻 "HH:mm" → 分 に変換する小ヘルパー（ファイル先頭か関数内でOK）
+      const toMinutes = (hhmm?: string | null) => {
+        if (!hhmm) return undefined;
+        const [h, m] = hhmm.split(":").map(Number);
+        if (Number.isNaN(h) || Number.isNaN(m)) return undefined;
+        return h * 60 + m;
+      };
+
+      // arrival/leave 操作の前で次ステータスを算出
+      const actualMin = updatedItem.actualUsageTime
+        ? toMinutes(updatedItem.actualUsageTime)
+        : undefined;
+      // 契約時間は contractTime("HH:mm") から算出（数値の contractedDuration を持っているならそれでもOK）
+      const contractedMin = toMinutes(updatedItem.contractTime);
+
+      const nextStatus: StatusCode =
+        type === "arrival"
+          ? "1" // 来所→利用中
+          : actualMin != null &&
+              contractedMin != null &&
+              actualMin < contractedMin
+            ? "2"
+            : "3";
+      // 退所→短時間 or 完了
+
       await client.models.VisitRecord.update(
         {
           id,
@@ -598,6 +662,7 @@ export default function AttendanceManagement() {
                 return h * 60 + m;
               })()
             : undefined,
+          status: nextStatus,
           earlyLeaveReasonCode: updatedItem.reason ?? undefined,
           updatedAt: new Date().toISOString(),
           updatedBy: "admin",
@@ -833,6 +898,8 @@ export default function AttendanceManagement() {
   // 時刻をリセットする関数
   const resetTime = async (id: string, type: "arrival" | "departure") => {
     const now = new Date();
+    const itemBefore = attendanceData.find((x) => x.id === id);
+    const hadArrival = !!itemBefore?.arrivalTime;
     setAttendanceData((prev) =>
       prev.map((item: AttendanceData) => {
         if (item.id === id) {
@@ -870,8 +937,13 @@ export default function AttendanceManagement() {
                 actualArrivalTime: null,
                 actualLeaveTime: null,
                 actualDuration: null,
+                status: "0",
               }
-            : { actualLeaveTime: null, actualDuration: null }),
+            : {
+                actualLeaveTime: null,
+                actualDuration: null,
+                status: hadArrival ? "1" : "0", // ← 来所が残っていれば利用中
+              }),
           earlyLeaveReasonCode: null,
           updatedAt: now.toISOString(),
           updatedBy: "admin",
@@ -1032,30 +1104,36 @@ export default function AttendanceManagement() {
 
   // 利用状況に基づくステータスバッジを取得
   const getStatusBadge = (data: AttendanceData) => {
-    if (!data.arrivalTime) {
-      return (
-        <Badge variant="outline" className="bg-gray-100">
-          未来所
-        </Badge>
-      );
-    } else if (!data.departureTime) {
-      return (
-        <Badge variant="outline" className="bg-green-100 text-green-800">
-          利用中
-        </Badge>
-      );
-    } else if (data.isShortUsage) {
-      return (
-        <Badge variant="outline" className="bg-red-100 text-red-800">
-          短時間利用
-        </Badge>
-      );
-    } else {
-      return (
-        <Badge variant="outline" className="bg-blue-100 text-blue-800">
-          利用完了
-        </Badge>
-      );
+    const code =
+      data.status ??
+      deriveStatus(data.arrivalTime, data.departureTime, data.isShortUsage);
+    switch (code) {
+      case "0":
+        return (
+          <Badge variant="outline" className="bg-gray-100">
+            未来所
+          </Badge>
+        );
+      case "1":
+        return (
+          <Badge variant="outline" className="bg-green-100 text-green-800">
+            利用中
+          </Badge>
+        );
+      case "2":
+        return (
+          <Badge variant="outline" className="bg-amber-100 text-amber-800">
+            短時間利用
+          </Badge>
+        );
+      case "3":
+        return (
+          <Badge variant="outline" className="bg-blue-100 text-blue-800">
+            利用完了
+          </Badge>
+        );
+      default:
+        return null;
     }
   };
 
@@ -1143,6 +1221,7 @@ export default function AttendanceManagement() {
           record.actualDuration(),
           record.plannedArrivalTime(),
           record.contractedDuration(),
+          record.status(),
           record.earlyLeaveReasonCode(),
           record.lateReasonCode(),
           record.remarks(),
@@ -1157,7 +1236,7 @@ export default function AttendanceManagement() {
         ],
         authMode: "userPool",
       }).subscribe({
-        next: async ({ items }) => {
+        next: async ({ items }: { items: any[] }) => {
           console.log("生データ確認:", items);
 
           const resolvedRecords = await Promise.all(
@@ -1171,7 +1250,7 @@ export default function AttendanceManagement() {
           }
         },
 
-        error: (err) => {
+        error: (err: unknown) => {
           console.error("VisitRecord サブスクリプションエラー:", err);
         },
       });

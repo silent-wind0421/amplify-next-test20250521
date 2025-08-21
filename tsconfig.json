@@ -20,12 +20,10 @@
       }
     ],
     "paths": {
-      "@/amplify/data/*": ["amplify/data/*"],
-      "@/amplify/data/resource": ["amplify/data/resource.ts"],
       "@/*": ["src/*"],
-      "@amplify/*": ["amplify/*"]
+      "@/amplify/*": ["amplify/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "amplify"]
+    "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "amplify/**/*.ts"],
+    "exclude": ["node_modules"]
 }
