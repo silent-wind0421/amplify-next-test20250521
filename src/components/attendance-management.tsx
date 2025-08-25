@@ -11,7 +11,7 @@ import { fetchAuthSession } from "@aws-amplify/auth";
 import { cn } from "@/lib/utils";
 import { DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { ja } from "date-fns/locale";
@@ -77,6 +77,12 @@ import { Message } from "../components/common/message";
 
 const client = generateClient<Schema>({ authMode: "userPool" });
 
+// attendance-management.tsx の先頭あたり
+const jaCollator = new Intl.Collator("ja", {
+  sensitivity: "base",
+  numeric: true,
+});
+
 function calcDiffMinutes(start: string, end: string): number {
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
@@ -123,6 +129,7 @@ const deriveStatus = (
 type AttendanceData = {
   id: string;
   userName: string;
+  userNameKana?: string;
   scheduledTime: string;
   contractTime: string;
   arrivalTime: Date | null;
@@ -158,6 +165,15 @@ const transformVisitRecord = async (record: any) => {
 
   const childData = child?.data;
 
+  const userName = childData
+    ? `${childData.lastName ?? ""} ${childData.firstName ?? ""}`.trim()
+    : "未設定";
+
+  const userNameKana =
+    childData && (childData.lastNameKana || childData.firstNameKana)
+      ? `${childData.lastNameKana ?? ""} ${childData.firstNameKana ?? ""}`.trim()
+      : undefined;
+
   const arrivalTime = record.actualArrivalTime
     ? new Date(`${record.visitDate}T${record.actualArrivalTime}`)
     : null;
@@ -189,6 +205,7 @@ const transformVisitRecord = async (record: any) => {
     userName: childData
       ? `${childData.lastName ?? ""} ${childData.firstName ?? ""}`.trim()
       : "未設定",
+    userNameKana,
     scheduledTime: record.plannedArrivalTime ?? "",
     contractTime,
     arrivalTime,
@@ -251,7 +268,7 @@ export default function AttendanceManagement() {
   const [sortConfig, setSortConfig] = useState<{
     column: SortColumn;
     direction: SortDirection;
-  } | null>(null);
+  }>({ column: "userName", direction: "asc" });
   const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([]);
 
   const formatToHHMM = (value: string): string => {
@@ -341,6 +358,8 @@ export default function AttendanceManagement() {
               child.childId(),
               child.lastName(),
               child.firstName(),
+              child.lastNameKana(),
+              child.firstNameKana(),
             ],
           }),
         ],
@@ -1012,7 +1031,9 @@ export default function AttendanceManagement() {
       // 列ごとの比較ロジック
       switch (column) {
         case "userName":
-          return a.userName.localeCompare(b.userName) * directionMultiplier;
+          const aKey = (a.userNameKana ?? a.userName) || "";
+          const bKey = (b.userNameKana ?? b.userName) || "";
+          return jaCollator.compare(aKey, bKey) * directionMultiplier;
         case "scheduledTime": {
           const baseDate = new Date(); // 日付部分は何でもよい
           const parseHHMM = (timeStr: string) => {
@@ -1231,6 +1252,8 @@ export default function AttendanceManagement() {
               child.childId(),
               child.lastName(),
               child.firstName(),
+              child.lastNameKana(),
+              child.firstNameKana(),
             ],
           }),
         ],
