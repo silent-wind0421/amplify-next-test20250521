@@ -296,15 +296,13 @@ export default function AttendanceManagement() {
     }
   };
   // State: 児童マスタと前回取得データのキャッシュ
-  const [recipientMap, setRecipientMap] = useState<Map<string, string>>(
-    new Map()
-  );
+  const [recipientMap, setRecipientMap] = useState<Map<string, any>>(new Map());
   const [lastFetchedJson, setLastFetchedJson] = useState<string>("");
 
   useEffect(() => {
     const fetchChildMaster = async () => {
       try {
-        // 受給者マスタを一括取得（APIキー & selection で必要項目だけ）
+        // ... recipients を list で取得
         const { data: recipients } = await (
           client.models.Recipient as any
         ).list(
@@ -318,25 +316,16 @@ export default function AttendanceManagement() {
             ],
             limit: 1000,
           },
-          { authMode: "apiKey" }
+          { authMode: "userPool" }
         );
 
         // ID→氏名の Map を作成して state に保持
-        const map = new Map<string, { name: string; kana?: string }>(
+        const map = new Map<string, any>(
           (recipients ?? [])
             .filter((r: any) => r.recipientId != null)
-            .map((r: any) => [
-              r.recipientId!,
-              {
-                name: `${r.lastName ?? ""}${r.firstName ?? ""}`.trim(),
-                kana:
-                  r.lastNameKana || r.firstNameKana
-                    ? `${r.lastNameKana ?? ""}${r.firstNameKana ?? ""}`.trim()
-                    : undefined,
-              },
-            ])
+            .map((r: any) => [r.recipientId!, r]) // ← 丸ごと入れる
         );
-        setRecipientMap(map as any);
+        setRecipientMap(map);
       } catch (error) {
         console.error("児童マスタの取得に失敗:", error);
       }
@@ -390,7 +379,7 @@ export default function AttendanceManagement() {
             r.note(),
           ],
         },
-        { authMode: "apiKey" }
+        { authMode: "userPool" }
       );
 
       if (!records) {
@@ -422,7 +411,7 @@ export default function AttendanceManagement() {
           ],
           limit: 1000,
         },
-        { authMode: "apiKey" }
+        { authMode: "userPool" }
       );
 
       console.log("Recipient件数:", recAll?.length, recAll?.slice(0, 3));
@@ -546,7 +535,6 @@ export default function AttendanceManagement() {
           updatedBy: "admin", // 実際のログインユーザー名に差し替え可
         },
         {
-          // authMode: "apiKey",
           authMode: "userPool",
         }
       );
@@ -617,7 +605,6 @@ export default function AttendanceManagement() {
           updatedBy: "admin",
         },
         {
-          // authMode: "apiKey",
           authMode: "userPool",
         }
       );
@@ -787,7 +774,6 @@ export default function AttendanceManagement() {
           updatedBy: "admin",
         },
         {
-          // authMode: "apiKey",
           authMode: "userPool",
         }
       );
@@ -904,7 +890,6 @@ export default function AttendanceManagement() {
           updatedBy: "admin",
         },
         {
-          // authMode: "apiKey",
           authMode: "userPool",
         }
       );
@@ -1061,7 +1046,6 @@ export default function AttendanceManagement() {
           updatedBy: "admin",
         },
         {
-          // authMode: "apiKey",
           authMode: "userPool",
         }
       );
@@ -1326,32 +1310,19 @@ export default function AttendanceManagement() {
           record.reason(),
           record.note(),
           record.recipientId(),
-
-          // record.recipient({
-          //   select: (r: any) => [
-          //     r.recipientId(),
-          //     r.lastName(),
-          //     r.firstName(),
-          //     r.lastNameKana(),
-          //     r.firstNameKana(),
-          //   ],
-          // }),
         ],
-        // authMode: "userPool",
-        authMode: "apiKey",
+
+        authMode: "userPool",
       }).subscribe({
-        next: async ({ items }: { items: any[] }) => {
-          console.log("生データ確認:", items);
-
-          const resolvedRecords = await Promise.all(
-            items.map(transformVisitRecord)
-          );
-
-          console.log("AttendanceData 更新完了:", resolvedRecords);
-
-          if (!isEditingRef.current) {
-            setAttendanceData(resolvedRecords);
-          }
+        next: ({ items }: { items: any[] }) => {
+          // recipientMap を使って氏名をJOIN
+          const mapped = (items ?? []).map((r: any) => {
+            const rec = r.recipientId
+              ? recipientMap.get(r.recipientId)
+              : undefined;
+            return transformVisitRecord(r, rec);
+          });
+          if (!isEditingRef.current) setAttendanceData(mapped);
         },
 
         error: (err: unknown) => {
