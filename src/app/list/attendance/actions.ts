@@ -26,7 +26,7 @@ export async function handleArrival(visitRecordId: string) {
         id: visitRecordId,
         visitDate: current.visitDate,
         officeId: current.officeId,
-        childId: current.childId,
+        recipientId: current.recipientId,
         plannedArrivalTime: current.plannedArrivalTime,
         contractedDuration: current.contractedDuration,
 
@@ -34,8 +34,7 @@ export async function handleArrival(visitRecordId: string) {
         actualLeaveTime: current.actualLeaveTime || "",
         actualDuration: 0, // ← duration は不要、初期値でOK
 
-        lateReasonCode: current.lateReasonCode || "",
-        earlyLeaveReasonCode: current.earlyLeaveReasonCode || "",
+        reason: current.reason || "0",
         isManuallyEntered: true,
         isDeleted: false,
 
@@ -43,7 +42,7 @@ export async function handleArrival(visitRecordId: string) {
         updatedBy: "admin",
 
         version: (current.version ?? 0) + 1,
-        remarks: current.remarks || "",
+        note: current.note || "",
     });
 
     if (errors) {
@@ -75,20 +74,19 @@ export async function handleLeave(record: Schema["VisitRecord"]["type"]) {
         id: record.id,
         visitDate: record.visitDate,
         officeId: record.officeId,
-        childId: record.childId,
+        recipientId: record.recipientId,
         plannedArrivalTime: record.plannedArrivalTime,
         contractedDuration: record.contractedDuration,
         actualArrivalTime: record.actualArrivalTime,
         actualLeaveTime: hhmm,
         actualDuration: Math.max(duration, 0),
-        lateReasonCode: record.lateReasonCode || "",
-        earlyLeaveReasonCode: record.earlyLeaveReasonCode || "",
+        reason: record.reason || "0",
         isManuallyEntered: true,
         isDeleted: false,
         updatedAt: new Date().toISOString(),
         updatedBy: "admin",
         version: (record.version ?? 0) + 1,
-        remarks: record.remarks || "",
+        note: record.note || "",
     });
 
     if (errors) {

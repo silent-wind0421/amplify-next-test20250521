@@ -19,7 +19,8 @@ import { Toaster } from "@/components/ui/toaster";
 import BufferedInputHandler from "@/components/buffered-input-handler";
 
 import { generateClient } from "aws-amplify/data";
-import { Schema } from "../../amplify/data/resource";
+// import { Schema } from "../../amplify/data/resource";
+import type { Schema } from "../../amplify/data/resource";
 const client = generateClient<Schema>();
 
 // メッセージの型定義
@@ -152,25 +153,24 @@ export default function QrReceptionScreen() {
         (visitRecordResult as any).data ?? [];
       console.log("✅ records:", records);
 
-      const match = records.find((r) => r.childId === cleanedChildId);
+      const match = records.find((r) => r.recipientId === cleanedChildId);
       console.log("✅ match:", match);
 
       if (match) {
         let userName = cleanedChildId;
-        if (match.childId) {
-          const childResult = await client.models.Child.list({
-            filter: { childId: { eq: match.childId } },
-            authMode: "userPool",
-          });
-          const childData = childResult.data[0];
-          if (childData) {
-            const lastName = childData.lastName ?? "";
-            const firstName = childData.firstName ?? "";
-            userName =
-              lastName || firstName
-                ? `${lastName} ${firstName}`.trim()
-                : match.childId;
-          }
+        // recipientId から氏名を取得
+        const recipientResult = await client.models.Recipient.list({
+          filter: { recipientId: { eq: match.recipientId } },
+          authMode: "userPool",
+        });
+        const recipientData = recipientResult.data?.[0];
+        if (recipientData) {
+          const lastName = recipientData.lastName ?? "";
+          const firstName = recipientData.firstName ?? "";
+          userName =
+            lastName || firstName
+              ? `${lastName} ${firstName}`.trim()
+              : match.recipientId;
         }
 
         // ✅ 退所済みなら受け付けない
@@ -251,34 +251,40 @@ export default function QrReceptionScreen() {
         return;
       }
 
-      // ✅ レコードがない場合 → Child 確認して新規作成
-      console.log("🔍 Child.list 開始");
-      const childResult = await client.models.Child.list({
-        filter: { childId: { eq: cleanedChildId } },
+      // ✅ レコードがない場合 → Recipient を確認して新規作成
+      console.log("🔍 Recipient.list 開始");
+      const recipientResult = await client.models.Recipient.list({
+        filter: { recipientId: { eq: cleanedChildId } },
         authMode: "userPool",
       });
-      console.log("✅ Child.list 完了:", childResult);
+      console.log("✅ Child.list 完了:", recipientResult);
 
-      const children: Schema["Child"]["type"][] =
-        (childResult as any).data ?? [];
-
-      if (!children || children.length === 0) return;
-
-      const childData = children[0];
-      const userName = `${childData.lastName}${childData.firstName}`;
+      const recipients = recipientResult.data ?? [];
+      if (!recipients.length) return;
+      const recipient = recipients[0];
+      const userName = `${recipient.lastName}${recipient.firstName}`;
 
       // ✅ 新規作成処理
       console.log("✅ VisitRecord.create 開始:", cleanedChildId);
       await client.models.VisitRecord.create(
         {
+          visitRecordId: crypto.randomUUID(),
           visitDate,
           actualArrivalTime: format(now, "HH:mm"),
-          childId: childData.childId, // ✅ スキーマ準拠
+          recipientId: recipient.recipientId,
+          officeId: recipient.officeId!, // ✅ 必須（Facility.officeId と一致）
+          isManuallyEntered: false, // QRなので false
+          isDeleted: false,
+          // 初期値が必要なら（任意）
+          // reason: "0",
+          createdAt: now.toISOString(),
+          createdBy: "qr-reader",
           updatedAt: now.toISOString(),
           updatedBy: "qr-reader",
         },
         { authMode: "userPool" }
       );
+
       console.log("✅ VisitRecord.create 完了");
       setMessage({
         text: "こんにちは！\n今日もがんばろう！",
