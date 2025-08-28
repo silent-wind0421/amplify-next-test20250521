@@ -26,3 +26,40 @@ export function cn(...inputs: ClassValue[]) {
 
 export const formatTimeJST = (date: Date | null): string =>
   date ? formatInTimeZone(date, "Asia/Tokyo", "HH:mm") : "";
+
+// 時刻 "HH:mm" を JST の Date に
+export function parseTimeInJST(dateYmd: string, time?: string | null): Date | undefined {
+  if (!dateYmd || !time) return undefined;
+  const t = time.length === 5 ? `${time}:00` : time; // "HH:mm" -> "HH:mm:00"
+  const iso = `${dateYmd}T${t}+09:00`;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? undefined : d;
+}
+
+export function formatMinutes(min?: number | null): string {
+  if (min == null) return "";
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return `${h}:${String(m).padStart(2, "0")}`;
+}
+
+type VisitRecordLike = {
+  actualArrivalTime?: string | null;
+  actualLeaveTime?: string | null;
+  contractedDuration?: number | null;
+  actualDuration?: number | null;
+};
+
+// 0:未来所 / 1:利用中 / 2:短時間利用 / 3:利用完了
+export function calcStatus(r: VisitRecordLike): "0" | "1" | "2" | "3" {
+  const arrived = !!r.actualArrivalTime;
+  const left = !!r.actualLeaveTime;
+  if (!arrived) return "0";
+  if (arrived && !left) return "1";
+  if (
+    r.actualDuration != null &&
+    r.contractedDuration != null &&
+    r.actualDuration < r.contractedDuration
+  ) return "2";
+  return "3";
+}

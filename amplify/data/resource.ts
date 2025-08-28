@@ -1,213 +1,65 @@
-//amplify/data/resource.ts
 import { a, defineData, type ClientSchema } from "@aws-amplify/backend";
 
+// ------------------------------------------------------------
+// NOTE: 現在の Amplify パッケージ版に合わせて互換性修正
+// - a.array / a.customType を使わず、1:N は hasMany/belongsTo のモデルで表現
+// - enum 定義はフィールドに直接 a.enum([..]) を指定（.required() は付けない）
+//   ※ 一部の版では a.enum(..).required() が型エラーになるため
+// ------------------------------------------------------------
+
 const schema = a.schema({
-  /**
-   * @typedef {object} Recipient
-   * @description 受給者情報を表すモデル
-   * @property {string} recipientId - 一意の受給者ID（主キー）
-   * @property {string} [officeId] - 所属事業所ID
-   * @property {boolean} [isDeleted] - 削除フラグ
-   * @property {Date} [createdAt] - 作成日時
-   * @property {string} [createdBy] - 作成者
-   * @property {Date} [updatedAt] - 更新日時
-   * @property {string} [updatedBy] - 更新者
-   * @property {number} [version] - バージョン管理用
-   */
+  // ---------------- Facility（事業所） ----------------
+  Facility: a.model({
+    officeId: a.id().required(),
+    name: a.string().required(),
+    nameKana: a.string(),
+    phoneNo: a.string(),
+    email: a.string(),
+    lineServiceAccountId: a.string(),
+    alexaUnitId: a.string(),
+    isDeleted: a.boolean().required(),
+    createdAt: a.string().required(),
+    createdBy: a.string().required(),
+    updatedAt: a.string(),
+    updatedBy: a.string(),
+    version: a.integer(),
+    // VisitRecord の逆参照（VisitRecord.facility の対応）
+    visitRecords: a.hasMany("VisitRecord", "officeId"),
+  }).authorization((allow) => [allow.owner()]),
 
-  Recipient: a
-    .model({
-      recipientId: a.string().required(),
-      officeId: a.string(),
-      isDeleted: a.boolean(),
-      createdAt: a.datetime(),
-      createdBy: a.string(),
-      updatedAt: a.datetime(),
-      updatedBy: a.string(),
-      version: a.integer(),
-    })
-    .identifier(["recipientId"])
-    .authorization((allow) => [allow.publicApiKey()]),
-
-  /**
-   * @typedef {object} RecipientChild
-   * @description 受給者と児童の関係モデル
-   * @property {string} recipientId
-   * @property {string} childId
-   */
-
-  RecipientChild: a
-    .model({
-      recipientId: a.string(),
-      childId: a.string(),
-    })
-    .authorization((allow) => [allow.publicApiKey()]),
-
-  /**
-   * @typedef {object} User
-   * @description システム利用者（保護者等）の基本情報
-   */
-
-  User: a
-    .model({
-      userId: a.string().required(),
-      lastName: a.string().required(),
-      firstName: a.string().required(),
-      lastNameKana: a.string(),
-      firstNameKana: a.string(),
-      officeId: a.string(),
-      phoneNo: a.string(),
-      email: a.string(),
-      lineUserId: a.string(),
-      isEmailArrivalRequired: a.boolean(),
-    })
-    .identifier(["userId"])
-    .authorization((allow) => [allow.publicApiKey()]),
-
-  /**
-   * @typedef {object} VisitRecord
-   * @description 通所実績データ。来所・退所情報などを保持。
-   */
-
-  VisitRecord: a
-    .model({
-      id: a.id().required(),
-      visitDate: a.date(), // 旧: a.string()
-      officeId: a.string(),
-      childId: a.string(),
-      child: a.belongsTo("Child", "childId"),
-      plannedArrivalTime: a.time(), // 旧: a.string()
-      contractedDuration: a.integer(),
-
-      actualArrivalTime: a.time(), // 旧: a.string()
-      actualLeaveTime: a.time(), // 旧: a.string()
-      actualDuration: a.integer(),
-      // 状態コード: "0"未来所 / "1"利用中 / "2"短時間利用 / "3"利用完了
-      status: a.string(),
-
-      lateReasonCode: a.string(),
-      earlyLeaveReasonCode: a.string(),
-
-      isManuallyEntered: a.boolean(),
-      isDeleted: a.boolean(),
-
-      createdAt: a.datetime(),
-      createdBy: a.string(),
-      updatedAt: a.datetime(),
-      updatedBy: a.string(),
-
-      version: a.integer(),
-      remarks: a.string(),
-    })
-    .identifier(["id"])
-    // .authorization((allow) => [allow.publicApiKey()])
+  // ---------------- Recipient（受給者情報） --------------
+  Recipient: a.model({
+    recipientId: a.id().required(), // 受給者承認番号
+    lastName: a.string().required(),
+    firstName: a.string().required(),
+    lastNameKana: a.string(), // 全角カナ
+    firstNameKana: a.string(), // 全角カナ
+    dob: a.string(), // YYYYMMDD
+    qrCodeName: a.string(), // QRコード出力用（画像ファイル名）
+    officeId: a.string(), // 所属事業所ID
+    isDeleted: a.boolean().required(),
+    createdAt: a.string().required(),
+    createdBy: a.string().required(),
+    updatedAt: a.string(),
+    updatedBy: a.string(),
+    version: a.integer(),
+    // リレーション
+    visitRecords: a.hasMany("VisitRecord", "recipientId"),
+    guardians: a.hasMany("Guardian", "recipientId"),
+  }).identifier(['recipientId'])
     .authorization((allow) => [
       allow.publicApiKey().to(["read"]), // ← APIキー利用者は read のみ許可
+      allow.authenticated().to(['read']),
       allow.groups(['admin']).to(['create', 'update', 'delete', 'read']),
     ]),
+  // ---------------- Guardian（保護者：1:N モデル化） ---------
+  Guardian: a.model({
+    guardianId: a.id().required(),
+    recipientId: a.id().required(),
 
-  /**
-   * @typedef {object} Child
-   * @description 通所する児童の基本情報
-   */
-
-  Child: a
-    .model({
-      childId: a.string().required(), // 主キー
-      lastName: a.string().required(),
-      firstName: a.string().required(),
-      lastNameKana: a.string(),
-      firstNameKana: a.string(),
-      dob: a.date(), // 生年月日
-      qrCodeName: a.string(), // QRコード出力用の識別名（画像ファイル名など）
-      isDeleted: a.boolean(),
-      createdAt: a.datetime(),
-      createdBy: a.string(),
-      updatedAt: a.datetime(),
-      updatedBy: a.string(),
-      version: a.integer(),
-      visitRecords: a.hasMany("VisitRecord", "childId"),
-    })
-    .identifier(["childId"])
-    // .authorization((allow) => [allow.publicApiKey()])
-    .authorization((allow) => [
-      allow.publicApiKey().to(["read"]),
-      allow.authenticated().to(["read", "create", "update"]),
-    ]),
-
-  /**
-   * @typedef {object} ChildUser
-   * @description 児童とユーザーの関係を定義する中間テーブル
-   */
-
-  ChildUser: a
-    .model({
-      childId: a.string().required(),
-      userId: a.string().required(),
-      createdAt: a.datetime(),
-      createdBy: a.string(),
-      updatedAt: a.datetime(),
-      updatedBy: a.string(),
-    })
-    .identifier(["childId", "userId"]) // 複合主キーとして扱う場合
-    .authorization((allow) => [allow.publicApiKey()]),
-
-  /**
-   * @typedef {object} AuthInfo
-   * @description 認証情報を保持するモデル
-   */
-
-  AuthInfo: a
-    .model({
-      staffId: a.string().required(), // 主キー
-      loginId: a.string().required(),
-      passwordHash: a.string().required(),
-      accountStatus: a.string().required(), // enum化も検討可
-      failedLoginAttempts: a.integer(),
-      lastLoginAt: a.datetime(),
-      passwordUpdatedAt: a.datetime(),
-      createdAt: a.datetime(),
-      createdBy: a.string(),
-      updatedAt: a.datetime(),
-      updatedBy: a.string(),
-    })
-    .identifier(["staffId"])
-    .authorization((allow) => [allow.publicApiKey()]),
-
-  /**
-   * @typedef {object} CodeMaster
-   * @description 各種コード（理由コードなど）のマスターデータ
-   */
-
-  CodeMaster: a
-    .model({
-      codeType: a.string().required(),
-      codeValue: a.string().required(),
-      codeTypeName: a.string(),
-      codeTypePhysical: a.string(),
-      displayText: a.string().required(),
-      shortText: a.string(),
-      extra: a.string(), // JSON形式などで保持
-      description: a.string(),
-    })
-    .identifier(["codeType", "codeValue"]) // 複合キーで識別
-    .authorization((allow) => [allow.publicApiKey()]),
-
-
-  Login: a
-    .model({
-      uid: a.string().required(),
-      loginTime: a.datetime(),
-    })
-    .authorization(allow => [
-      allow.authenticated().to(["read"]),
-      allow.owner()
-    ]),
-
-  UserGuardian: a.customType({
     userId: a.string().required(),
-    lastName: a.string(),
-    firstName: a.string(),
+    lastName: a.string().required(),
+    firstName: a.string().required(),
     lastNameKana: a.string(),
     firstNameKana: a.string(),
     officeId: a.string(),
@@ -218,34 +70,114 @@ const schema = a.schema({
     isEmailLeaveRequired: a.boolean(),
     isLineArrivalRequired: a.boolean(),
     isLineLeaveRequired: a.boolean(),
-    isDeleted: a.boolean()
-  }),
+    isDeleted: a.boolean().required(),
 
-  UserRecipientProfiles: a
-    .model({
-      recipientId: a.string().required(),
-      lastName: a.string(),
-      firstName: a.string(),
-      lastNameKana: a.string(),
-      firstNameKana: a.string(),
-      dob: a.string(),
-      qrCodeName: a.string(),
-      guardians: a.ref('UserGuardian').array(),
-      officeId: a.string(),
-      isDeleted: a.boolean(),
-      createdBy: a.string(),
-      updatedBy: a.string(),
-      version: a.integer()
-    })
-    .identifier(['recipientId'])
-    .authorization(allow => [
-      allow.publicApiKey(),
-    ]),
+    // 任意の監査項目（必要なら）
+    createdAt: a.string(),
+    createdBy: a.string(),
+    updatedAt: a.string(),
+    updatedBy: a.string(),
+
+    // リレーション
+    recipient: a.belongsTo("Recipient", "recipientId"),
+  }).authorization((allow) => [allow.owner()]),
+
+  // ---------------- VisitRecord（通所実績） ----------------
+  VisitRecord: a.model({
+    visitRecordId: a.id().required(),
+    visitDate: a.string().required(), // YYYY-MM-DD（実績対象日）
+    officeId: a.id().required(),
+    recipientId: a.string().required(), // ← childId からリネーム
+    plannedArrivalTime: a.string(), // HH:mm
+    contractedDuration: a.integer(), // 分
+    actualArrivalTime: a.string(), // HH:mm（QR/手入力）
+    actualLeaveTime: a.string(), // HH:mm（QR/手入力）
+    actualDuration: a.integer(), // 分
+    status: a.string(), // コード値はフロント側の型で担保（"0"|"1"|"2"|"3"）
+    reason: a.string(), // 同上（"0"|"1"|"2"|"3"|"99"）
+    note: a.string(),
+    isManuallyEntered: a.boolean().required(), // true:手入力,false:QR
+    isDeleted: a.boolean().required(),
+    createdAt: a.string().required(), // ISO8601
+    createdBy: a.string().required(), // UUID など
+    updatedAt: a.string().required(), // ISO8601
+    updatedBy: a.string().required(), // UUID など
+    version: a.integer(),
+
+    // リレーション
+    facility: a.belongsTo("Facility", "officeId"),
+    recipient: a.belongsTo("Recipient", "recipientId"),
+  }).authorization((allow) => [
+    allow.publicApiKey().to(["read"]), // ← APIキー利用者は read のみ許可
+    allow.groups(['admin']).to(['create', 'update', 'delete', 'read']),
+  ]),
+
+  // ---------------- Staff（職員プロフィール：権限表示用） ------------
+  Staff: a.model({
+    staffId: a.id().required(), // Cognito sub を推奨
+    displayName: a.string().required(),
+    email: a.string(),
+    phoneNo: a.string(),
+    title: a.string(),
+    // officeIds の配列はバージョン互換のため省略（必要なら別モデルで関連づけ）
+
+    isDeleted: a.boolean().required(),
+    createdAt: a.string().required(),
+    createdBy: a.string().required(),
+    updatedAt: a.string(),
+    updatedBy: a.string(),
+    version: a.integer(),
+
+    // リレーション
+    roleGrants: a.hasMany("RoleGrant", "staffId"),
+    loginAccount: a.hasOne("LoginAccount", "staffId"),
+  }).authorization((allow) => [allow.owner()]),
+
+  // ---------------- RoleGrant（権限付与：情報保持用） -------------
+  RoleGrant: a.model({
+    roleGrantId: a.id().required(),
+    staffId: a.string().required(), // Staff.staffId
+    role: a.enum(["systemAdmin", "officeAdmin", "editor", "viewer"]),
+    scopeType: a.enum(["system", "office"]), // system / office
+    scopeId: a.string(), // scopeType=office のときに officeId を入れる
+    memo: a.string(), // 任意（付与理由など）
+
+    isDeleted: a.boolean().required(),
+    createdAt: a.string().required(),
+    createdBy: a.string().required(),
+    updatedAt: a.string(),
+    updatedBy: a.string(),
+    version: a.integer(),
+
+    // リレーション
+    staff: a.belongsTo("Staff", "staffId"),
+  }).authorization((allow) => [allow.owner()]),
+
+  // ---------------- LoginAccount（認証はCognito、ここはメタ情報のみ） ----
+  LoginAccount: a.model({
+    loginAccountId: a.id().required(),
+    staffId: a.string().required(),      // Staff.staffId（= Cognito sub 推奨）
+    loginId: a.string().required(),      // 例: Cognito username / federated subject
+    provider: a.enum(["cognito", "google", "line"]),
+    accountStatus: a.enum(["active", "suspended"]),
+    failedLoginAttempts: a.integer(),     // ※必要ならCognitoイベントで同期（任意）
+    lastLoginAt: a.string(),              // ISO8601
+    isDeleted: a.boolean().required(),
+    createdAt: a.string().required(),
+    createdBy: a.string().required(),
+    updatedAt: a.string(),
+    updatedBy: a.string(),
+    version: a.integer(),
+
+    staff: a.belongsTo("Staff", "staffId"),
+  }).authorization((allow) => [
+    // 本人だけでなく、管理者ロール（例: Cognitoグループ）にも読ませる
+    allow.groups(["systemAdmin", "officeAdmin"]),
+    allow.owner(),
+  ]),
 
 });
-
 export type Schema = ClientSchema<typeof schema>;
-
 export const data = defineData({
   schema,
   authorizationModes: {

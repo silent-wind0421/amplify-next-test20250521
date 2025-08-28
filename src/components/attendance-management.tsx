@@ -75,9 +75,44 @@ import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import { Message } from "../components/common/message";
 
+import { parseTimeInJST, formatMinutes, calcStatus } from "@/lib/utils";
+
 const client = generateClient<Schema>({ authMode: "userPool" });
 
-// attendance-management.tsx の先頭あたり
+// status（今あるやつ）はそのまま維持
+type StatusCode = "0" | "1" | "2" | "3";
+const STATUS_LABEL: Record<StatusCode, string> = {
+  "0": "未来所",
+  "1": "利用中",
+  "2": "短時間利用",
+  "3": "利用完了",
+};
+
+// コード値のドメイン
+const REASON_VALUES = ["0", "1", "2", "3", "99"] as const;
+type ReasonCode = (typeof REASON_VALUES)[number];
+
+export const REASON_LABEL: Record<ReasonCode, string> = {
+  "0": "未選択",
+  "1": "児童都合",
+  "2": "保護者都合",
+  "3": "事業者都合",
+  "99": "その他",
+};
+
+// 日本語→コード に直す（未知は "0"）
+export const REASON_CODE: Record<string, ReasonCode> = {
+  未選択: "0",
+  児童都合: "1",
+  保護者都合: "2",
+  事業者都合: "3",
+  その他: "99",
+};
+
+// 何が来てもコードに丸めるガード
+export const toReasonCode = (v: unknown): ReasonCode =>
+  REASON_VALUES.includes(v as ReasonCode) ? (v as ReasonCode) : "0";
+
 const jaCollator = new Intl.Collator("ja", {
   sensitivity: "base",
   numeric: true,
@@ -107,14 +142,6 @@ function normalizeTimeInput(raw: string): string | null {
  * 通所実績データを表す型。
  * 各児童に対して、当日の来所・退所・利用状況などを表現する。
  */
-type StatusCode = "0" | "1" | "2" | "3";
-
-const STATUS_LABEL: Record<StatusCode, string> = {
-  "0": "未来所",
-  "1": "利用中",
-  "2": "短時間利用",
-  "3": "利用完了",
-};
 
 const deriveStatus = (
   arrival: Date | null,
@@ -136,7 +163,7 @@ type AttendanceData = {
   departureTime: Date | null;
   actualUsageTime: string | null;
   isShortUsage: boolean;
-  reason: string | null;
+  reason: ReasonCode | null;
   note: string | null;
   status: StatusCode | null;
 };
@@ -152,26 +179,14 @@ type SortColumn =
   | "Badge";
 type SortDirection = "asc" | "desc";
 
-const transformVisitRecord = async (record: any) => {
-  let child = record.child;
-  if (typeof child === "function") {
-    try {
-      child = await child();
-    } catch (e) {
-      console.warn("child の取得失敗:", e);
-      child = null;
-    }
-  }
-
-  const childData = child?.data;
-
-  const userName = childData
-    ? `${childData.lastName ?? ""} ${childData.firstName ?? ""}`.trim()
+// 変換ユーティリティ（非async）
+const transformVisitRecord = (record: any, rec?: any) => {
+  const userName = rec
+    ? `${rec.lastName ?? ""}${rec.firstName ?? ""}`
     : "未設定";
-
   const userNameKana =
-    childData && (childData.lastNameKana || childData.firstNameKana)
-      ? `${childData.lastNameKana ?? ""} ${childData.firstNameKana ?? ""}`.trim()
+    rec && (rec.lastNameKana || rec.firstNameKana)
+      ? `${rec.lastNameKana ?? ""}${rec.firstNameKana ?? ""}`
       : undefined;
 
   const arrivalTime = record.actualArrivalTime
@@ -202,17 +217,15 @@ const transformVisitRecord = async (record: any) => {
 
   return {
     id: record.id,
-    userName: childData
-      ? `${childData.lastName ?? ""} ${childData.firstName ?? ""}`.trim()
-      : "未設定",
-    userNameKana,
+    userName, // ← 重複させない
+    userNameKana, // ← 重複させない
     scheduledTime: record.plannedArrivalTime ?? "",
     contractTime,
     arrivalTime,
     departureTime,
     actualUsageTime,
-    reason: record.earlyLeaveReasonCode ?? record.lateReasonCode ?? "未選択",
-    note: record.remarks ?? "-",
+    reason: toReasonCode(record.reason ?? "0"),
+    note: record.note ?? "-",
     isShortUsage,
     status,
   };
@@ -283,22 +296,47 @@ export default function AttendanceManagement() {
     }
   };
   // State: 児童マスタと前回取得データのキャッシュ
-  const [childMap, setChildMap] = useState<Map<string, string>>(new Map());
+  const [recipientMap, setRecipientMap] = useState<Map<string, string>>(
+    new Map()
+  );
   const [lastFetchedJson, setLastFetchedJson] = useState<string>("");
 
   useEffect(() => {
     const fetchChildMaster = async () => {
       try {
-        const { data: children } = await client.models.Child.list();
-        const map = new Map(
-          children
-            .filter((child) => child.childId != null)
-            .map((child) => [
-              child.childId!,
-              `${child.lastName}${child.firstName}`,
+        // 受給者マスタを一括取得（APIキー & selection で必要項目だけ）
+        const { data: recipients } = await (
+          client.models.Recipient as any
+        ).list(
+          {
+            selection: (r: any) => [
+              r.recipientId(),
+              r.lastName(),
+              r.firstName(),
+              r.lastNameKana(),
+              r.firstNameKana(),
+            ],
+            limit: 1000,
+          },
+          { authMode: "apiKey" }
+        );
+
+        // ID→氏名の Map を作成して state に保持
+        const map = new Map<string, { name: string; kana?: string }>(
+          (recipients ?? [])
+            .filter((r: any) => r.recipientId != null)
+            .map((r: any) => [
+              r.recipientId!,
+              {
+                name: `${r.lastName ?? ""}${r.firstName ?? ""}`.trim(),
+                kana:
+                  r.lastNameKana || r.firstNameKana
+                    ? `${r.lastNameKana ?? ""}${r.firstNameKana ?? ""}`.trim()
+                    : undefined,
+              },
             ])
         );
-        setChildMap(map);
+        setRecipientMap(map as any);
       } catch (error) {
         console.error("児童マスタの取得に失敗:", error);
       }
@@ -328,49 +366,39 @@ export default function AttendanceManagement() {
    */
   const fetchVisitRecords = async () => {
     try {
-      console.log(
-        "検索日付:",
-        formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd")
-      );
+      const ymd = formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd");
+      console.log("検索日付:", ymd);
 
-      const { data: records } = await client.models.VisitRecord.list({
-        filter: {
-          visitDate: {
-            eq: formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd"),
-          },
+      // 1) VisitRecord を取得（recipientId を含める）
+
+      const { data: records } = await (client.models.VisitRecord as any).list(
+        {
+          filter: { visitDate: { eq: ymd } },
+          selection: (r: any) => [
+            r.id(),
+            r.visitRecordId(),
+            r.visitDate(),
+            r.officeId(),
+            r.recipientId(), // ← これで join キー取得
+            r.plannedArrivalTime(),
+            r.contractedDuration(),
+            r.status(),
+            r.actualArrivalTime(),
+            r.actualLeaveTime(),
+            r.actualDuration(),
+            r.reason(),
+            r.note(),
+          ],
         },
-        // @ts-expect-error: Amplify Gen2 の型に selection はまだ含まれていないが、実行時には問題なく動作する
-        selection: (record) => [
-          record.id(),
-          record.visitDate(),
-          record.plannedArrivalTime(),
-          record.contractedDuration(),
-          record.status(),
-          record.actualArrivalTime(),
-          record.actualLeaveTime(),
-          record.actualDuration(),
-          record.earlyLeaveReasonCode(),
-          record.lateReasonCode(),
-          record.remarks(),
-
-          record.child({
-            select: (child: any) => [
-              child.childId(),
-              child.lastName(),
-              child.firstName(),
-              child.lastNameKana(),
-              child.firstNameKana(),
-            ],
-          }),
-        ],
-        // authMode: "apiKey", // 必要に応じて変更
-      });
+        { authMode: "apiKey" }
+      );
 
       if (!records) {
         console.warn("VisitRecordデータが取得できませんでした");
         return;
       }
 
+      // 変更検出（再描画最適化）
       const currentJson = JSON.stringify(records);
       if (currentJson === lastFetchedJson) {
         console.log("同一データのため再描画をスキップ");
@@ -378,10 +406,82 @@ export default function AttendanceManagement() {
       }
       setLastFetchedJson(currentJson);
 
-      // ✅ 共通関数を使って変換
-      const mapped: AttendanceData[] = await Promise.all(
-        records.map(transformVisitRecord)
+      // 2) Recipient を一括取得 → 必要IDだけ Map 化
+      const ids = Array.from(
+        new Set(records.map((r: any) => r.recipientId).filter(Boolean))
       );
+
+      const { data: recAll } = await (client.models.Recipient as any).list(
+        {
+          selection: (x: any) => [
+            x.recipientId(),
+            x.lastName(),
+            x.firstName(),
+            x.lastNameKana(),
+            x.firstNameKana(),
+          ],
+          limit: 1000,
+        },
+        { authMode: "apiKey" }
+      );
+
+      console.log("Recipient件数:", recAll?.length, recAll?.slice(0, 3));
+
+      const recMap = new Map<string, any>();
+      (recAll ?? [])
+        .filter((r: any) => ids.includes(r.recipientId))
+        .forEach((r: any) => recMap.set(r.recipientId, r));
+
+      // デバッグ（突き合わせ確認）
+      console.log(
+        "records件数:",
+        records.length,
+        "recipient候補件数:",
+        recAll?.length ?? 0
+      );
+      console.log("Joinキー例:", ids.slice(0, 5));
+      console.log("recMapキー例:", Array.from(recMap.keys()).slice(0, 5));
+
+      // 3) 画面用に整形（recMap から氏名を引く）
+      const mapped: AttendanceData[] = (records ?? []).map((r: any) => {
+        const rec = r.recipientId ? recMap.get(r.recipientId) : undefined;
+
+        return {
+          id: r.id,
+          // 氏名
+          userName: rec
+            ? `${rec.lastName ?? ""}${rec.firstName ?? ""}`.trim() || "未設定"
+            : "未設定",
+          userNameKana:
+            rec && (rec.lastNameKana || rec.firstNameKana)
+              ? `${rec.lastNameKana ?? ""}${rec.firstNameKana ?? ""}`.trim()
+              : undefined,
+
+          // 時刻・時間
+          scheduledTime: r.plannedArrivalTime ?? "",
+          contractTime:
+            r.contractedDuration != null
+              ? `${Math.floor(r.contractedDuration / 60)}:${String(r.contractedDuration % 60).padStart(2, "0")}`
+              : "",
+          arrivalTime: r.actualArrivalTime
+            ? parseTimeInJST(r.visitDate, r.actualArrivalTime)
+            : undefined,
+          departureTime: r.actualLeaveTime
+            ? parseTimeInJST(r.visitDate, r.actualLeaveTime)
+            : undefined,
+          actualUsageTime:
+            r.actualDuration != null ? formatMinutes(r.actualDuration) : "",
+
+          // ステータス/理由/備考
+          status: calcStatus(r),
+          reason: r.reason ?? "",
+          note: r.note ?? "",
+          isShortUsage:
+            typeof r.contractedDuration === "number" &&
+            typeof r.actualDuration === "number" &&
+            r.actualDuration < r.contractedDuration,
+        };
+      });
 
       setAttendanceData(mapped);
       console.log("AttendanceData 更新完了:", mapped);
@@ -404,7 +504,7 @@ export default function AttendanceManagement() {
     // }, 10000); // 10秒
 
     // return () => clearInterval(intervalId);
-  }, [childMap, selectedDate]); // childMap に依存（児童マスタ取得完了後に開始）
+  }, [recipientMap, selectedDate]); // recipientMap に依存（受給者マスタ取得完了後に開始）
 
   // 現在の日付
   const formattedDate = format(selectedDate, "yyyy年MM月dd日(E)", {
@@ -512,7 +612,7 @@ export default function AttendanceManagement() {
           actualLeaveTime: currentTime,
           actualDuration: actualDuration,
           status: nextStatus,
-          earlyLeaveReasonCode: updatedItem.reason ?? undefined,
+          reason: updatedItem.reason ?? undefined,
           updatedAt: now.toISOString(),
           updatedBy: "admin",
         },
@@ -682,7 +782,7 @@ export default function AttendanceManagement() {
               })()
             : undefined,
           status: nextStatus,
-          earlyLeaveReasonCode: updatedItem.reason ?? undefined,
+          reason: updatedItem.reason ?? undefined,
           updatedAt: new Date().toISOString(),
           updatedBy: "admin",
         },
@@ -750,18 +850,12 @@ export default function AttendanceManagement() {
 
     try {
       // データベースを更新
-      await client.models.VisitRecord.update(
-        {
-          id,
-          remarks: trimmed,
-          updatedAt: new Date().toISOString(),
-          updatedBy: "admin",
-        },
-        {
-          // authMode: "apiKey",
-          authMode: "userPool",
-        }
-      );
+      await client.models.VisitRecord.update({
+        id,
+        note: trimmed,
+        updatedAt: new Date().toISOString(),
+        updatedBy: "admin",
+      });
 
       toast(Message.IA000003, {
         description: trimmed || "（空欄）",
@@ -786,13 +880,14 @@ export default function AttendanceManagement() {
 
   // 理由の更新
   const updateReason = async (id: string, reason: string) => {
+    const code = toReasonCode(reason);
     // ローカル状態の更新
     setAttendanceData((prev) =>
       prev.map((item: AttendanceData) => {
         if (item.id === id) {
           return {
             ...item,
-            reason,
+            reason: code,
           };
         }
         return item;
@@ -804,7 +899,7 @@ export default function AttendanceManagement() {
       await client.models.VisitRecord.update(
         {
           id,
-          earlyLeaveReasonCode: reason,
+          reason: code,
           updatedAt: new Date().toISOString(),
           updatedBy: "admin",
         },
@@ -814,9 +909,7 @@ export default function AttendanceManagement() {
         }
       );
 
-      toast(Message.IA000004, {
-        description: reason,
-      });
+      toast(Message.IA000004, { description: REASON_LABEL[code] });
     } catch (error) {
       console.error("早退/超過理由の保存に失敗:", error);
       toast(
@@ -963,7 +1056,7 @@ export default function AttendanceManagement() {
                 actualDuration: null,
                 status: hadArrival ? "1" : "0", // ← 来所が残っていれば利用中
               }),
-          earlyLeaveReasonCode: null,
+          reason: "0",
           updatedAt: now.toISOString(),
           updatedBy: "admin",
         },
@@ -1170,21 +1263,8 @@ export default function AttendanceManagement() {
   const getUserNameDisplayText = (userName: string) => userName;
 
   // 理由の表示用テキストを取得
-  const getReasonDisplayText = (reason: string | null) => {
-    switch (reason) {
-      case "1":
-        return "児童都合";
-      case "2":
-        return "保護者都合";
-      case "3":
-        return "事業者都合";
-      case "99":
-        return "その他";
-      case "0":
-      default:
-        return "未選択";
-    }
-  };
+  const getReasonDisplayText = (reason: ReasonCode | null) =>
+    REASON_LABEL[reason ?? "0"];
 
   // ソート済みのデータを取得
   const sortedData = getSortedData();
@@ -1243,21 +1323,22 @@ export default function AttendanceManagement() {
           record.plannedArrivalTime(),
           record.contractedDuration(),
           record.status(),
-          record.earlyLeaveReasonCode(),
-          record.lateReasonCode(),
-          record.remarks(),
+          record.reason(),
+          record.note(),
+          record.recipientId(),
 
-          record.child({
-            select: (child: any) => [
-              child.childId(),
-              child.lastName(),
-              child.firstName(),
-              child.lastNameKana(),
-              child.firstNameKana(),
-            ],
-          }),
+          // record.recipient({
+          //   select: (r: any) => [
+          //     r.recipientId(),
+          //     r.lastName(),
+          //     r.firstName(),
+          //     r.lastNameKana(),
+          //     r.firstNameKana(),
+          //   ],
+          // }),
         ],
-        authMode: "userPool",
+        // authMode: "userPool",
+        authMode: "apiKey",
       }).subscribe({
         next: async ({ items }: { items: any[] }) => {
           console.log("生データ確認:", items);
@@ -1698,7 +1779,7 @@ export default function AttendanceManagement() {
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{data.reason || "未選択"}</p>
+                                    <p>{getReasonDisplayText(data.reason)}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
