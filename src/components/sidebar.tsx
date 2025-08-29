@@ -36,16 +36,11 @@ type SidebarProps = {
   className?: string;
 };
 
-// interface SidebarProps {
-//   isOpen: boolean
-//   onClose: () => void
-// }
-
-// export function Sidebar({ isOpen, onClose }: SidebarProps) {
-//   const [isMobile, setIsMobile] = useState(false)
-//   const [expandedItems, setExpandedItems] = useState<string[]>([])
-
 export function Sidebar({ className = "" }: SidebarProps) {
+  //サイドバーを非表示
+  const ENABLE_SIDEBAR = false; // ← 一時的に無効化
+  if (!ENABLE_SIDEBAR) return null; // ← 一時的に無効化
+
   const { isOpen, close } = useSidebar();
   const [isMobile, setIsMobile] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
