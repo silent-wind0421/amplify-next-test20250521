@@ -155,6 +155,7 @@ const deriveStatus = (
 
 type AttendanceData = {
   id: string;
+  _version: number;
   userName: string;
   userNameKana?: string;
   scheduledTime: string;
@@ -203,7 +204,7 @@ const transformVisitRecord = (record: any, rec?: any) => {
 
   const actualUsageTime = record.actualDuration
     ? `${Math.floor(record.actualDuration / 60)}:${`${record.actualDuration % 60}`.padStart(2, "0")}`
-    : "";
+    : null;
 
   const isShortUsage =
     typeof record.contractedDuration === "number" &&
@@ -217,6 +218,7 @@ const transformVisitRecord = (record: any, rec?: any) => {
 
   return {
     id: record.id,
+    _version: record._version,
     userName, // ← 重複させない
     userNameKana, // ← 重複させない
     scheduledTime: record.plannedArrivalTime ?? "",
@@ -377,6 +379,7 @@ export default function AttendanceManagement() {
             r.actualDuration(),
             r.reason(),
             r.note(),
+            r._version(),
           ],
         },
         { authMode: "userPool" }
@@ -459,7 +462,7 @@ export default function AttendanceManagement() {
             ? parseTimeInJST(r.visitDate, r.actualLeaveTime)
             : undefined,
           actualUsageTime:
-            r.actualDuration != null ? formatMinutes(r.actualDuration) : "",
+            r.actualDuration != null ? formatMinutes(r.actualDuration) : null,
 
           // ステータス/理由/備考
           status: calcStatus(r),
@@ -1165,22 +1168,21 @@ export default function AttendanceManagement() {
             compareTime(a.departureTime, b.departureTime) * directionMultiplier
           );
         case "actualUsageTime":
-          // nullの場合は最後に表示
-          if (a.actualUsageTime === null && b.actualUsageTime === null)
-            return 0;
-          if (a.actualUsageTime === null) return directionMultiplier;
-          if (b.actualUsageTime === null) return -directionMultiplier;
-
-          // 実利用時間を分に変換して比較
-          const getUsageMinutes = (time: string) => {
+          const parseUsageMinutes = (time?: string | null) => {
+            if (!time) return null;
             const [hours, minutes] = time.split(":").map(Number);
+            if (isNaN(hours) || isNaN(minutes)) return null;
             return hours * 60 + minutes;
           };
-          return (
-            (getUsageMinutes(a.actualUsageTime) -
-              getUsageMinutes(b.actualUsageTime)) *
-            directionMultiplier
-          );
+
+          const aMinutes = parseUsageMinutes(a.actualUsageTime);
+          const bMinutes = parseUsageMinutes(b.actualUsageTime);
+
+          if (aMinutes == null && bMinutes == null) return 0;
+          if (aMinutes == null) return directionMultiplier;
+          if (bMinutes == null) return -directionMultiplier;
+
+          return (aMinutes - bMinutes) * directionMultiplier;
 
         default:
           return 0;
@@ -1310,6 +1312,7 @@ export default function AttendanceManagement() {
           record.reason(),
           record.note(),
           record.recipientId(),
+          record._version(),
         ],
 
         authMode: "userPool",
