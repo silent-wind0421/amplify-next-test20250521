@@ -5,6 +5,7 @@ import outputs from "../../../amplify_outputs.json";
 import "@aws-amplify/ui-react/styles.css";
 import { Authenticator, useTheme, View, Heading, Button, useAuthenticator } from "@aws-amplify/ui-react";
 import { I18n } from '@aws-amplify/core';
+import { signIn } from 'aws-amplify/auth';   
 import { useEffect } from "react";
 import QrReceptionScreen from "@/components/qr-reception-screen";
 import { SidebarProvider } from "@/context/sidebar-context";
@@ -76,7 +77,9 @@ export default function App() {
       document.body.style.backgroundColor = "";
     };*/
   }, []);
-
+  
+  
+  const loginType: 'user' | 'admin' = 'user';
 
   return (
     <Authenticator
@@ -84,6 +87,16 @@ export default function App() {
       components={components}
       hideSignUp={true}
       loginMechanisms={["username"]}
+      services={{
+        async handleSignIn(formData) {
+          const { username, password } = formData;
+          return signIn({
+            username,
+            password,
+            options: { clientMetadata: { loginType } },
+          });
+        },
+      }}
     >
      <LoginApp destination="/list/qr-reception-screen" loginType="user"/>  
      {/*<div className="fixed inset-0">

@@ -1,9 +1,9 @@
 {
   "auth": {
-    "user_pool_id": "ap-northeast-1_69x88NSzz",
+    "user_pool_id": "ap-northeast-1_qZe3b8qSj",
     "aws_region": "ap-northeast-1",
-    "user_pool_client_id": "7aikh7ctth2bk9ddr1jmpul05p",
-    "identity_pool_id": "ap-northeast-1:9f1270e4-b810-4e0f-be59-2b0ea555cde7",
+    "user_pool_client_id": "1li0b757gut3kav5eounnu6f8t",
+    "identity_pool_id": "ap-northeast-1:61ed2994-d310-471e-b1d1-cd9ee0a488c5",
     "mfa_methods": [],
     "standard_required_attributes": [
       "sub",
@@ -24,9 +24,9 @@
     "unauthenticated_identities_enabled": false
   },
   "data": {
-    "url": "https://ylxnfmagh5h3xf5tg3gq4fjbhm.appsync-api.ap-northeast-1.amazonaws.com/graphql",
+    "url": "https://nptsjrzzubdfzckr3xlr6tx6be.appsync-api.ap-northeast-1.amazonaws.com/graphql",
     "aws_region": "ap-northeast-1",
-    "api_key": "da2-dmrhzpkfqna57kpy6ricruamme",
+    "api_key": "da2-w4g542z7bzduhm2z3ndifoun4a",
     "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
     "authorization_types": [
       "API_KEY",
@@ -514,17 +514,12 @@
                     ]
                   },
                   {
-                    "groupClaim": "cognito:groups",
-                    "provider": "userPools",
-                    "allow": "groups",
+                    "allow": "private",
                     "operations": [
+                      "read",
                       "create",
                       "update",
-                      "delete",
-                      "read"
-                    ],
-                    "groups": [
-                      "admin"
+                      "delete"
                     ]
                   }
                 ]

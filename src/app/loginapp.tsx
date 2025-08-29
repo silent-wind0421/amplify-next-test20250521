@@ -78,6 +78,8 @@ export default function LoginApp({destination, loginType}:LoginAppProps) {
         (loginType === "admin" && isAdmin) ||
         (loginType === "user" && isUser);
 
+      console.log(ok);
+      console.log("here!");
       if (!ok) {
         // ここがポイント
         const url = new URL(window.location.href);
