@@ -457,10 +457,10 @@ export default function AttendanceManagement() {
               : "",
           arrivalTime: r.actualArrivalTime
             ? parseTimeInJST(r.visitDate, r.actualArrivalTime)
-            : undefined,
+            : null,
           departureTime: r.actualLeaveTime
             ? parseTimeInJST(r.visitDate, r.actualLeaveTime)
-            : undefined,
+            : null,
           actualUsageTime:
             r.actualDuration != null ? formatMinutes(r.actualDuration) : null,
 
@@ -968,31 +968,22 @@ export default function AttendanceManagement() {
       };
     }
 
-    // 差分（分）を計算
-    const diffMilliseconds =
-      departureTime.getTime() - item.arrivalTime.getTime();
-    const diffMinutes = Math.floor(diffMilliseconds / 60000);
+    // 同日前提：時分のみで差分
+    const toMinutes = (d: Date) => d.getHours() * 60 + d.getMinutes();
+    let diffMinutes = toMinutes(departureTime) - toMinutes(item.arrivalTime);
+    if (diffMinutes < 0) diffMinutes = 0; // 念のためガード
+    if (diffMinutes > 24 * 60) diffMinutes %= 24 * 60; // 念のためガード
 
-    // HH:mm 形式の文字列に変換
     const hours = Math.floor(diffMinutes / 60);
     const minutes = diffMinutes % 60;
     const actualUsageTime = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 
-    // 契約時間を分に変換
-    const [contractHours, contractMinutes] = item.contractTime
-      .split(":")
-      .map(Number);
-    const contractTotalMinutes = contractHours * 60 + contractMinutes;
+    const [ch, cm] = item.contractTime.split(":").map(Number);
+    const contractTotalMinutes = (ch || 0) * 60 + (cm || 0);
+    const isShortUsage =
+      contractTotalMinutes > 0 ? diffMinutes < contractTotalMinutes : false;
 
-    // 契約より短いかどうかを判定
-    const isShortUsage = diffMinutes < contractTotalMinutes;
-
-    return {
-      ...item,
-      departureTime,
-      actualUsageTime,
-      isShortUsage,
-    };
+    return { ...item, departureTime, actualUsageTime, isShortUsage };
   };
 
   // 時刻をリセットする関数
@@ -1115,29 +1106,23 @@ export default function AttendanceManagement() {
           const bKey = (b.userNameKana ?? b.userName) || "";
           return jaCollator.compare(aKey, bKey) * directionMultiplier;
         case "scheduledTime": {
-          const baseDate = new Date(); // 日付部分は何でもよい
-          const parseHHMM = (timeStr: string) => {
-            const [h, m] = timeStr.split(":").map(Number);
-            const d = new Date(baseDate);
+          const parseHHMM = (time?: string | null) => {
+            if (!time || !/^\d{2}:\d{2}$/.test(time)) return null;
+            const [h, m] = time.split(":").map(Number);
+            if (Number.isNaN(h) || Number.isNaN(m)) return null;
+            const d = new Date();
             d.setHours(h, m, 0, 0);
             return d;
           };
-          return (
-            compareTime(
-              parseHHMM(a.scheduledTime),
-              parseHHMM(b.scheduledTime)
-            ) * directionMultiplier
-          );
-        }
 
-        case "Badge": {
-          const getStatusRank = (data: AttendanceData): number => {
-            if (!data.arrivalTime) return 0; // 未来所
-            if (!data.departureTime) return 1; // 利用中
-            if (data.isShortUsage) return 2; // 短時間利用
-            return 3; // 利用完了
-          };
-          return (getStatusRank(a) - getStatusRank(b)) * directionMultiplier;
+          const ad = parseHHMM(a.scheduledTime);
+          const bd = parseHHMM(b.scheduledTime);
+
+          if (ad === null && bd === null) return 0;
+          if (ad === null) return directionMultiplier; // 空や不正値は末尾へ（昇順時）
+          if (bd === null) return -directionMultiplier;
+
+          return (ad.getTime() - bd.getTime()) * directionMultiplier;
         }
 
         case "contractTime":
@@ -1341,7 +1326,7 @@ export default function AttendanceManagement() {
     return () => {
       subscriptions.unsubscribe();
     };
-  }, [selectedDate, isEditing]);
+  }, [selectedDate, isEditing, recipientMap]);
 
   return (
     <div className="flex flex-col bg-gray-50">
