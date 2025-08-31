@@ -971,31 +971,22 @@ export default function AttendanceManagement() {
       };
     }
 
-    // 差分（分）を計算
-    const diffMilliseconds =
-      departureTime.getTime() - item.arrivalTime.getTime();
-    const diffMinutes = Math.floor(diffMilliseconds / 60000);
+    // 同日前提：時分のみで差分
+    const toMinutes = (d: Date) => d.getHours() * 60 + d.getMinutes();
+    let diffMinutes = toMinutes(departureTime) - toMinutes(item.arrivalTime);
+    if (diffMinutes < 0) diffMinutes = 0; // 念のためガード
+    if (diffMinutes > 24 * 60) diffMinutes %= 24 * 60; // 念のためガード
 
-    // HH:mm 形式の文字列に変換
     const hours = Math.floor(diffMinutes / 60);
     const minutes = diffMinutes % 60;
     const actualUsageTime = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 
-    // 契約時間を分に変換
-    const [contractHours, contractMinutes] = item.contractTime
-      .split(":")
-      .map(Number);
-    const contractTotalMinutes = contractHours * 60 + contractMinutes;
+    const [ch, cm] = item.contractTime.split(":").map(Number);
+    const contractTotalMinutes = (ch || 0) * 60 + (cm || 0);
+    const isShortUsage =
+      contractTotalMinutes > 0 ? diffMinutes < contractTotalMinutes : false;
 
-    // 契約より短いかどうかを判定
-    const isShortUsage = diffMinutes < contractTotalMinutes;
-
-    return {
-      ...item,
-      departureTime,
-      actualUsageTime,
-      isShortUsage,
-    };
+    return { ...item, departureTime, actualUsageTime, isShortUsage };
   };
 
   // 時刻をリセットする関数
@@ -1412,7 +1403,7 @@ export default function AttendanceManagement() {
     return () => {
       subscriptions.unsubscribe();
     };
-  }, [selectedDate, isEditing]);
+  }, [selectedDate, isEditing, recipientMap]);
 
   return (
     <div className="flex flex-col bg-gray-50">
