@@ -935,7 +935,10 @@ export default function AttendanceManagement() {
    * @param b 比較対象の日時2
    * @returns a < b: 負数, a > b: 正数, 同一: 0
    */
-  const compareTime = (a: Date, b: Date): number => {
+  const compareTime = (a?: Date | null, b?: Date | null): number => {
+    if (a == null && b == null) return 0;
+    if (a == null) return -1;
+    if (b == null) return 1;
     return a.getTime() - b.getTime();
   };
 
@@ -1091,6 +1094,21 @@ export default function AttendanceManagement() {
     setSortConfig({ column, direction });
   };
 
+  const handleDeleteVisitRecord = async (row: AttendanceData) => {
+    if (!window.confirm("この行を削除します。よろしいですか？")) return;
+    try {
+      await client.models.VisitRecord.delete(
+        { id: row.id },
+        { authMode: "userPool" }
+      );
+      // ローカルも即時反映（observeQuery でも追従）
+      setAttendanceData((prev) => prev.filter((x) => x.id !== row.id));
+    } catch (e) {
+      console.error("削除失敗:", e);
+      alert("削除に失敗しました。画面を更新して再度お試しください。");
+    }
+  };
+
   // ソートされたデータを取得
   const getSortedData = () => {
     if (!sortConfig) return attendanceData;
@@ -1105,7 +1123,42 @@ export default function AttendanceManagement() {
           const aKey = (a.userNameKana ?? a.userName) || "";
           const bKey = (b.userNameKana ?? b.userName) || "";
           return jaCollator.compare(aKey, bKey) * directionMultiplier;
+
         case "scheduledTime": {
+          const toMinutes = (time?: string | null) => {
+            if (!time || !/^\d{2}:\d{2}$/.test(time)) return null; // 空や不正は末尾へ
+            const [h, m] = time.split(":").map(Number);
+            if (Number.isNaN(h) || Number.isNaN(m)) return null;
+            return h * 60 + m;
+          };
+
+          const am = toMinutes(a.scheduledTime);
+          const bm = toMinutes(b.scheduledTime);
+
+          if (am == null && bm == null) return 0;
+          if (am == null) return directionMultiplier; // 空は末尾
+          if (bm == null) return -directionMultiplier;
+
+          return (am - bm) * directionMultiplier;
+        }
+
+        case "Badge": {
+          const getStatusRank = (d: AttendanceData): number => {
+            if (!d.arrivalTime) return 0; // 未来所
+            if (!d.departureTime) return 1; // 利用中
+            return d.isShortUsage ? 2 : 3; // 短時間 / 完了
+          };
+          const ra = getStatusRank(a);
+          const rb = getStatusRank(b);
+          if (ra !== rb) return (ra - rb) * directionMultiplier;
+
+          // ① 同順位なら名前で安定ソート
+          const aKey = (a.userNameKana ?? a.userName) || "";
+          const bKey = (b.userNameKana ?? b.userName) || "";
+          const nameCmp = jaCollator.compare(aKey, bKey);
+          if (nameCmp !== 0) return nameCmp * directionMultiplier;
+
+          // ② それでも同じなら来所予定で比較（空は末尾）
           const parseHHMM = (time?: string | null) => {
             if (!time || !/^\d{2}:\d{2}$/.test(time)) return null;
             const [h, m] = time.split(":").map(Number);
@@ -1114,14 +1167,11 @@ export default function AttendanceManagement() {
             d.setHours(h, m, 0, 0);
             return d;
           };
-
-          const ad = parseHHMM(a.scheduledTime);
-          const bd = parseHHMM(b.scheduledTime);
-
+          const ad = parseHHMM(a.scheduledTime),
+            bd = parseHHMM(b.scheduledTime);
           if (ad === null && bd === null) return 0;
-          if (ad === null) return directionMultiplier; // 空や不正値は末尾へ（昇順時）
+          if (ad === null) return directionMultiplier;
           if (bd === null) return -directionMultiplier;
-
           return (ad.getTime() - bd.getTime()) * directionMultiplier;
         }
 
@@ -1144,14 +1194,41 @@ export default function AttendanceManagement() {
           return (
             compareTime(a.arrivalTime, b.arrivalTime) * directionMultiplier
           );
-        case "departureTime":
-          // nullの場合は最後に表示
-          if (a.departureTime === null && b.departureTime === null) return 0;
-          if (a.departureTime === null) return directionMultiplier;
-          if (b.departureTime === null) return -directionMultiplier;
-          return (
-            compareTime(a.departureTime, b.departureTime) * directionMultiplier
-          );
+        case "departureTime": {
+          const toMs = (d?: Date | null) => (d ? d.getTime() : null);
+          const ta = toMs(a.departureTime);
+          const tb = toMs(b.departureTime);
+
+          // 1) どちらも退所時刻あり → 時刻で比較（方向はdirectionに従う）
+          if (ta != null && tb != null) {
+            const tDiff = (ta - tb) * directionMultiplier;
+            if (tDiff !== 0) return tDiff;
+
+            // 同時刻内の安定化（常に昇順で固定）
+            const aKey = (a.userNameKana ?? a.userName) || "";
+            const bKey = (b.userNameKana ?? b.userName) || "";
+            const nameDiff = jaCollator.compare(aKey, bKey);
+            if (nameDiff !== 0) return nameDiff;
+            return a.id.localeCompare(b.id);
+          }
+
+          // 2) 片方だけ null → 常に null を末尾へ（昇順/降順に関係なく固定）
+          if (ta == null && tb != null) return 1;
+          if (ta != null && tb == null) return -1;
+
+          // 3) どちらも null → 「利用中(来所あり)」→「未来所(来所なし)」で固定
+          const nullRank = (d: AttendanceData) => (d.arrivalTime ? 0 : 1); // 0=利用中, 1=未来所
+          const rDiff = nullRank(a) - nullRank(b);
+          if (rDiff !== 0) return rDiff;
+
+          // さらに同順位なら名前→idで安定化
+          const aKey = (a.userNameKana ?? a.userName) || "";
+          const bKey = (b.userNameKana ?? b.userName) || "";
+          const nameDiff = jaCollator.compare(aKey, bKey);
+          if (nameDiff !== 0) return nameDiff;
+          return a.id.localeCompare(b.id);
+        }
+
         case "actualUsageTime":
           const parseUsageMinutes = (time?: string | null) => {
             if (!time) return null;
@@ -1446,6 +1523,9 @@ export default function AttendanceManagement() {
                         >
                           ステータス
                           {getSortIcon("Badge")}
+                        </TableHead>
+                        <TableHead className="w-[60px] text-center">
+                          削除
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1830,6 +1910,16 @@ export default function AttendanceManagement() {
                             </TableCell>
                             <TableCell className="whitespace-nowrap py-2 text-center">
                               {getStatusBadge(data)}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap py-2 text-center">
+                              <button
+                                className="h-7 w-7 inline-flex items-center justify-center rounded hover:bg-red-50"
+                                title="この行を削除"
+                                aria-label="この行を削除"
+                                onClick={() => handleDeleteVisitRecord(data)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                              </button>
                             </TableCell>
                           </motion.tr>
                         ))}
