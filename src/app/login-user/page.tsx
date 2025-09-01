@@ -1,9 +1,11 @@
 "use client";
 
-
+import { Amplify } from "aws-amplify";
+import outputs from "../../../amplify_outputs.json";
 import "@aws-amplify/ui-react/styles.css";
-import { Authenticator, useTheme, View, Heading, Button, useAuthenticator } from "@aws-amplify/ui-react";
+import { Authenticator, useTheme, View, Heading, Button, useAuthenticator, Alert } from "@aws-amplify/ui-react";
 import { I18n } from '@aws-amplify/core';
+import { signIn } from 'aws-amplify/auth';   
 import { useEffect } from "react";
 import QrReceptionScreen from "@/components/qr-reception-screen";
 import { SidebarProvider } from "@/context/sidebar-context";
@@ -16,10 +18,12 @@ I18n.putVocabularies({
     'Sign in': '送信',
     'Signing in': '送信中',
     'Incorrect username or password.': 'IDまたはパスワードが間違っています。',
+    'PreAuthentication failed with error Incorrect username or password.': 'IDまたはパスワードが間違っています。'
   },
 });
 
-
+// Amplify設定を反映
+Amplify.configure(outputs);
 
 // Amplify UIのカスタマイズ
 const components = {
@@ -32,6 +36,9 @@ const components = {
         </Heading>
       );
     },
+
+  
+
     Footer() {
       return <View textAlign="center" padding="1rem" />;
     },
@@ -74,7 +81,11 @@ export default function App() {
       document.body.style.backgroundColor = "";
     };*/
   }, []);
+  
+  
+  const loginType: 'user' | 'admin' = 'user';
 
+  console.log('loginType', loginType);
 
   return (
     <Authenticator
@@ -82,6 +93,53 @@ export default function App() {
       components={components}
       hideSignUp={true}
       loginMechanisms={["username"]}
+      services={{
+        async handleSignIn(formData: any) {
+          const { username, password } = formData;
+          try {
+              return await signIn({
+                username,
+                password,
+                options: {
+                    authFlowType: 'USER_PASSWORD_AUTH',
+                    clientMetadata: { loginType }, // ← PreAuth へ渡す
+                },
+              });
+          } catch (err) {
+            // 文字列化
+              const raw =
+              typeof err === 'string'
+              ? err
+              : (err as any)?.message ?? String(err ?? '');
+
+          // PreAuth 由来や一般的な認証失敗は日本語に差し替え
+              const isAuthFail =
+              /PreAuthentication failed/i.test(raw) ||
+              /Incorrect username or password/i.test(raw) ||
+              /UserNotFoundException|NotAuthorizedException/i.test(raw);
+
+            if (isAuthFail) {
+              // ← ここで日本語メッセージを投げ直す
+                throw new Error(I18n.get('Incorrect username or password.'));
+            }
+              // それ以外はそのまま（デフォルト帯に英語等で表示）
+            throw err;
+        }
+      },
+    }}
+  
+  /*  services={{
+        async handleSignIn(formData) {
+          const { username, password } = formData;
+          console.log('handleSignIn called', formData?.username);
+          return signIn({
+            username,
+            password,
+            options: { authFlowType: 'USER_PASSWORD_AUTH', clientMetadata: { loginType } },
+          });
+        },
+      }}*/
+      
     >
      <LoginApp destination="/list/qr-reception-screen" loginType="user"/>  
      {/*<div className="fixed inset-0">
