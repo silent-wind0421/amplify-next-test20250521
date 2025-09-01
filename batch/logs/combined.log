@@ -26,3 +26,7 @@
 {"durationSeconds":"1.67","endTime":"2025-08-01T00:47:50.501Z","level":"info","message":"✅ バッチ処理完了","processedItemCount":0,"timestamp":"2025-08-01T00:47:50.503Z"}
 {"level":"info","message":"📌 バッチ処理開始","startTime":"2025-08-04T02:23:26.650Z","timestamp":"2025-08-04T02:23:26.651Z"}
 {"durationSeconds":"0.58","endTime":"2025-08-04T02:23:27.234Z","level":"info","message":"✅ バッチ処理完了","processedItemCount":0,"timestamp":"2025-08-04T02:23:27.235Z"}
+{"level":"info","message":"📌 バッチ処理開始","startTime":"2025-08-26T01:03:30.670Z","timestamp":"2025-08-26T01:03:30.680Z"}
+{"level":"error","message":"指定のファイルが存在しません。","source":"CsvToDynamodbBatch.ts","stack":"Error: ENOENT: no such file or directory, open 'C:\\Users\\稲岡大起\\kotayori_main\\kotayori\\batch\\dat\\kaipoke-sample-dummy2.csv'","timestamp":"2025-08-26T01:03:30.692Z"}
+{"level":"info","message":"📌 バッチ処理開始","startTime":"2025-08-26T01:03:44.409Z","timestamp":"2025-08-26T01:03:44.410Z"}
+{"level":"error","message":"指定のファイルが存在しません。","source":"CsvToDynamodbBatch.ts","stack":"Error: ENOENT: no such file or directory, open 'C:\\Users\\稲岡大起\\kotayori_main\\kotayori\\batch\\dat\\kaipoke-sample-dummy2.csv'","timestamp":"2025-08-26T01:03:44.420Z"}
