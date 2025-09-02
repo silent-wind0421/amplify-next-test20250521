@@ -5,8 +5,8 @@ export function useSignOutHandler() {
 
   return async function handleSignOut() {
     sessionStorage.clear();
-    await signOut({ global: true }); // ここで unauthenticated 状態へ変化
-    
+   // await signOut({ global: true }); // ここで unauthenticated 状態へ変化
+    await signOut();
     //sessionStorage.clear();
     
   };

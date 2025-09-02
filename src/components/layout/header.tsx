@@ -65,7 +65,7 @@ export function Header({ className = "" }: HeaderProps) {
           await handleSignOut();
           setTimeout(() => {
             router.replace("/"); //遷移の履歴を残さない(ブラウザーバックを防ぐ)
-          }, 50);
+          }, 100);
         }
       }
     })();

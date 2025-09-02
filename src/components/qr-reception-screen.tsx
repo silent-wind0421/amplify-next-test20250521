@@ -18,6 +18,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Toaster } from "@/components/ui/toaster";
 import BufferedInputHandler from "@/components/buffered-input-handler";
 
+// added by yoshida
+import { useSignOutHandler } from "@/hooks/use-signout";
+import { useAuthenticator } from "@aws-amplify/ui-react";
+import { useRouter } from "next/navigation";
+import { fetchAuthSession } from "aws-amplify/auth";
+
+import {
+  useSecretReveal,
+  SecretLogoutButton,
+  LogoutDialog,
+} from "@/components/secret-logout";
+// 
+
 import { generateClient } from "aws-amplify/data";
 // import { Schema } from "../../amplify/data/resource";
 import type { Schema } from "../../amplify/data/resource";
@@ -99,6 +112,65 @@ export default function QrReceptionScreen() {
 
   const successAudio = useRef<HTMLAudioElement | null>(null);
 
+  // added by yoshida
+  //const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+
+  //modified  by yoshida
+  const handleSignOut = useSignOutHandler();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { user, authStatus } = useAuthenticator();
+  const router = useRouter();
+  const signingOutRef = useRef(false);
+
+  useEffect(() => {
+    if (authStatus === "configuring") return;
+    if (authStatus === "unauthenticated") {
+      router.replace("/"); // 未認証時にリダイレクト
+    }
+
+    (async () => {
+      try {
+        const { tokens } = await fetchAuthSession();
+        const raw = tokens?.idToken?.payload?.["cognito:groups"];
+        const groups: string[] = Array.isArray(raw) ? (raw as string[]) : [];
+
+        const isAdmin = groups.includes("admin");
+        //const isUser = groups.includes("user");
+
+        if (isAdmin && !signingOutRef.current) {
+          signingOutRef.current = true;
+          await handleSignOut(); // ここでセッションを落とす
+          setTimeout(() => {
+            router.replace("/"); //遷移の履歴を残さない(ブラウザーバックを防ぐ)
+          }, 100);
+        }
+      } catch {
+        // 失敗時は安全側で落とす
+        if (!signingOutRef.current) {
+          signingOutRef.current = true;
+          await handleSignOut();
+          setTimeout(() => {
+            router.replace("/"); //遷移の履歴を残さない(ブラウザーバックを防ぐ)
+          }, 100);
+        }
+      }
+    })();
+  }, [authStatus, router]);
+
+
+
+
+  // 隠しボタンの表示ロジック
+  const { visible, onPressStart, onPressEnd } = useSecretReveal({
+    holdMs: null, 
+    autoHideMs: 6000,
+    hotkey: "m",
+  });
+
+  // ダイアログ制御
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  
+  
   useEffect(() => {
     successAudio.current = new Audio("/sounds/maou_se_system23.mp3");
     successAudio.current.preload = "auto";
@@ -547,9 +619,12 @@ export default function QrReceptionScreen() {
           className="grid flex-1 gap-4"
           style={{ gridTemplateRows: showButtons ? "1fr auto" : "1fr" }}
         >
+
+
           {/* メッセージ表示エリア - 透明背景 */}
           <div className="flex flex-col relative overflow-hidden">
             {/* ミュートボタン */}
+            {/*
             <Button
               onClick={() => setIsMuted((prev) => !prev)}
               variant="outline"
@@ -557,6 +632,26 @@ export default function QrReceptionScreen() {
             >
               {isMuted ? "🔇 ミュート中" : "🔊 音あり"}
             </Button>
+             */}
+
+            <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+               {/* 隠しログアウト（左）。 ⌘/Ctrl+Alt+g で visible=true になった時だけ出現 */}
+                <SecretLogoutButton
+                  visible={visible}
+                  onClick={() => setLogoutOpen(true)}
+                />
+
+              {/* ミュート（右）。短押し=ミュート切替、長押し=隠しログアウトの出現 */}
+                <Button
+                  variant="outline"
+                  onClick={() => setIsMuted((prev) => !prev)}
+                  className="bg-white/90 backdrop-blur-sm text-black shadow-md px-4 py-1 rounded-lg"
+                >
+                  {isMuted ? "🔇 ミュート中" : "🔊 音あり"}
+                </Button>
+            </div>
+
+
             <div className="flex flex-1 flex-col items-center justify-center p-6">
               {/* 紙吹雪のためのref */}
               <div
@@ -669,6 +764,14 @@ export default function QrReceptionScreen() {
         </div>
       </main>
 
+      <LogoutDialog
+          open={logoutOpen}
+          onOpenChange={setLogoutOpen}
+          onConfirm={async () => { console.log('clicked'); await handleSignOut(); }}
+        
+          isLoading={isLoggingOut}
+      />
+    
       {/* トースト通知 */}
       <Toaster />
       <BufferedInputHandler
