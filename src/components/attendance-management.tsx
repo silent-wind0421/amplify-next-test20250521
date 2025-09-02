@@ -552,7 +552,7 @@ export default function AttendanceManagement() {
         <div>
           <div className="font-bold text-destructive">エラー</div>
           <div className="text-sm text-muted-foreground">
-            DynamoDBへの更新に失敗しました
+            {Message.EF050012}
           </div>
         </div>,
         {
@@ -628,7 +628,7 @@ export default function AttendanceManagement() {
         <div>
           <div className="font-bold text-destructive">エラー</div>
           <div className="text-sm text-muted-foreground">
-            DynamoDBへの退所記録に失敗しました
+            {Message.EF050013}
           </div>
         </div>,
         {
@@ -671,9 +671,9 @@ export default function AttendanceManagement() {
     if (!timeRegex.test(newValue)) {
       toast(
         <div>
-          <div className="font-bold text-destructive">無効な時刻形式です</div>
+          <div className="font-bold text-destructive">{Message.EF050014}</div>
           <div className="text-sm text-muted-foreground">
-            時刻は HH:mm 形式で入力してください（例: 09:30）
+          {Message.EF050015}
           </div>
         </div>,
         {
@@ -703,10 +703,10 @@ export default function AttendanceManagement() {
               toast(
                 <div>
                   <div className="font-bold text-destructive">
-                    無効な退所時刻です
+                    {Message.EF050016}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    退所時刻は来所時刻より後である必要があります
+                    {Message.EF050017}
                   </div>
                 </div>,
                 {
@@ -784,7 +784,7 @@ export default function AttendanceManagement() {
       toast(
         <div>
           <div className="font-semibold text-foreground">
-            {type === "arrival" ? "来所" : "退所"}時刻を更新しました
+            {type === "arrival" ? "来所" : "退所"}{Message.IA000005}
           </div>
           <div className="text-sm text-muted-foreground">
             新しい時刻: {newValue}
@@ -799,9 +799,9 @@ export default function AttendanceManagement() {
       console.error("DynamoDB 更新失敗:", error);
       toast(
         <div>
-          <div className="font-bold text-destructive">更新エラー</div>
+          <div className="font-bold text-destructive">{Message.EF050027}</div>
           <div className="text-sm text-muted-foreground">
-            DynamoDBへの反映に失敗しました
+            {Message.EF050025}
           </div>
         </div>,
         {
@@ -853,9 +853,9 @@ export default function AttendanceManagement() {
       console.error("備考の保存に失敗:", error);
       toast(
         <div>
-          <div className="font-bold text-destructive">備考の保存エラー</div>
+          <div className="font-bold text-destructive">{Message.EF050019}</div>
           <div className="text-sm text-muted-foreground">
-            DynamoDBへの保存に失敗しました
+            {Message.EF050020}
           </div>
         </div>,
         {
@@ -902,9 +902,9 @@ export default function AttendanceManagement() {
       console.error("早退/超過理由の保存に失敗:", error);
       toast(
         <div>
-          <div className="font-bold text-destructive">保存エラー</div>
+          <div className="font-bold text-destructive">{Message.EF050021}</div>
           <div className="text-sm text-muted-foreground">
-            DynamoDBへの保存に失敗しました
+            {Message.EF050020}
           </div>
         </div>,
         {
@@ -1050,10 +1050,10 @@ export default function AttendanceManagement() {
       toast(
         <div>
           <div className="font-semibold text-foreground">
-            {type === "arrival" ? "来所" : "退所"}時刻をリセットしました
+            {type === "arrival" ? "来所" : "退所"}{Message.EF050022}
           </div>
           <div className="text-sm text-muted-foreground">
-            DynamoDB にも反映されました
+            {Message.EF050023}
           </div>
         </div>,
         {
@@ -1065,9 +1065,9 @@ export default function AttendanceManagement() {
       console.error("リセット時のDB更新失敗:", error);
       toast(
         <div>
-          <div className="font-bold text-destructive">リセットエラー</div>
+          <div className="font-bold text-destructive">{Message.EF050024}</div>
           <div className="text-sm text-muted-foreground">
-            DynamoDBへのリセット反映に失敗しました
+            {Message.EF050025}
           </div>
         </div>,
         {

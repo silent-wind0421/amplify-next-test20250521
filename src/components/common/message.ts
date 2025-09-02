@@ -123,6 +123,9 @@ static readonly EF050014 = "無効な時刻形式です。";
 /** 時刻の形式が不正な場合 */
 static readonly EF050015 = "時刻は HH:mm 形式で入力してください。（例=09:30）";
 
+/** 無効な退所時刻です */
+static readonly EF050016 = "無効な退所時刻です。";
+
 /** 来所時刻より前に退所時刻を登録した際に発生 */
 static readonly EF050017 = "退所時刻は来所時刻より後である必要があります。";
 
@@ -152,5 +155,8 @@ static readonly EF050025 = "DynamoDBの反映に失敗しました。";
 
 /** DynamoDBに接続できず、システムエラーが発生 */
 static readonly EF050026 = "DynamoDBへのリセット反映に失敗しました。";
+
+/** DynamoDBの更新失敗のサブメッセージ */
+static readonly EF050027 = "更新エラー";
 
 }
