@@ -1,6 +1,7 @@
 import fs from 'fs';
 import csv from 'csv-parser';
 import pLimit from 'p-limit';
+import { Message } from "../batch/message.js";
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, BatchWriteCommand, BatchGetCommand } from '@aws-sdk/lib-dynamodb';
 import { marshall } from "@aws-sdk/util-dynamodb";
@@ -157,7 +158,8 @@ async function addTimestampsToItems(docClient, tableName, items) {
                 tableName,
                 keys,
             });
-            console.error('DynamoDBの接続に失敗しました。');
+            console.error(Message.EB050008)
+            //console.error('DynamoDBの接続に失敗しました。');
             // ✅ 処理停止
             process.exit(1);
         }
@@ -217,7 +219,8 @@ async function processCSV(filePath) {
                             不正な項目名: header,
                             context: 'CSVヘッダー検証'
                         });
-                        throw new Error(`❌ 列インデックス ${index} に有効なヘッダーが存在しません`);
+                        throw new Error(Message.EB050010.replace("{0}", String(index)));
+                        //throw new Error(`❌ 列インデックス ${index} に有効なヘッダーが存在しません`);
                     }
                     indexValidationMap[index] = validations[validationsIndices[i]];
                     indexMaxSizeMap[index] = maxSizeValidationsIndices[i];
@@ -402,7 +405,8 @@ async function processCSV(filePath) {
                     if (conflict) {
                         isConflict = true;
                         logger.error({
-                            message: `同一IDに対して異なる児童情報があります。`,
+                            messageID: "EB050007",
+                            message: Message.EB050007,
                             PK: recipientId,
                             "行番号": line,
                             "児童情報（障害児名）": baseCname,
