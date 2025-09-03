@@ -171,6 +171,17 @@ export default function QrReceptionScreen() {
   const [logoutOpen, setLogoutOpen] = useState(false);
   
   
+  const handleConfirm = () =>
+    new Promise<void>((resolve) => {
+      handleSignOut(); // 同期
+      setTimeout(() => {  // 少し待ってから遷移＆resolve
+        router.replace("/");
+        resolve();
+      }, 300);
+    });
+
+
+
   useEffect(() => {
     successAudio.current = new Audio("/sounds/maou_se_system23.mp3");
     successAudio.current.preload = "auto";
@@ -767,7 +778,7 @@ export default function QrReceptionScreen() {
       <LogoutDialog
           open={logoutOpen}
           onOpenChange={setLogoutOpen}
-          onConfirm={async () => { console.log('clicked'); await handleSignOut(); }}
+          onConfirm={async()=> {await handleSignOut();}}
         
           isLoading={isLoggingOut}
       />
