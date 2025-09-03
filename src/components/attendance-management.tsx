@@ -1450,6 +1450,10 @@ export default function AttendanceManagement() {
                       locale={ja} // 日本語化
                       month={calendarMonth} // 表示中の月を state 管理
                       onMonthChange={setCalendarMonth}
+                      formatters={{
+                        formatCaption: (date) =>
+                          format(date, "yyyy年M月", { locale: ja }),
+                      }}
                       onSelect={(date) => {
                         if (date) {
                           console.log("選択された日付", date);
