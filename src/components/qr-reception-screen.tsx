@@ -175,9 +175,9 @@ export default function QrReceptionScreen() {
     new Promise<void>((resolve) => {
       handleSignOut(); // 同期
       setTimeout(() => {  // 少し待ってから遷移＆resolve
-        router.replace("/");
+        router.replace("/login-user");
         resolve();
-      }, 300);
+      }, 1000);
     });
 
 
@@ -778,8 +778,8 @@ export default function QrReceptionScreen() {
       <LogoutDialog
           open={logoutOpen}
           onOpenChange={setLogoutOpen}
-          onConfirm={async()=> {await handleSignOut();}}
-        
+          //onConfirm={async()=> {await handleSignOut();}}
+          onConfirm={handleConfirm}
           isLoading={isLoggingOut}
       />
     
