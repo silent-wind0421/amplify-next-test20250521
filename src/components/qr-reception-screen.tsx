@@ -778,9 +778,11 @@ export default function QrReceptionScreen() {
       <LogoutDialog
           open={logoutOpen}
           onOpenChange={setLogoutOpen}
-          //onConfirm={async()=> {await handleSignOut();}}
-          onConfirm={handleConfirm}
-          isLoading={isLoggingOut}
+          onConfirm={async()=> {await handleSignOut();}}
+          //onConfirm={handleConfirm}
+          //closeOnSuccess                          // ★ 成功時は即クローズ（busy解除しない）
+          labels={{ confirming: "ログアウト中…" }}
+          //isLoading={isLoggingOut}
       />
     
       {/* トースト通知 */}

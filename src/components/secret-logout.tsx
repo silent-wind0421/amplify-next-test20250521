@@ -212,10 +212,18 @@ export function LogoutDialog({
       if (r && typeof (r as Promise<unknown>).then === "function") {
         await (r as Promise<unknown>);
       }
-      if (closeOnSuccess) onOpenChange(false);
+      if (closeOnSuccess){
+
+        onOpenChange(false);
+        return;
+      } 
     } finally {
-      setLocalBusy(false);
-      busyRef.current = false;
+      
+      if (!closeOnSuccess) {
+        setLocalBusy(false);
+        busyRef.current = false;
+      }     
+      
     }
   };
 
