@@ -358,7 +358,7 @@ async function processCSV(filePath) {
             .on('end', async () => {
             const allValid = rowsWithMeta.every(r => r.isValid);
             if (!allValid) {
-                console.error('❌ 一部の行にバリデーションエラーがあります。処理を終了します。');
+                console.error(Message.EB050011);
                 process.exit(1);
             }
             // ✅ 全件バリデーションOK → inputMap に詰めていく
@@ -426,7 +426,7 @@ async function processCSV(filePath) {
                 }
             }
             if (isConflict) {
-                console.error('❌ 同一IDに異なる児童情報が含まれています。処理を終了します。');
+                console.error(Message.EB050007);
                 process.exit(1);
             }
             else {
@@ -477,7 +477,7 @@ async function processCSV(filePath) {
                         }
                     }));
                     await Promise.all(promises);
-                    console.log('✅ 全件書き込み完了');
+                    console.log(Message.EB050012);
                     resolve();
                 }
                 catch (err) {

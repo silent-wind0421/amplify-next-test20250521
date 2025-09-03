@@ -24,9 +24,9 @@
     "unauthenticated_identities_enabled": false
   },
   "data": {
-    "url": "https://ciead3jncvdqdhzroyljszosqy.appsync-api.ap-northeast-1.amazonaws.com/graphql",
+    "url": "https://vplw5xk4wvhazbvivckkvystji.appsync-api.ap-northeast-1.amazonaws.com/graphql",
     "aws_region": "ap-northeast-1",
-    "api_key": "da2-4lroz5plmndknkfr2z4koxwgrq",
+    "api_key": "da2-zf67drpb5jezjggy6sdtqwxbba",
     "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
     "authorization_types": [
       "API_KEY",
