@@ -51,3 +51,6 @@ kotayori-backup/
 dist/
 src/components/dist/
 src/config/dist/
+
+# batchのエラーログ
+batch/logs/
