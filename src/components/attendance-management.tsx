@@ -269,6 +269,7 @@ export default function AttendanceManagement() {
 
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [editingTime, setEditingTime] = useState<{
@@ -673,7 +674,7 @@ export default function AttendanceManagement() {
         <div>
           <div className="font-bold text-destructive">{Message.EF050014}</div>
           <div className="text-sm text-muted-foreground">
-          {Message.EF050015}
+            {Message.EF050015}
           </div>
         </div>,
         {
@@ -784,7 +785,8 @@ export default function AttendanceManagement() {
       toast(
         <div>
           <div className="font-semibold text-foreground">
-            {type === "arrival" ? "来所" : "退所"}{Message.IA000005}
+            {type === "arrival" ? "来所" : "退所"}
+            {Message.IA000005}
           </div>
           <div className="text-sm text-muted-foreground">
             新しい時刻: {newValue}
@@ -1050,7 +1052,8 @@ export default function AttendanceManagement() {
       toast(
         <div>
           <div className="font-semibold text-foreground">
-            {type === "arrival" ? "来所" : "退所"}{Message.EF050022}
+            {type === "arrival" ? "来所" : "退所"}
+            {Message.EF050022}
           </div>
           <div className="text-sm text-muted-foreground">
             {Message.EF050023}
@@ -1421,7 +1424,16 @@ export default function AttendanceManagement() {
                 >
                   {formattedDate}
                 </div>
-                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <Popover
+                  open={datePickerOpen}
+                  onOpenChange={(open) => {
+                    setDatePickerOpen(open);
+                    if (open) {
+                      // 開いたら選択日を表示月にする
+                      setCalendarMonth(selectedDate);
+                    }
+                  }}
+                >
                   <PopoverTrigger asChild>
                     <Button
                       variant="ghost"
@@ -1435,10 +1447,14 @@ export default function AttendanceManagement() {
                     <CalendarComponent
                       mode="single"
                       selected={selectedDate}
+                      locale={ja} // 日本語化
+                      month={calendarMonth} // 表示中の月を state 管理
+                      onMonthChange={setCalendarMonth}
                       onSelect={(date) => {
                         if (date) {
                           console.log("選択された日付", date);
                           setSelectedDate(date);
+                          setCalendarMonth(date);
                           setDatePickerOpen(false);
                         }
                       }}
