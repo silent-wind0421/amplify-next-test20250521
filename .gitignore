@@ -53,4 +53,4 @@ src/components/dist/
 src/config/dist/
 
 # batchのエラーログ
-batch/logs/
+batch/logs/*logs
