@@ -1,6 +1,7 @@
 import fs from 'fs';
 import csv from 'csv-parser';
 import pLimit from 'p-limit';
+import { Message } from "../batch/message.js";
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, BatchWriteCommand, BatchGetCommand } from '@aws-sdk/lib-dynamodb';
 import { marshall } from "@aws-sdk/util-dynamodb";
@@ -157,7 +158,8 @@ async function addTimestampsToItems(docClient, tableName, items) {
                 tableName,
                 keys,
             });
-            console.error('DynamoDBの接続に失敗しました。');
+            console.error(Message.EB050008)
+            //console.error('DynamoDBの接続に失敗しました。');
             // ✅ 処理停止
             process.exit(1);
         }
@@ -217,7 +219,8 @@ async function processCSV(filePath) {
                             不正な項目名: header,
                             context: 'CSVヘッダー検証'
                         });
-                        throw new Error(`❌ 列インデックス ${index} に有効なヘッダーが存在しません`);
+                        throw new Error(Message.EB050010.replace("{0}", String(index)));
+                        //throw new Error(`❌ 列インデックス ${index} に有効なヘッダーが存在しません`);
                     }
                     indexValidationMap[index] = validations[validationsIndices[i]];
                     indexMaxSizeMap[index] = maxSizeValidationsIndices[i];
@@ -355,7 +358,7 @@ async function processCSV(filePath) {
             .on('end', async () => {
             const allValid = rowsWithMeta.every(r => r.isValid);
             if (!allValid) {
-                console.error('❌ 一部の行にバリデーションエラーがあります。処理を終了します。');
+                console.error(Message.EB050011);
                 process.exit(1);
             }
             // ✅ 全件バリデーションOK → inputMap に詰めていく
@@ -402,7 +405,8 @@ async function processCSV(filePath) {
                     if (conflict) {
                         isConflict = true;
                         logger.error({
-                            message: `同一IDに対して異なる児童情報があります。`,
+                            messageID: "EB050007",
+                            message: Message.EB050007,
                             PK: recipientId,
                             "行番号": line,
                             "児童情報（障害児名）": baseCname,
@@ -422,7 +426,7 @@ async function processCSV(filePath) {
                 }
             }
             if (isConflict) {
-                console.error('❌ 同一IDに異なる児童情報が含まれています。処理を終了します。');
+                console.error(Message.EB050007);
                 process.exit(1);
             }
             else {
@@ -473,7 +477,7 @@ async function processCSV(filePath) {
                         }
                     }));
                     await Promise.all(promises);
-                    console.log('✅ 全件書き込み完了');
+                    console.log(Message.EB050012);
                     resolve();
                 }
                 catch (err) {
