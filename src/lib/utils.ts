@@ -1,4 +1,4 @@
-// src/lib/utils.tsa
+// src/lib/utils.ts
 
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
@@ -62,4 +62,42 @@ export function calcStatus(r: VisitRecordLike): "0" | "1" | "2" | "3" {
     r.actualDuration < r.contractedDuration
   ) return "2";
   return "3";
+}
+
+
+// 契約利用時間の編集機能を切り替えるフラグ true→編集可 false→編集不可
+export const ENABLE_CONTRACT_EDIT = false;
+
+// 入力を "HH:mm" に正規化（例: "9"→"09:00", "930"→"09:30", "9:3"→"09:03"）
+export function normalizeToHHmm(input: string): string {
+  if (!input) return "";
+  const raw = input.trim();
+  const parts = raw.split(":");
+  if (parts.length === 2) {
+    const h = parts[0].replace(/\D/g, "");
+    const m = parts[1].replace(/\D/g, "");
+    if (!h && !m) return "";
+    const hh = h.padStart(2, "0").slice(-2);
+    const mm = m.padStart(2, "0").slice(-2);
+    const mmNum = Number(mm);
+    if (isNaN(mmNum) || mmNum > 59) return "";
+    return `${hh}:${mm}`;
+  }
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length <= 2) return `${digits.padStart(2, "0")}:00`;
+  const take = digits.slice(0, 4);
+  const hh = take.slice(0, take.length - 2).padStart(2, "0").slice(-2);
+  const mm = take.slice(-2);
+  const mmNum = Number(mm);
+  if (isNaN(mmNum) || mmNum > 59) return "";
+  return `${hh}:${mm}`;
+}
+
+// "HH:mm" → 分（無効なら null）
+export function hhmmToMinutes(hhmm: string): number | null {
+  if (!hhmm) return null;
+  const m = /^(\d{1,2}):([0-5]\d)$/.exec(hhmm.trim());
+  if (!m) return null;
+  return Number(m[1]) * 60 + Number(m[2]);
 }

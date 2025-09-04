@@ -70,6 +70,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  ENABLE_CONTRACT_EDIT,
+  normalizeToHHmm,
+  hhmmToMinutes,
+} from "@/lib/utils";
 
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
@@ -265,6 +270,38 @@ export default function AttendanceManagement() {
   const setEditing = (value: boolean) => {
     setIsEditing(value);
     isEditingRef.current = value;
+  };
+
+  // AttendanceManagement() 内に追加
+  const [editingContract, setEditingContract] = useState<{
+    id: string;
+    value: string;
+  } | null>(null);
+
+  const saveContractTime = async (id: string, value: string) => {
+    const normalized = normalizeToHHmm(value);
+    const minutes = hhmmToMinutes(normalized);
+    if (minutes == null) {
+      toast("契約利用時間は HH:mm で入力してください（例: 02:30）");
+      return;
+    }
+
+    // ローカル反映
+    setAttendanceData((prev) =>
+      prev.map((v) => (v.id === id ? { ...v, contractTime: normalized } : v))
+    );
+    setEditingContract(null);
+
+    try {
+      await client.models.VisitRecord.update(
+        { id, contractedDuration: minutes },
+        { authMode: "userPool" }
+      );
+      toast("契約利用時間を更新しました", { description: normalized });
+    } catch (e) {
+      console.error(e);
+      toast("契約利用時間の更新に失敗しました");
+    }
   };
 
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
@@ -1577,9 +1614,79 @@ export default function AttendanceManagement() {
                             <TableCell className="whitespace-nowrap py-2 text-center">
                               {data.scheduledTime}
                             </TableCell>
-                            <TableCell className="whitespace-nowrap py-2 text-center">
-                              {data.contractTime}
+                            <TableCell className="py-2 text-center">
+                              {ENABLE_CONTRACT_EDIT ? (
+                                editingContract?.id === data.id ? (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <Input
+                                      value={editingContract.value}
+                                      onChange={(e) =>
+                                        setEditingContract({
+                                          id: data.id,
+                                          value: e.target.value,
+                                        })
+                                      }
+                                      onBlur={(e) =>
+                                        setEditingContract({
+                                          id: data.id,
+                                          value: normalizeToHHmm(
+                                            e.target.value
+                                          ),
+                                        })
+                                      }
+                                      className="w-20 text-center text-sm"
+                                      placeholder="HH:mm"
+                                    />
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 rounded-full text-green-600 hover:bg-green-50 hover:text-green-700"
+                                      onClick={() =>
+                                        saveContractTime(
+                                          data.id,
+                                          editingContract.value
+                                        )
+                                      }
+                                      title="保存"
+                                    >
+                                      <Check className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                      onClick={() => setEditingContract(null)}
+                                      title="キャンセル"
+                                    >
+                                      <XIcon className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <div className="group flex items-center justify-center">
+                                    <span className="font-medium">
+                                      {data.contractTime || "-"}
+                                    </span>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-6 w-6 opacity-0 group-hover:opacity-100 ml-2"
+                                      onClick={() =>
+                                        setEditingContract({
+                                          id: data.id,
+                                          value: data.contractTime || "",
+                                        })
+                                      }
+                                      title="契約利用時間を編集"
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                )
+                              ) : (
+                                <span>{data.contractTime || "-"}</span>
+                              )}
                             </TableCell>
+
                             <TableCell className="whitespace-nowrap py-2 text-center">
                               {data.arrivalTime ? (
                                 <div className="group flex items-center justify-center gap-2">
