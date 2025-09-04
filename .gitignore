@@ -39,7 +39,7 @@ next-env.d.ts
 
 # amplify
 .amplify
-# amplify_outputs.json
+amplify_outputs.json
 
 # amplify_outputs*
 amplifyconfiguration*amplify-next-app-backup.git.zip

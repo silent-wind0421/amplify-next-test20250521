@@ -1515,7 +1515,7 @@ export default function AttendanceManagement() {
                     <TableHeader className="bg-gray-50">
                       <TableRow>
                         <TableHead
-                          className="w-[80px] cursor-pointer whitespace-nowrap hover:bg-gray-100"
+                          className="w-[80px] text-left cursor-pointer whitespace-nowrap hover:bg-gray-100"
                           onClick={() => handleSort("userName")}
                         >
                           <div className="flex items-center">
@@ -1524,58 +1524,58 @@ export default function AttendanceManagement() {
                           </div>
                         </TableHead>
                         <TableHead
-                          className="w-[90px] cursor-pointer whitespace-nowrap hover:bg-gray-100"
+                          className="w-[90px] text-center cursor-pointer whitespace-nowrap hover:bg-gray-100"
                           onClick={() => handleSort("scheduledTime")}
                         >
-                          <div className="flex items-center">
+                          <div className="inline-flex items-center justify-center gap-1">
                             来所予定時刻
                             {getSortIcon("scheduledTime")}
                           </div>
                         </TableHead>
                         <TableHead
-                          className="w-[90px] cursor-pointer whitespace-nowrap hover:bg-gray-100"
+                          className="w-[90px] text-center cursor-pointer whitespace-nowrap hover:bg-gray-100"
                           onClick={() => handleSort("contractTime")}
                         >
-                          <div className="flex items-center">
+                          <div className="inline-flex items-center justify-center gap-1">
                             契約利用時間
                             {getSortIcon("contractTime")}
                           </div>
                         </TableHead>
                         <TableHead
-                          className="w-[90px] cursor-pointer whitespace-nowrap hover:bg-gray-100"
+                          className="w-[90px] text-center cursor-pointer whitespace-nowrap hover:bg-gray-100"
                           onClick={() => handleSort("arrivalTime")}
                         >
-                          <div className="flex items-center">
+                          <div className="inline-flex items-center justify-center gap-1">
                             来所時刻
                             {getSortIcon("arrivalTime")}
                           </div>
                         </TableHead>
                         <TableHead
-                          className="w-[90px] cursor-pointer whitespace-nowrap hover:bg-gray-100"
+                          className="w-[90px] text-center cursor-pointer whitespace-nowrap hover:bg-gray-100"
                           onClick={() => handleSort("departureTime")}
                         >
-                          <div className="flex items-center">
+                          <div className="inline-flex items-center justify-center gap-1">
                             退所時刻
                             {getSortIcon("departureTime")}
                           </div>
                         </TableHead>
                         <TableHead
-                          className="w-[90px] cursor-pointer whitespace-nowrap hover:bg-gray-100"
+                          className="w-[90px] text-center cursor-pointer whitespace-nowrap hover:bg-gray-100"
                           onClick={() => handleSort("actualUsageTime")}
                         >
-                          <div className="flex items-center">
+                          <div className="inline-flex items-center justify-center gap-1">
                             実利用時間
                             {getSortIcon("actualUsageTime")}
                           </div>
                         </TableHead>
-                        <TableHead className="w-[80px] lg:w-[100px] whitespace-nowrap">
+                        <TableHead className="w-[80px] lg:w-[100px] text-center whitespace-nowrap">
                           早退/超過理由
                         </TableHead>
-                        <TableHead className="w-[70px] lg:w-[120px] xl:w-[150px] whitespace-nowrap">
+                        <TableHead className="w-[70px] lg:w-[120px] xl:w-[150px] text-center whitespace-nowrap">
                           備考
                         </TableHead>
                         <TableHead
-                          className="w-[90px] cursor-pointer whitespace-nowrap hover:bg-gray-100"
+                          className="w-[90px] text-center cursor-pointer whitespace-nowrap hover:bg-gray-100"
                           onClick={() => handleSort("Badge")}
                         >
                           ステータス
@@ -1597,7 +1597,7 @@ export default function AttendanceManagement() {
                             transition={{ duration: 0.2 }}
                             className={`border-b ${index % 2 === 1 ? "bg-blue-50/30" : ""} hover:bg-gray-50`}
                           >
-                            <TableCell className="whitespace-nowrap py-2 text-center">
+                            <TableCell className="whitespace-nowrap py-2 text-left">
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
@@ -1612,7 +1612,10 @@ export default function AttendanceManagement() {
                               </TooltipProvider>
                             </TableCell>
                             <TableCell className="whitespace-nowrap py-2 text-center">
-                              {data.scheduledTime}
+                              {/* {data.scheduledTime} */}
+                              <span className="font-mono tabular-nums">
+                                {data.scheduledTime}
+                              </span>
                             </TableCell>
                             <TableCell className="py-2 text-center">
                               {ENABLE_CONTRACT_EDIT ? (
@@ -1757,14 +1760,15 @@ export default function AttendanceManagement() {
                                       </Button>
                                     </div>
                                   ) : (
-                                    <div className="flex items-center justify-center w-full">
-                                      <span className="font-medium text-gray-700">
+                                    <div className="group grid grid-cols-[1.5rem_auto_1.5rem] items-center w-full">
+                                      <span aria-hidden />
+                                      <span className="justify-self-center inline-block w-14 text-center font-mono tabular-nums font-medium text-gray-700">
                                         {formatTimeJST(data.arrivalTime)}
                                       </span>
                                       <Button
                                         size="icon"
                                         variant="ghost"
-                                        className="h-6 w-6 rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-700 group-hover:opacity-100 ml-2"
+                                        className="justify-self-end h-6 w-6 rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-700 group-hover:opacity-100 ml-2"
                                         onClick={() =>
                                           startEditing(
                                             data.id,
@@ -1858,14 +1862,15 @@ export default function AttendanceManagement() {
                                       </Button>
                                     </div>
                                   ) : (
-                                    <div className="flex items-center justify-center w-full">
-                                      <span className="font-medium text-gray-700">
+                                    <div className="group grid grid-cols-[1.5rem_auto_1.5rem] items-center w-full">
+                                      <span aria-hidden />
+                                      <span className="justify-self-center inline-block w-14 text-center font-mono tabular-nums font-medium text-gray-700">
                                         {formatTimeJST(data.departureTime)}
                                       </span>
                                       <Button
                                         size="icon"
                                         variant="ghost"
-                                        className="h-6 w-6 rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-700 group-hover:opacity-100 ml-2"
+                                        className="justify-self-end h-6 w-6 rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-700 group-hover:opacity-100 ml-2"
                                         onClick={() =>
                                           startEditing(
                                             data.id,
@@ -1894,11 +1899,7 @@ export default function AttendanceManagement() {
                             <TableCell className="whitespace-nowrap py-2 text-center">
                               {data.actualUsageTime && (
                                 <span
-                                  className={
-                                    data.isShortUsage
-                                      ? "font-medium text-red-500"
-                                      : "font-medium text-gray-700"
-                                  }
+                                  className={`${data.isShortUsage ? "text-red-500" : "text-gray-700"} font-mono tabular-nums font-medium`}
                                 >
                                   {data.actualUsageTime}
                                 </span>
