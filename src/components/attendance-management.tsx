@@ -9,15 +9,13 @@
 
 import { fetchAuthSession } from "@aws-amplify/auth";
 import { cn } from "@/lib/utils";
-import { DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { ja } from "date-fns/locale";
 import { formatTimeJST } from "@/lib/utils";
 import {
-  LogOut,
   Calendar,
   Edit2,
   Check,
@@ -25,19 +23,11 @@ import {
   Trash2,
   ArrowUp,
   ArrowDown,
-  Menu,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import NoteDialog from "@/components/attendance/NoteDialog";
 import {
   Table,
   TableBody,
@@ -62,7 +52,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   Tooltip,
@@ -81,6 +70,9 @@ import type { Schema } from "@/amplify/data/resource";
 import { Message } from "../components/common/message";
 
 import { parseTimeInJST, formatMinutes, calcStatus } from "@/lib/utils";
+
+// 既存の import 群の近くに追加
+import { normalizeTimeInput, compareTime } from "@/lib/time-utils";
 
 const client = generateClient<Schema>({ authMode: "userPool" });
 
@@ -127,20 +119,6 @@ function calcDiffMinutes(start: string, end: string): number {
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
   return eh * 60 + em - (sh * 60 + sm);
-}
-
-//時刻入力補完
-function normalizeTimeInput(raw: string): string | null {
-  const trimmed = raw.replace(/[^\d]/g, "");
-  if (trimmed.length === 4) {
-    return `${trimmed.slice(0, 2)}:${trimmed.slice(2, 4)}`;
-  } else if (trimmed.length === 3) {
-    return `0${trimmed[0]}:${trimmed.slice(1, 3)}`;
-  } else if (trimmed.length === 2) {
-    return `${trimmed}:00`;
-  } else {
-    return null;
-  }
 }
 
 /**
@@ -504,8 +482,8 @@ export default function AttendanceManagement() {
 
           // ステータス/理由/備考
           status: calcStatus(r),
-          reason: r.reason ?? "",
-          note: r.note ?? "",
+          reason: toReasonCode(r.reason ?? "0"),
+          note: r.note ?? null,
           isShortUsage:
             typeof r.contractedDuration === "number" &&
             typeof r.actualDuration === "number" &&
@@ -965,20 +943,6 @@ export default function AttendanceManagement() {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
-  };
-
-  // 時刻を比較する関数 (a < b なら負、a > b なら正、a = b なら 0)
-  /**
-   * 2つのDateオブジェクトを比較する。
-   * @param a 比較対象の日時1
-   * @param b 比較対象の日時2
-   * @returns a < b: 負数, a > b: 正数, 同一: 0
-   */
-  const compareTime = (a?: Date | null, b?: Date | null): number => {
-    if (a == null && b == null) return 0;
-    if (a == null) return -1;
-    if (b == null) return 1;
-    return a.getTime() - b.getTime();
   };
 
   /**
@@ -1952,89 +1916,58 @@ export default function AttendanceManagement() {
                               </TooltipProvider>
                             </TableCell>
                             <TableCell className="whitespace-nowrap py-2 text-left">
-                              <Dialog
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 w-full max-w-[65px] lg:max-w-[110px] xl:max-w-[140px] flex items-center justify-start px-2 text-left text-gray-600 hover:bg-gray-100 text-xs mx-auto"
+                                onClick={() =>
+                                  startEditingNote(data.id, data.note)
+                                }
+                              >
+                                {data.note ? (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        {screenWidth === null ? (
+                                          ""
+                                        ) : (
+                                          <span className="truncate">
+                                            {data.note!.length >
+                                            (screenWidth < 1280 ? 10 : 20)
+                                              ? `${data.note!.substring(0, screenWidth < 1280 ? 10 : 20)}...`
+                                              : data.note}
+                                          </span>
+                                        )}
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{data.note}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </Button>
+
+                              <NoteDialog
                                 open={
                                   editingNote !== null &&
                                   editingNote.id === data.id
                                 }
-                                onOpenChange={(open) => {
-                                  if (!open) setEditingNote(null);
-                                }}
-                              >
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 w-full max-w-[65px] lg:max-w-[110px] xl:max-w-[140px] flex items-center justify-start px-2 text-left text-gray-600 hover:bg-gray-100 text-xs mx-auto"
-                                    onClick={() =>
-                                      startEditingNote(data.id, data.note)
-                                    }
-                                  >
-                                    {data.note ? (
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            {screenWidth === null ? (
-                                              ""
-                                            ) : (
-                                              <span className="truncate">
-                                                {data.note!.length >
-                                                (screenWidth < 1280 ? 10 : 20)
-                                                  ? `${data.note!.substring(0, screenWidth < 1280 ? 10 : 20)}...`
-                                                  : data.note}
-                                              </span>
-                                            )}
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p>{data.note}</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    ) : (
-                                      <span className="text-gray-400">-</span>
-                                    )}
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-md">
-                                  <DialogHeader>
-                                    <DialogTitle>備考の編集</DialogTitle>
-                                    <DialogDescription>
-                                      {data.userName}
-                                      さんの備考を入力してください
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <div className="grid gap-4 py-4">
-                                    <Textarea
-                                      value={editingNote?.value || ""}
-                                      onChange={(e) =>
-                                        setEditingNote({
-                                          ...editingNote!,
-                                          value: e.target.value,
-                                        })
-                                      }
-                                      onFocus={() => setEditing(true)} // 追加
-                                      onBlur={() => setEditing(false)} // 追加
-                                      placeholder="備考を入力"
-                                      className="min-h-[100px]"
-                                    />
-                                  </div>
-                                  <DialogFooter>
-                                    <Button
-                                      variant="outline"
-                                      onClick={() => setEditingNote(null)}
-                                    >
-                                      キャンセル
-                                    </Button>
-                                    <Button
-                                      onClick={() =>
-                                        saveNote(data.id, editingNote!.value)
-                                      }
-                                    >
-                                      保存
-                                    </Button>
-                                  </DialogFooter>
-                                </DialogContent>
-                              </Dialog>
+                                userName={data.userName}
+                                value={editingNote?.value || ""}
+                                /* 編集内容の反映 */
+                                onChange={(v) =>
+                                  setEditingNote({ id: data.id, value: v })
+                                }
+                                /* 閉じる・保存 */
+                                onClose={() => setEditingNote(null)}
+                                onSave={() =>
+                                  saveNote(data.id, editingNote!.value)
+                                }
+                                onFocus={() => setEditing(true)}
+                                onBlur={() => setEditing(false)}
+                              />
                             </TableCell>
                             <TableCell className="whitespace-nowrap py-2 text-center">
                               {getStatusBadge(data)}
