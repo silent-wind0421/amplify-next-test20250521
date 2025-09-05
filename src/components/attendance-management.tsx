@@ -67,6 +67,9 @@ import { Message } from "../components/common/message";
 import { parseTimeInJST, formatMinutes, calcStatus } from "@/lib/utils";
 
 import { normalizeTimeInput, compareTime } from "@/lib/time-utils";
+import ContractTimeCell from "@/components/attendance/contract-time-cell";
+import ArrivalTimeCell from "@/components/attendance/arrival-time-cell";
+import DepartureTimeCell from "@/components/attendance/departure-time-cell";
 
 const client = generateClient<Schema>({ authMode: "userPool" });
 
@@ -1577,283 +1580,132 @@ export default function AttendanceManagement() {
                             </TableCell>
                             <TableCell className="py-2 text-center">
                               {ENABLE_CONTRACT_EDIT ? (
-                                editingContract?.id === data.id ? (
-                                  <div className="flex items-center justify-center gap-1">
-                                    <Input
-                                      value={editingContract.value}
-                                      onChange={(e) =>
-                                        setEditingContract({
-                                          id: data.id,
-                                          value: e.target.value,
-                                        })
-                                      }
-                                      onBlur={(e) =>
-                                        setEditingContract({
-                                          id: data.id,
-                                          value: normalizeToHHmm(
-                                            e.target.value
-                                          ),
-                                        })
-                                      }
-                                      className="w-20 text-center text-sm"
-                                      placeholder="HH:mm"
-                                    />
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-8 w-8 rounded-full text-green-600 hover:bg-green-50 hover:text-green-700"
-                                      onClick={() =>
-                                        saveContractTime(
-                                          data.id,
-                                          editingContract.value
-                                        )
-                                      }
-                                      title="保存"
-                                    >
-                                      <Check className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-8 w-8 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                      onClick={() => setEditingContract(null)}
-                                      title="キャンセル"
-                                    >
-                                      <XIcon className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <div className="group flex items-center justify-center">
-                                    <span className="font-medium">
-                                      {data.contractTime || "-"}
-                                    </span>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-6 w-6 opacity-0 group-hover:opacity-100 ml-2"
-                                      onClick={() =>
-                                        setEditingContract({
-                                          id: data.id,
-                                          value: data.contractTime || "",
-                                        })
-                                      }
-                                      title="契約利用時間を編集"
-                                    >
-                                      <Edit2 className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                )
+                                <ContractTimeCell
+                                  value={data.contractTime}
+                                  isEditing={editingContract?.id === data.id}
+                                  editingValue={editingContract?.value ?? ""}
+                                  onStartEdit={(current) =>
+                                    setEditingContract({
+                                      id: data.id,
+                                      value: current,
+                                    })
+                                  }
+                                  onChange={(v) =>
+                                    setEditingContract({
+                                      id: data.id,
+                                      value: v,
+                                    })
+                                  }
+                                  onSave={() =>
+                                    saveContractTime(
+                                      data.id,
+                                      editingContract!.value
+                                    )
+                                  }
+                                  onCancel={() => setEditingContract(null)}
+                                  onFocus={() => setEditing(true)}
+                                  onBlur={() => setEditing(false)}
+                                />
                               ) : (
-                                <span>{data.contractTime || "-"}</span>
+                                <span className="font-mono tabular-nums">
+                                  {data.contractTime ?? "-"}
+                                </span>
                               )}
                             </TableCell>
 
                             <TableCell className="whitespace-nowrap py-2 text-center">
-                              {data.arrivalTime ? (
-                                <div className="group flex items-center justify-center gap-2">
-                                  {editingTime &&
+                              <ArrivalTimeCell
+                                time={data.arrivalTime}
+                                isEditing={
+                                  !!editingTime &&
                                   editingTime.id === data.id &&
-                                  editingTime.type === "arrival" ? (
-                                    <div className="flex items-center justify-center gap-1 mx-auto">
-                                      <Input
-                                        type="text"
-                                        value={editingTime.value}
-                                        onChange={(e) =>
-                                          setEditingTime({
-                                            ...editingTime,
-                                            value: e.target.value,
-                                          })
-                                        }
-                                        onBlur={() => {
-                                          const normalized = normalizeTimeInput(
-                                            editingTime.value
-                                          );
-                                          if (normalized) {
-                                            setEditingTime((prev) => ({
-                                              ...prev!,
-                                              value: normalized,
-                                            }));
-                                          }
-                                          setEditing(false);
-                                        }} //編集終了
-                                        onFocus={() => setEditing(true)} //編集開始
-                                        className="w-20 text-sm text-center"
-                                        placeholder="HH:mm"
-                                      />
-
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-8 w-8 rounded-full text-green-600 hover:bg-green-50 hover:text-green-700"
-                                        onClick={() =>
-                                          saveEditedTime(
-                                            data.id,
-                                            "arrival",
-                                            editingTime.value
-                                          )
-                                        }
-                                        title="保存"
-                                      >
-                                        <Check className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-8 w-8 rounded-full text-red-500 hover:bg-red-50 hover:text-red-700"
-                                        onClick={() =>
-                                          resetTime(data.id, "arrival")
-                                        }
-                                        title="時刻をリセット"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-8 w-8 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                        onClick={cancelEditing}
-                                        title="キャンセル"
-                                      >
-                                        <XIcon className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <div className="group grid grid-cols-[1.5rem_auto_1.5rem] items-center w-full">
-                                      <span aria-hidden />
-                                      <span className="justify-self-center inline-block w-14 text-center font-mono tabular-nums font-medium text-gray-700">
-                                        {formatTimeJST(data.arrivalTime)}
-                                      </span>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="justify-self-end h-6 w-6 rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-700 group-hover:opacity-100 ml-2"
-                                        onClick={() =>
-                                          startEditing(
-                                            data.id,
-                                            "arrival",
-                                            formatTimeJST(data.arrivalTime)!
-                                          )
-                                        }
-                                      >
-                                        <Edit2 className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="flex justify-center">
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleArrival(data.id)}
-                                    className="bg-blue-500 hover:bg-blue-600 px-2 h-7 text-xs"
-                                  >
-                                    来所
-                                  </Button>
-                                </div>
-                              )}
+                                  editingTime.type === "arrival"
+                                }
+                                editingValue={editingTime?.value ?? ""}
+                                onStartEdit={(current) =>
+                                  startEditing(data.id, "arrival", current)
+                                }
+                                onChange={(v) =>
+                                  setEditingTime({
+                                    id: data.id,
+                                    type: "arrival",
+                                    value: v,
+                                  })
+                                }
+                                onSave={() =>
+                                  saveEditedTime(
+                                    data.id,
+                                    "arrival",
+                                    editingTime!.value
+                                  )
+                                }
+                                onReset={() => resetTime(data.id, "arrival")}
+                                onCancel={cancelEditing}
+                                onFocus={() => setEditing(true)}
+                                onBlur={() => {
+                                  // 既存どおり onBlur で正規化
+                                  const normalized = normalizeTimeInput(
+                                    editingTime?.value ?? ""
+                                  );
+                                  if (normalized) {
+                                    setEditingTime((prev) => ({
+                                      ...prev!,
+                                      value: normalized,
+                                    }));
+                                  }
+                                  setEditing(false);
+                                }}
+                                onClickArrival={() => handleArrival(data.id)}
+                              />
                             </TableCell>
+
                             <TableCell className="whitespace-nowrap py-2 text-center">
-                              {data.departureTime ? (
-                                <div className="group flex items-center justify-center gap-2">
-                                  {editingTime &&
+                              <DepartureTimeCell
+                                hasArrival={!!data.arrivalTime}
+                                time={data.departureTime}
+                                isEditing={
+                                  !!editingTime &&
                                   editingTime.id === data.id &&
-                                  editingTime.type === "departure" ? (
-                                    <div className="flex items-center justify-center gap-1 mx-auto">
-                                      <Input
-                                        type="text"
-                                        value={editingTime.value}
-                                        onChange={(e) =>
-                                          setEditingTime({
-                                            ...editingTime,
-                                            value: e.target.value,
-                                          })
-                                        }
-                                        onFocus={() => setEditing(true)} // 編集開始
-                                        onBlur={(e) => {
-                                          const rawValue = e.target.value;
-                                          const formated =
-                                            formatToHHMM(rawValue);
-                                          setEditingTime({
-                                            ...editingTime,
-                                            value: formated,
-                                          });
-                                          setEditing(false); // 編集終了
-                                        }}
-                                        className="w-20 text-sm text-center"
-                                        placeholder="HH:mm"
-                                      />
-
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-8 w-8 rounded-full text-green-600 hover:bg-green-50 hover:text-green-700"
-                                        onClick={() =>
-                                          saveEditedTime(
-                                            data.id,
-                                            "departure",
-                                            editingTime.value
-                                          )
-                                        }
-                                        title="保存"
-                                      >
-                                        <Check className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-8 w-8 rounded-full text-red-500 hover:bg-red-50 hover:text-red-700"
-                                        onClick={() =>
-                                          resetTime(data.id, "departure")
-                                        }
-                                        title="時刻をリセット"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-8 w-8 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                        onClick={cancelEditing}
-                                        title="キャンセル"
-                                      >
-                                        <XIcon className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <div className="group grid grid-cols-[1.5rem_auto_1.5rem] items-center w-full">
-                                      <span aria-hidden />
-                                      <span className="justify-self-center inline-block w-14 text-center font-mono tabular-nums font-medium text-gray-700">
-                                        {formatTimeJST(data.departureTime)}
-                                      </span>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="justify-self-end h-6 w-6 rounded-full text-gray-400 opacity-0 transition-opacity hover:bg-gray-100 hover:text-gray-700 group-hover:opacity-100 ml-2"
-                                        onClick={() =>
-                                          startEditing(
-                                            data.id,
-                                            "departure",
-                                            formatTimeJST(data.departureTime)
-                                          )
-                                        }
-                                      >
-                                        <Edit2 className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
-                              ) : data.arrivalTime ? (
-                                <div className="flex justify-center">
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleDeparture(data.id)}
-                                    className="bg-blue-500 hover:bg-blue-600 px-2 h-7 text-xs"
-                                  >
-                                    退所
-                                  </Button>
-                                </div>
-                              ) : null}
+                                  editingTime.type === "departure"
+                                }
+                                editingValue={editingTime?.value ?? ""}
+                                onStartEdit={(current) =>
+                                  startEditing(data.id, "departure", current)
+                                }
+                                onChange={(v) =>
+                                  setEditingTime({
+                                    id: data.id,
+                                    type: "departure",
+                                    value: v,
+                                  })
+                                }
+                                onSave={() =>
+                                  saveEditedTime(
+                                    data.id,
+                                    "departure",
+                                    editingTime!.value
+                                  )
+                                }
+                                onReset={() => resetTime(data.id, "departure")}
+                                onCancel={cancelEditing}
+                                onFocus={() => setEditing(true)}
+                                onBlur={() => {
+                                  // 既存どおり onBlur でフォーマット整形
+                                  const formatted = formatToHHMM(
+                                    editingTime?.value ?? ""
+                                  );
+                                  setEditingTime((prev) => ({
+                                    ...prev!,
+                                    value: formatted,
+                                  }));
+                                  setEditing(false);
+                                }}
+                                onClickDeparture={() =>
+                                  handleDeparture(data.id)
+                                }
+                              />
                             </TableCell>
+
                             <TableCell className="whitespace-nowrap py-2 text-center">
                               {data.actualUsageTime && (
                                 <span
