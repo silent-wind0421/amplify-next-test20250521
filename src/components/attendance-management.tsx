@@ -14,16 +14,8 @@ import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { ja } from "date-fns/locale";
-import { formatTimeJST } from "@/lib/utils";
-import {
-  Calendar,
-  Edit2,
-  Check,
-  XIcon,
-  Trash2,
-  ArrowUp,
-  ArrowDown,
-} from "lucide-react";
+
+import { Calendar, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
@@ -40,7 +32,6 @@ import {
 import { useSidebar } from "@/context/sidebar-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 
 import {
   Popover,
@@ -54,11 +45,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  ENABLE_CONTRACT_EDIT,
-  normalizeToHHmm,
-  hhmmToMinutes,
-} from "@/lib/utils";
+import { ENABLE_CONTRACT_EDIT, normalizeToHHmm } from "@/lib/utils";
 
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
@@ -66,12 +53,30 @@ import { Message } from "../components/common/message";
 
 import { parseTimeInJST, formatMinutes, calcStatus } from "@/lib/utils";
 
-import { normalizeTimeInput, compareTime } from "@/lib/time-utils";
+import {
+  normalizeTimeInput,
+  compareHHmm,
+  diffSameDay,
+  minutesToHHmm,
+  hhmmToMinutes,
+  compareTime,
+} from "@/lib/time-utils";
 import ContractTimeCell from "@/components/attendance/contract-time-cell";
 import ArrivalTimeCell from "@/components/attendance/arrival-time-cell";
 import DepartureTimeCell from "@/components/attendance/departure-time-cell";
 
 const client = generateClient<Schema>({ authMode: "userPool" });
+
+// module-scope helper（固定日で Date を作る）
+const toFixedDate = (hhmm: string): Date => {
+  const d = parseTimeInJST("2000-01-01", hhmm);
+  if (!d) throw new Error(`Invalid time: ${hhmm}`);
+  return d;
+};
+
+// HH:mm → 2000-01-01 固定日の Date、パース失敗は null に寄せる
+const toFixedDateOrNull = (hhmm?: string | null): Date | null =>
+  hhmm ? (parseTimeInJST("2000-01-01", hhmm) ?? null) : null;
 
 // status（今あるやつ）はそのまま維持
 type StatusCode = "0" | "1" | "2" | "3";
@@ -170,13 +175,8 @@ const transformVisitRecord = (record: any, rec?: any) => {
       ? `${rec.lastNameKana ?? ""}${rec.firstNameKana ?? ""}`
       : undefined;
 
-  const arrivalTime = record.actualArrivalTime
-    ? new Date(`${record.visitDate}T${record.actualArrivalTime}`)
-    : null;
-
-  const departureTime = record.actualLeaveTime
-    ? new Date(`${record.visitDate}T${record.actualLeaveTime}`)
-    : null;
+  const arrivalTime: Date | null = toFixedDateOrNull(record.actualArrivalTime);
+  const departureTime: Date | null = toFixedDateOrNull(record.actualLeaveTime);
 
   const contractTime = record.contractedDuration
     ? `${Math.floor(record.contractedDuration / 60)}:${`${record.contractedDuration % 60}`.padStart(2, "0")}`
@@ -451,6 +451,18 @@ export default function AttendanceManagement() {
       const mapped: AttendanceData[] = (records ?? []).map((r: any) => {
         const rec = r.recipientId ? recMap.get(r.recipientId) : undefined;
 
+        // ★ ここで Date|null を確定（undefined は null に寄せる）
+        const arrivalTime: Date | null = toFixedDateOrNull(r.actualArrivalTime);
+        const departureTime: Date | null = toFixedDateOrNull(r.actualLeaveTime);
+
+        // 実利用（分→HH:mm）も先に型付きで計算
+        const usedMins: number | null = diffSameDay(
+          r.actualArrivalTime,
+          r.actualLeaveTime
+        );
+        const actualUsageTime: string | null =
+          usedMins == null ? null : minutesToHHmm(usedMins);
+
         return {
           id: r.id,
           // 氏名
@@ -468,15 +480,13 @@ export default function AttendanceManagement() {
             r.contractedDuration != null
               ? `${Math.floor(r.contractedDuration / 60)}:${String(r.contractedDuration % 60).padStart(2, "0")}`
               : "",
-          arrivalTime: r.actualArrivalTime
-            ? parseTimeInJST(r.visitDate, r.actualArrivalTime)
-            : null,
-          departureTime: r.actualLeaveTime
-            ? parseTimeInJST(r.visitDate, r.actualLeaveTime)
-            : null,
-          actualUsageTime:
-            r.actualDuration != null ? formatMinutes(r.actualDuration) : null,
 
+          // ★ visitDate を使わず、固定日の Date にする
+          arrivalTime,
+          departureTime,
+
+          // ★ 実利用は HH:mm 同士で計算（同日扱い）
+          actualUsageTime,
           // ステータス/理由/備考
           status: calcStatus(r),
           reason: toReasonCode(r.reason ?? "0"),
@@ -536,7 +546,9 @@ export default function AttendanceManagement() {
     // ローカルUIの更新
     setAttendanceData((prev) =>
       prev.map((item: AttendanceData) =>
-        item.id === id ? { ...item, arrivalTime: now } : item
+        item.id === id
+          ? { ...item, arrivalTime: toFixedDate(format(now, "HH:mm")) }
+          : item
       )
     );
 
@@ -589,7 +601,10 @@ export default function AttendanceManagement() {
     if (!target) return;
 
     // 実利用時間を計算
-    const updatedItem = calculateUsageTime(target, now);
+    const updatedItem = calculateUsageTime(
+      target,
+      toFixedDate(format(now, "HH:mm"))
+    );
 
     // DynamoDB 更新
     try {
