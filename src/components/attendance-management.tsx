@@ -27,7 +27,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
-import NoteDialog from "@/components/attendance/NoteDialog";
+import NoteDialog from "@/components/attendance/note-dialog";
+import ReasonSelect from "@/components/attendance/reason-select";
 import {
   Table,
   TableBody,
@@ -40,13 +41,7 @@ import { useSidebar } from "@/context/sidebar-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import {
   Popover,
   PopoverContent,
@@ -71,7 +66,6 @@ import { Message } from "../components/common/message";
 
 import { parseTimeInJST, formatMinutes, calcStatus } from "@/lib/utils";
 
-// 既存の import 群の近くに追加
 import { normalizeTimeInput, compareTime } from "@/lib/time-utils";
 
 const client = generateClient<Schema>({ authMode: "userPool" });
@@ -210,7 +204,7 @@ const transformVisitRecord = (record: any, rec?: any) => {
     departureTime,
     actualUsageTime,
     reason: toReasonCode(record.reason ?? "0"),
-    note: record.note ?? "-",
+    note: record.note ?? null,
     isShortUsage,
     status,
   };
@@ -1874,39 +1868,14 @@ export default function AttendanceManagement() {
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <div>
-                                      <Select
-                                        value={data.reason || "0"}
-                                        onValueChange={(value) =>
-                                          updateReason(data.id, value)
+                                      <ReasonSelect
+                                        value={data.reason}
+                                        onChange={(v) =>
+                                          updateReason(data.id, v)
                                         }
-                                      >
-                                        <SelectTrigger
-                                          onFocus={() => setEditing(true)} // ✅ こちらが発火する
-                                          onBlur={() => setEditing(false)} // ✅ こちらもOK
-                                          className="w-[75px] lg:w-[95px] h-7 text-xs mx-auto"
-                                        >
-                                          <SelectValue placeholder="理由を選択">
-                                            {getReasonDisplayText(data.reason)}
-                                          </SelectValue>
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="0">
-                                            未選択
-                                          </SelectItem>
-                                          <SelectItem value="1">
-                                            児童都合
-                                          </SelectItem>
-                                          <SelectItem value="2">
-                                            保護者都合
-                                          </SelectItem>
-                                          <SelectItem value="3">
-                                            事業者都合
-                                          </SelectItem>
-                                          <SelectItem value="99">
-                                            その他
-                                          </SelectItem>
-                                        </SelectContent>
-                                      </Select>
+                                        onFocus={() => setEditing(true)}
+                                        onBlur={() => setEditing(false)}
+                                      />
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent>
@@ -1915,6 +1884,7 @@ export default function AttendanceManagement() {
                                 </Tooltip>
                               </TooltipProvider>
                             </TableCell>
+
                             <TableCell className="whitespace-nowrap py-2 text-left">
                               <Button
                                 variant="outline"
