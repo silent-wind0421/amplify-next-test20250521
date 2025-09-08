@@ -34,12 +34,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StatusBadge, { StatusCode } from "@/components/attendance/status-badge";
 import { sortAttendance } from "../lib/attendance-sorting";
 
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import DateToolbar from "@/components/attendance/date-toolbar";
 import {
   Tooltip,
   TooltipContent,
@@ -1246,60 +1241,15 @@ export default function AttendanceManagement() {
         {/* メインコンテンツ */}
         <div className={cn("flex-1 overflow-auto transition-all duration-300")}>
           <Card className="mb-4 overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between bg-blue-500 py-3 text-white">
-              <CardTitle className="text-lg font-bold">通所実績管理</CardTitle>
-
-              <div className="flex items-center rounded bg-white/20 overflow-hidden">
-                <div
-                  className="px-3 py-1 text-white cursor-text hover:bg-white/10 transition-colors text-sm"
-                  onClick={() => setDatePickerOpen(true)}
-                >
-                  {formattedDate}
-                </div>
-                <Popover
-                  open={datePickerOpen}
-                  onOpenChange={(open) => {
-                    setDatePickerOpen(open);
-                    if (open) {
-                      // 開いたら選択日を表示月にする
-                      setCalendarMonth(selectedDate);
-                    }
-                  }}
-                >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-white hover:bg-white/30 rounded-none"
-                    >
-                      <Calendar className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <CalendarComponent
-                      mode="single"
-                      selected={selectedDate}
-                      locale={ja} // 日本語化
-                      month={calendarMonth} // 表示中の月を state 管理
-                      onMonthChange={setCalendarMonth}
-                      formatters={{
-                        formatCaption: (date) =>
-                          format(date, "yyyy年M月", { locale: ja }),
-                      }}
-                      onSelect={(date) => {
-                        if (date) {
-                          console.log("選択された日付", date);
-                          setSelectedDate(date);
-                          setCalendarMonth(date);
-                          setDatePickerOpen(false);
-                        }
-                      }}
-                      // autoFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </CardHeader>
+            <DateToolbar
+              selectedDate={selectedDate}
+              onSelectDate={(d) => setSelectedDate(d)}
+              calendarMonth={calendarMonth}
+              setCalendarMonth={setCalendarMonth}
+              open={datePickerOpen}
+              setOpen={setDatePickerOpen}
+              title="通所実績管理"
+            />
           </Card>
 
           <Card>
