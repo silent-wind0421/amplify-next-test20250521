@@ -78,5 +78,5 @@ export function useVisitRecords(selectedDate: Date, client: AmplifyClient) {
         void refetch();
     }, [selectedDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    return { data, refetch };
+    return { data, refetch, setData };
 }

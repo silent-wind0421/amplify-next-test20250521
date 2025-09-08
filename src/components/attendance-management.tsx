@@ -30,10 +30,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useSidebar } from "@/context/sidebar-context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import StatusBadge from "@/components/attendance/status-badge";
 import { sortAttendance } from "../lib/attendance-sorting";
-
+import { useVisitRecords } from "@/hooks/use-visit-records";
 import DateToolbar from "@/components/attendance/date-toolbar";
 import {
   Tooltip,
@@ -269,7 +269,11 @@ export default function AttendanceManagement() {
     column: SortColumn;
     direction: SortDirection;
   }>({ column: "userName", direction: "asc" });
-  const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([]);
+  const {
+    data: attendanceData,
+    refetch,
+    setData: setAttendanceData, // ← 追加
+  } = useVisitRecords(selectedDate, client);
 
   const col: SortColumn = sortConfig.column;
   const dir: SortDirection = sortConfig.direction;
