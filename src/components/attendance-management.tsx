@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/table";
 import { useSidebar } from "@/context/sidebar-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import StatusBadge, { StatusCode } from "@/components/attendance/status-badge";
+import StatusBadge from "@/components/attendance/status-badge";
 import { sortAttendance } from "../lib/attendance-sorting";
 
 import DateToolbar from "@/components/attendance/date-toolbar";
@@ -45,6 +45,7 @@ import { ENABLE_CONTRACT_EDIT, normalizeToHHmm } from "@/lib/utils";
 
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
+import type { AttendanceData, StatusCode } from "@/types/attendance";
 import { Message } from "../components/common/message";
 
 import { parseTimeInJST, formatMinutes, calcStatus } from "@/lib/utils";
@@ -123,22 +124,6 @@ const deriveStatus = (
   if (!arrival) return "0";
   if (!leave) return "1";
   return isShort ? "2" : "3";
-};
-
-type AttendanceData = {
-  id: string;
-  _version: number;
-  userName: string;
-  userNameKana?: string;
-  scheduledTime: string;
-  contractTime: string;
-  arrivalTime: Date | null;
-  departureTime: Date | null;
-  actualUsageTime: string | null;
-  isShortUsage: boolean;
-  reason: ReasonCode | null;
-  note: string | null;
-  status: StatusCode | null;
 };
 
 // ソート用の型定義

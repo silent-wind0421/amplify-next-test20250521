@@ -1,8 +1,6 @@
 // src/components/attendance/status-badge.tsx
 import { Badge } from "@/components/ui/badge";
-
-// ✅ これを追加（型をエクスポート）
-export type StatusCode = "0" | "1" | "2" | "3";
+import type { StatusCode } from "@/types/attendance"; // ← ここから型だけ取る
 
 type Props = { code: StatusCode };
 
