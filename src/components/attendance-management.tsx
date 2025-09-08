@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/table";
 import { useSidebar } from "@/context/sidebar-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import StatusBadge, { StatusCode } from "@/components/attendance/status-badge";
 
 import {
   Popover,
@@ -77,15 +77,6 @@ const toFixedDate = (hhmm: string): Date => {
 // HH:mm → 2000-01-01 固定日の Date、パース失敗は null に寄せる
 const toFixedDateOrNull = (hhmm?: string | null): Date | null =>
   hhmm ? (parseTimeInJST("2000-01-01", hhmm) ?? null) : null;
-
-// status（今あるやつ）はそのまま維持
-type StatusCode = "0" | "1" | "2" | "3";
-const STATUS_LABEL: Record<StatusCode, string> = {
-  "0": "未来所",
-  "1": "利用中",
-  "2": "短時間利用",
-  "3": "利用完了",
-};
 
 // コード値のドメイン
 const REASON_VALUES = ["0", "1", "2", "3", "99"] as const;
@@ -1280,41 +1271,6 @@ export default function AttendanceManagement() {
     );
   };
 
-  // 利用状況に基づくステータスバッジを取得
-  const getStatusBadge = (data: AttendanceData) => {
-    const code =
-      data.status ??
-      deriveStatus(data.arrivalTime, data.departureTime, data.isShortUsage);
-    switch (code) {
-      case "0":
-        return (
-          <Badge variant="outline" className="bg-gray-100">
-            未来所
-          </Badge>
-        );
-      case "1":
-        return (
-          <Badge variant="outline" className="bg-green-100 text-green-800">
-            利用中
-          </Badge>
-        );
-      case "2":
-        return (
-          <Badge variant="outline" className="bg-amber-100 text-amber-800">
-            短時間利用
-          </Badge>
-        );
-      case "3":
-        return (
-          <Badge variant="outline" className="bg-blue-100 text-blue-800">
-            利用完了
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
-
   // 児童名の表示用テキストを取得
   // const getUserNameDisplayText = (userName: string) => {
   //   const maxLength = 5;
@@ -1807,7 +1763,16 @@ export default function AttendanceManagement() {
                               />
                             </TableCell>
                             <TableCell className="whitespace-nowrap py-2 text-center">
-                              {getStatusBadge(data)}
+                              <StatusBadge
+                                code={
+                                  (data.status ??
+                                    deriveStatus(
+                                      data.arrivalTime,
+                                      data.departureTime,
+                                      data.isShortUsage
+                                    )) as "0" | "1" | "2" | "3"
+                                }
+                              />
                             </TableCell>
                             <TableCell className="whitespace-nowrap py-2 text-center">
                               <button
