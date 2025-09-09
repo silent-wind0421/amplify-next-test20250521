@@ -34,6 +34,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import StatusBadge from "@/components/attendance/status-badge";
 import { sortAttendance } from "../lib/attendance-sorting";
 import { useVisitRecords } from "@/hooks/use-visit-records";
+import { useAttendanceActions } from "@/hooks/use-attendance-actions";
+
 import DateToolbar from "@/components/attendance/date-toolbar";
 import {
   Tooltip,
@@ -45,7 +47,11 @@ import { ENABLE_CONTRACT_EDIT, normalizeToHHmm } from "@/lib/utils";
 
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
-import type { AttendanceData, StatusCode } from "@/types/attendance";
+import type {
+  AttendanceData,
+  StatusCode,
+  ReasonCode,
+} from "@/types/attendance";
 import { Message } from "../components/common/message";
 
 import { parseTimeInJST, formatMinutes, calcStatus } from "@/lib/utils";
@@ -74,11 +80,7 @@ const toFixedDate = (hhmm: string): Date => {
 // HH:mm → 2000-01-01 固定日の Date、パース失敗は null に寄せる
 const toFixedDateOrNull = (hhmm?: string | null): Date | null =>
   hhmm ? (parseTimeInJST("2000-01-01", hhmm) ?? null) : null;
-
-// コード値のドメイン
-const REASON_VALUES = ["0", "1", "2", "3", "99"] as const;
-type ReasonCode = (typeof REASON_VALUES)[number];
-
+const REASON_VALUES: readonly ReasonCode[] = ["0", "1", "2", "3", "99"];
 export const REASON_LABEL: Record<ReasonCode, string> = {
   "0": "未選択",
   "1": "児童都合",
@@ -225,32 +227,6 @@ export default function AttendanceManagement() {
     value: string;
   } | null>(null);
 
-  const saveContractTime = async (id: string, value: string) => {
-    const normalized = normalizeToHHmm(value);
-    const minutes = hhmmToMinutes(normalized);
-    if (minutes == null) {
-      toast("契約利用時間は HH:mm で入力してください（例: 02:30）");
-      return;
-    }
-
-    // ローカル反映
-    setAttendanceData((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, contractTime: normalized } : v))
-    );
-    setEditingContract(null);
-
-    try {
-      await client.models.VisitRecord.update(
-        { id, contractedDuration: minutes },
-        { authMode: "userPool" }
-      );
-      toast("契約利用時間を更新しました", { description: normalized });
-    } catch (e) {
-      console.error(e);
-      toast("契約利用時間の更新に失敗しました");
-    }
-  };
-
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState("");
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
@@ -272,11 +248,34 @@ export default function AttendanceManagement() {
   const {
     data: attendanceData,
     refetch,
-    setData: setAttendanceData, // ← 追加
+    setData: setAttendanceData,
   } = useVisitRecords(selectedDate, client);
 
   const col: SortColumn = sortConfig.column;
   const dir: SortDirection = sortConfig.direction;
+
+  const actions = useAttendanceActions({
+    client,
+    setAttendanceData,
+    refetch, // 失敗時の巻き戻し用
+    currentUserName: "admin",
+  });
+
+  const successToast = (desc: string) =>
+    toast(Message.IA000004, { description: desc });
+
+  const errorToast = () =>
+    toast(
+      <div>
+        <div className="font-bold text-destructive">{Message.EF050021}</div>
+        <div className="text-sm text-muted-foreground">{Message.EF050020}</div>
+      </div>,
+      {
+        icon: "❌",
+        className: "bg-destructive text-destructive-foreground",
+        duration: 5000,
+      }
+    );
 
   const sortedData = useMemo(
     () => sortAttendance<AttendanceData>(attendanceData, col, dir),
@@ -522,136 +521,6 @@ export default function AttendanceManagement() {
     return () => clearInterval(interval);
   }, []);
 
-  // 来所ボタンのハンドラー
-  const handleArrival = async (id: string) => {
-    const now = new Date();
-    const currentTime = format(now, "HH:mm");
-
-    // ローカルUIの更新
-    setAttendanceData((prev) =>
-      prev.map((item: AttendanceData) =>
-        item.id === id
-          ? { ...item, arrivalTime: toFixedDate(format(now, "HH:mm")) }
-          : item
-      )
-    );
-
-    try {
-      // DynamoDBの更新
-      await client.models.VisitRecord.update(
-        {
-          id: id,
-          actualArrivalTime: currentTime,
-          status: "1",
-          updatedAt: now.toISOString(),
-          updatedBy: "admin", // 実際のログインユーザー名に差し替え可
-        },
-        {
-          authMode: "userPool",
-        }
-      );
-
-      toast(Message.IA000001, {
-        description: `現在時刻: ${currentTime}`,
-      });
-    } catch (error) {
-      console.error("来所時刻の更新に失敗しました:", error);
-
-      toast(
-        <div>
-          <div className="font-bold text-destructive">エラー</div>
-          <div className="text-sm text-muted-foreground">
-            {Message.EF050012}
-          </div>
-        </div>,
-        {
-          duration: 5000,
-          icon: "❌",
-          className: "bg-destructive text-destructive-foreground",
-        }
-      );
-
-      // 必要であればここで setAttendanceData をロールバックしてもよい
-    }
-  };
-
-  // 退所ボタンのハンドラー
-  const handleDeparture = async (id: string) => {
-    const now = new Date();
-    const currentTime = format(now, "HH:mm");
-
-    // 更新対象の item を state から先に取得
-    const target = attendanceData.find((item) => item.id === id);
-    if (!target) return;
-
-    // 実利用時間を計算
-    const updatedItem = calculateUsageTime(
-      target,
-      toFixedDate(format(now, "HH:mm"))
-    );
-
-    // DynamoDB 更新
-    try {
-      const actualDuration = updatedItem.actualUsageTime
-        ? (() => {
-            const [h, m] = updatedItem.actualUsageTime.split(":").map(Number);
-            return h * 60 + m;
-          })()
-        : 0;
-
-      // 契約と実利用で status を決定
-      const [ch, cm] = updatedItem.contractTime.split(":").map(Number);
-      const contractedMin = ch * 60 + cm;
-      const nextStatus: StatusCode =
-        actualDuration > 0 &&
-        contractedMin > 0 &&
-        actualDuration < contractedMin
-          ? "2"
-          : "3";
-
-      await client.models.VisitRecord.update(
-        {
-          id,
-          actualLeaveTime: currentTime,
-          actualDuration: actualDuration,
-          status: nextStatus,
-          reason: updatedItem.reason ?? undefined,
-          updatedAt: now.toISOString(),
-          updatedBy: "admin",
-        },
-        {
-          authMode: "userPool",
-        }
-      );
-
-      // ローカル状態の更新
-      setAttendanceData((prev) =>
-        prev.map((item: AttendanceData) =>
-          item.id === id ? updatedItem : item
-        )
-      );
-
-      toast(Message.IA000002, {
-        description: `現在時刻: ${currentTime}`,
-      });
-    } catch (error) {
-      console.error("退所時刻の更新に失敗:", error);
-      toast(
-        <div>
-          <div className="font-bold text-destructive">エラー</div>
-          <div className="text-sm text-muted-foreground">
-            {Message.EF050013}
-          </div>
-        </div>,
-        {
-          icon: "❌",
-          className: "bg-destructive text-destructive-foreground",
-          duration: 5000,
-        }
-      );
-    }
-  };
-
   // 時間編集の開始
   const startEditing = (
     id: string,
@@ -673,260 +542,9 @@ export default function AttendanceManagement() {
    * @param newValue 編集後の時刻 (HH:mm)
    */
 
-  const saveEditedTime = async (
-    id: string,
-    type: "arrival" | "departure",
-    newValue: string
-  ) => {
-    // 時刻形式のバリデーション (HH:mm)
-    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-    if (!timeRegex.test(newValue)) {
-      toast(
-        <div>
-          <div className="font-bold text-destructive">{Message.EF050014}</div>
-          <div className="text-sm text-muted-foreground">
-            {Message.EF050015}
-          </div>
-        </div>,
-        {
-          icon: "⏰",
-          className: "bg-destructive text-destructive-foreground",
-          duration: 5000,
-        }
-      );
-      return;
-    }
-
-    const newDate = toDateTime(selectedDate, newValue);
-    let updatedItem = {} as AttendanceData;
-
-    setAttendanceData((prev) =>
-      prev.map((item: AttendanceData) => {
-        if (item.id === id) {
-          let temp: AttendanceData = { ...item };
-
-          if (type === "arrival") {
-            temp.arrivalTime = newDate;
-            if (temp.departureTime) {
-              temp = calculateUsageTime(temp, temp.departureTime);
-            }
-          } else {
-            if (item.arrivalTime && newDate < item.arrivalTime) {
-              toast(
-                <div>
-                  <div className="font-bold text-destructive">
-                    {Message.EF050016}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {Message.EF050017}
-                  </div>
-                </div>,
-                {
-                  icon: "⚠️",
-                  className: "bg-destructive text-destructive-foreground",
-                  duration: 5000,
-                }
-              );
-              return item;
-            }
-            temp = calculateUsageTime(temp, newDate);
-          }
-
-          updatedItem = temp;
-          return temp;
-        }
-        return item;
-      })
-    );
-
-    setEditingTime(null);
-
-    if (!updatedItem) return;
-
-    try {
-      // 時刻 "HH:mm" → 分 に変換する小ヘルパー（ファイル先頭か関数内でOK）
-      const toMinutes = (hhmm?: string | null) => {
-        if (!hhmm) return undefined;
-        const [h, m] = hhmm.split(":").map(Number);
-        if (Number.isNaN(h) || Number.isNaN(m)) return undefined;
-        return h * 60 + m;
-      };
-
-      // arrival/leave 操作の前で次ステータスを算出
-      const actualMin = updatedItem.actualUsageTime
-        ? toMinutes(updatedItem.actualUsageTime)
-        : undefined;
-      // 契約時間は contractTime("HH:mm") から算出（数値の contractedDuration を持っているならそれでもOK）
-      const contractedMin = toMinutes(updatedItem.contractTime);
-
-      const nextStatus: StatusCode =
-        type === "arrival"
-          ? "1" // 来所→利用中
-          : actualMin != null &&
-              contractedMin != null &&
-              actualMin < contractedMin
-            ? "2"
-            : "3";
-      // 退所→短時間 or 完了
-
-      await client.models.VisitRecord.update(
-        {
-          id,
-          ...(type === "arrival"
-            ? { actualArrivalTime: format(newDate, "HH:mm") }
-            : { actualLeaveTime: format(newDate, "HH:mm") }),
-          actualDuration: updatedItem.actualUsageTime
-            ? (() => {
-                const [h, m] = updatedItem
-                  .actualUsageTime!.split(":")
-                  .map(Number);
-                return h * 60 + m;
-              })()
-            : undefined,
-          status: nextStatus,
-          reason: updatedItem.reason ?? undefined,
-          updatedAt: new Date().toISOString(),
-          updatedBy: "admin",
-        },
-        {
-          authMode: "userPool",
-        }
-      );
-
-      toast(
-        <div>
-          <div className="font-semibold text-foreground">
-            {type === "arrival" ? "来所" : "退所"}
-            {Message.IA000005}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            新しい時刻: {newValue}
-          </div>
-        </div>,
-        {
-          icon: "✅",
-          duration: 4000,
-        }
-      );
-    } catch (error) {
-      console.error("DynamoDB 更新失敗:", error);
-      toast(
-        <div>
-          <div className="font-bold text-destructive">{Message.EF050027}</div>
-          <div className="text-sm text-muted-foreground">
-            {Message.EF050025}
-          </div>
-        </div>,
-        {
-          icon: "❌",
-          className: "bg-destructive text-destructive-foreground",
-          duration: 5000,
-        }
-      );
-    }
-  };
-
   // 備考編集の開始
   const startEditingNote = (id: string, currentValue: string | null) => {
     setEditingNote({ id, value: currentValue || "" });
-  };
-
-  // 備考の保存
-  const saveNote = async (id: string, newValue: string) => {
-    const trimmed = newValue.trim() === "" ? null : newValue.trim();
-
-    // ローカル状態を更新
-    setAttendanceData((prev) =>
-      prev.map((item: AttendanceData) => {
-        if (item.id === id) {
-          return {
-            ...item,
-            note: trimmed,
-          };
-        }
-        return item;
-      })
-    );
-
-    setEditingNote(null);
-
-    try {
-      // データベースを更新
-      await client.models.VisitRecord.update({
-        id,
-        note: trimmed,
-        updatedAt: new Date().toISOString(),
-        updatedBy: "admin",
-      });
-
-      toast(Message.IA000003, {
-        description: trimmed || "（空欄）",
-      });
-    } catch (error) {
-      console.error("備考の保存に失敗:", error);
-      toast(
-        <div>
-          <div className="font-bold text-destructive">{Message.EF050019}</div>
-          <div className="text-sm text-muted-foreground">
-            {Message.EF050020}
-          </div>
-        </div>,
-        {
-          icon: "❌",
-          duration: 5000,
-          className: "bg-destructive text-destructive-foreground",
-        }
-      );
-    }
-  };
-
-  // 理由の更新
-  const updateReason = async (id: string, reason: string) => {
-    const code = toReasonCode(reason);
-    // ローカル状態の更新
-    setAttendanceData((prev) =>
-      prev.map((item: AttendanceData) => {
-        if (item.id === id) {
-          return {
-            ...item,
-            reason: code,
-          };
-        }
-        return item;
-      })
-    );
-
-    try {
-      // DynamoDB の更新
-      await client.models.VisitRecord.update(
-        {
-          id,
-          reason: code,
-          updatedAt: new Date().toISOString(),
-          updatedBy: "admin",
-        },
-        {
-          authMode: "userPool",
-        }
-      );
-
-      toast(Message.IA000004, { description: REASON_LABEL[code] });
-    } catch (error) {
-      console.error("早退/超過理由の保存に失敗:", error);
-      toast(
-        <div>
-          <div className="font-bold text-destructive">{Message.EF050021}</div>
-          <div className="text-sm text-muted-foreground">
-            {Message.EF050020}
-          </div>
-        </div>,
-        {
-          icon: "❌",
-          className: "bg-destructive text-destructive-foreground",
-          duration: 5000,
-        }
-      );
-    }
   };
 
   /**
@@ -988,97 +606,6 @@ export default function AttendanceManagement() {
     return { ...item, departureTime, actualUsageTime, isShortUsage };
   };
 
-  // 時刻をリセットする関数
-  const resetTime = async (id: string, type: "arrival" | "departure") => {
-    const now = new Date();
-    const itemBefore = attendanceData.find((x) => x.id === id);
-    const hadArrival = !!itemBefore?.arrivalTime;
-    setAttendanceData((prev) =>
-      prev.map((item: AttendanceData) => {
-        if (item.id === id) {
-          if (type === "arrival") {
-            return {
-              ...item,
-              arrivalTime: null,
-              departureTime: null,
-              actualUsageTime: null,
-              isShortUsage: false,
-            };
-          } else {
-            return {
-              ...item,
-              departureTime: null,
-              actualUsageTime: null,
-              isShortUsage: false,
-            };
-          }
-        }
-        return item;
-      })
-    );
-
-    setEditingTime(null);
-
-    try {
-      const now = new Date();
-
-      await client.models.VisitRecord.update(
-        {
-          id,
-          ...(type === "arrival"
-            ? {
-                actualArrivalTime: null,
-                actualLeaveTime: null,
-                actualDuration: null,
-                status: "0",
-              }
-            : {
-                actualLeaveTime: null,
-                actualDuration: null,
-                status: hadArrival ? "1" : "0", // ← 来所が残っていれば利用中
-              }),
-          reason: "0",
-          updatedAt: now.toISOString(),
-          updatedBy: "admin",
-        },
-        {
-          authMode: "userPool",
-        }
-      );
-
-      toast(
-        <div>
-          <div className="font-semibold text-foreground">
-            {type === "arrival" ? "来所" : "退所"}
-            {Message.EF050022}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            {Message.EF050023}
-          </div>
-        </div>,
-        {
-          icon: "♻️",
-          duration: 4000,
-        }
-      );
-    } catch (error) {
-      console.error("リセット時のDB更新失敗:", error);
-      toast(
-        <div>
-          <div className="font-bold text-destructive">{Message.EF050024}</div>
-          <div className="text-sm text-muted-foreground">
-            {Message.EF050025}
-          </div>
-        </div>,
-        {
-          icon: "❌",
-          className: "bg-destructive text-destructive-foreground",
-          duration: 5000,
-        }
-      );
-    }
-  };
-
   // ソート関数
   const handleSort = (column: SortColumn) => {
     let direction: SortDirection = "asc";
@@ -1101,11 +628,11 @@ export default function AttendanceManagement() {
         { id: row.id },
         { authMode: "userPool" }
       );
-      // ローカルも即時反映（observeQuery でも追従）
       setAttendanceData((prev) => prev.filter((x) => x.id !== row.id));
+      successToast("削除しました");
     } catch (e) {
       console.error("削除失敗:", e);
-      alert("削除に失敗しました。画面を更新して再度お試しください。");
+      errorToast();
     }
   };
 
@@ -1370,12 +897,21 @@ export default function AttendanceManagement() {
                                         value: v,
                                       })
                                     }
-                                    onSave={() =>
-                                      saveContractTime(
-                                        data.id,
-                                        editingContract!.value
-                                      )
-                                    }
+                                    onSave={() => {
+                                      const val = editingContract?.value ?? "";
+                                      actions
+                                        .saveContractTime(data.id, val)
+                                        .then((res) => {
+                                          if (res.ok) {
+                                            successToast(
+                                              "契約時間を保存しました"
+                                            );
+                                            setEditingContract(null); // 編集モード終了
+                                          } else {
+                                            errorToast();
+                                          }
+                                        });
+                                    }}
                                     onCancel={() => setEditingContract(null)}
                                     onFocus={() => setEditing(true)}
                                     onBlur={() => setEditing(false)}
@@ -1406,14 +942,38 @@ export default function AttendanceManagement() {
                                       value: v,
                                     })
                                   }
-                                  onSave={() =>
-                                    saveEditedTime(
-                                      data.id,
-                                      "arrival",
-                                      editingTime!.value
-                                    )
-                                  }
-                                  onReset={() => resetTime(data.id, "arrival")}
+                                  onSave={() => {
+                                    actions
+                                      .saveEditedTime(
+                                        data.id,
+                                        "arrival",
+                                        editingTime?.value ?? ""
+                                      )
+                                      .then((res) => {
+                                        if (res.ok) {
+                                          successToast(
+                                            "来所時刻を保存しました"
+                                          );
+                                          cancelEditing(); // ← 追加
+                                        } else {
+                                          errorToast();
+                                        }
+                                      });
+                                  }}
+                                  onReset={() => {
+                                    actions
+                                      .resetTime(data.id, "arrival")
+                                      .then((res) => {
+                                        if (res.ok) {
+                                          successToast(
+                                            "時刻をリセットしました"
+                                          );
+                                          cancelEditing();
+                                        } else {
+                                          errorToast();
+                                        }
+                                      });
+                                  }}
                                   onCancel={cancelEditing}
                                   onFocus={() => setEditing(true)}
                                   onBlur={() => {
@@ -1429,7 +989,15 @@ export default function AttendanceManagement() {
                                     }
                                     setEditing(false);
                                   }}
-                                  onClickArrival={() => handleArrival(data.id)}
+                                  onClickArrival={() => {
+                                    actions
+                                      .handleArrival(data.id)
+                                      .then((res) => {
+                                        res.ok
+                                          ? successToast("来所を記録しました")
+                                          : errorToast();
+                                      });
+                                  }}
                                 />
                               </TableCell>
 
@@ -1453,16 +1021,38 @@ export default function AttendanceManagement() {
                                       value: v,
                                     })
                                   }
-                                  onSave={() =>
-                                    saveEditedTime(
-                                      data.id,
-                                      "departure",
-                                      editingTime!.value
-                                    )
-                                  }
-                                  onReset={() =>
-                                    resetTime(data.id, "departure")
-                                  }
+                                  onSave={() => {
+                                    actions
+                                      .saveEditedTime(
+                                        data.id,
+                                        "departure",
+                                        editingTime?.value ?? ""
+                                      )
+                                      .then((res) => {
+                                        if (res.ok) {
+                                          successToast(
+                                            "退所時刻を保存しました"
+                                          );
+                                          cancelEditing();
+                                        } else {
+                                          errorToast();
+                                        }
+                                      });
+                                  }}
+                                  onReset={() => {
+                                    actions
+                                      .resetTime(data.id, "departure")
+                                      .then((res) => {
+                                        if (res.ok) {
+                                          successToast(
+                                            "時刻をリセットしました"
+                                          );
+                                          cancelEditing(); // ← これを追加すると統一感が出ます
+                                        } else {
+                                          errorToast();
+                                        }
+                                      });
+                                  }}
                                   onCancel={cancelEditing}
                                   onFocus={() => setEditing(true)}
                                   onBlur={() => {
@@ -1476,9 +1066,15 @@ export default function AttendanceManagement() {
                                     }));
                                     setEditing(false);
                                   }}
-                                  onClickDeparture={() =>
-                                    handleDeparture(data.id)
-                                  }
+                                  onClickDeparture={() => {
+                                    actions
+                                      .handleDeparture(data.id)
+                                      .then((res) => {
+                                        res.ok
+                                          ? successToast("退所を記録しました")
+                                          : errorToast();
+                                      });
+                                  }}
                                 />
                               </TableCell>
 
@@ -1497,10 +1093,22 @@ export default function AttendanceManagement() {
                                     <TooltipTrigger asChild>
                                       <div>
                                         <ReasonSelect
-                                          value={data.reason}
-                                          onChange={(v) =>
-                                            updateReason(data.id, v)
-                                          }
+                                          value={data.reason ?? "0"}
+                                          onChange={(v) => {
+                                            const code = (v ??
+                                              "0") as ReasonCode;
+                                            actions
+                                              .updateReason(data.id, code)
+                                              .then((res) => {
+                                                if (res.ok) {
+                                                  successToast(
+                                                    REASON_LABEL[code]
+                                                  );
+                                                } else {
+                                                  errorToast();
+                                                }
+                                              });
+                                          }}
                                           onFocus={() => setEditing(true)}
                                           onBlur={() => setEditing(false)}
                                         />
@@ -1560,9 +1168,18 @@ export default function AttendanceManagement() {
                                   }
                                   /* 閉じる・保存 */
                                   onClose={() => setEditingNote(null)}
-                                  onSave={() =>
-                                    saveNote(data.id, editingNote!.value)
-                                  }
+                                  onSave={async () => {
+                                    const res = await actions.saveNote(
+                                      data.id,
+                                      editingNote!.value
+                                    );
+                                    if (res.ok) {
+                                      successToast("備考を保存しました");
+                                      setEditingNote(null);
+                                    } else {
+                                      errorToast();
+                                    }
+                                  }}
                                   onFocus={() => setEditing(true)}
                                   onBlur={() => setEditing(false)}
                                 />
