@@ -25,7 +25,13 @@ const schema = a.schema({
     version: a.integer(),
     // VisitRecord の逆参照（VisitRecord.facility の対応）
     visitRecords: a.hasMany("VisitRecord", "officeId"),
-  }).authorization((allow) => [allow.owner()]),
+  })
+    // .authorization((allow) => [allow.owner()]),
+    .authorization((allow) => [
+
+      allow.authenticated().to(["read"]),
+      allow.owner(),
+    ]),
 
   // ---------------- Recipient（受給者情報） --------------
   Recipient: a.model({
@@ -110,6 +116,7 @@ const schema = a.schema({
   }).authorization((allow) => [
     allow.publicApiKey().to(["read"]), // ← APIキー利用者は read のみ許可
     allow.groups(['admin']).to(['create', 'update', 'delete', 'read']),
+    allow.authenticated().to(["create", "update", "read"])
   ]),
 
   // ---------------- Staff（職員プロフィール：権限表示用） ------------

@@ -29,7 +29,7 @@ import {
   SecretLogoutButton,
   LogoutDialog,
 } from "@/components/secret-logout";
-// 
+//
 
 import { generateClient } from "aws-amplify/data";
 // import { Schema } from "../../amplify/data/resource";
@@ -157,30 +157,25 @@ export default function QrReceptionScreen() {
     })();
   }, [authStatus, router]);
 
-
-
-
   // 隠しボタンの表示ロジック
   const { visible, onPressStart, onPressEnd } = useSecretReveal({
-    holdMs: null, 
+    holdMs: null,
     autoHideMs: 6000,
     hotkey: "m",
   });
 
   // ダイアログ制御
   const [logoutOpen, setLogoutOpen] = useState(false);
-  
-  
+
   const handleConfirm = () =>
     new Promise<void>((resolve) => {
       handleSignOut(); // 同期
-      setTimeout(() => {  // 少し待ってから遷移＆resolve
+      setTimeout(() => {
+        // 少し待ってから遷移＆resolve
         router.replace("/login-user");
         resolve();
       }, 1000);
     });
-
-
 
   useEffect(() => {
     successAudio.current = new Audio("/sounds/maou_se_system23.mp3");
@@ -228,6 +223,7 @@ export default function QrReceptionScreen() {
       const visitRecordResult = await client.models.VisitRecord.list({
         filter: { visitDate: { eq: visitDate } },
         authMode: "userPool",
+        // authMode: "apiKey",
       });
 
       console.log("✅ VisitRecord.list 完了:", visitRecordResult);
@@ -245,6 +241,7 @@ export default function QrReceptionScreen() {
         const recipientResult = await client.models.Recipient.list({
           filter: { recipientId: { eq: match.recipientId } },
           authMode: "userPool",
+          // authMode: "apiKey",
         });
         const recipientData = recipientResult.data?.[0];
         if (recipientData) {
@@ -285,6 +282,7 @@ export default function QrReceptionScreen() {
               updatedBy: "qr-reader",
             },
             { authMode: "userPool" }
+            // { authMode: "apiKey" }
           );
 
           setMessage({
@@ -319,6 +317,7 @@ export default function QrReceptionScreen() {
             updatedBy: "qr-reader",
           },
           { authMode: "userPool" }
+          // { authMode: "apiKey" }
         );
 
         setMessage({
@@ -339,6 +338,7 @@ export default function QrReceptionScreen() {
       const recipientResult = await client.models.Recipient.list({
         filter: { recipientId: { eq: cleanedChildId } },
         authMode: "userPool",
+        // authMode: "apiKey",
       });
       console.log("✅ Child.list 完了:", recipientResult);
 
@@ -355,7 +355,8 @@ export default function QrReceptionScreen() {
           visitDate,
           actualArrivalTime: format(now, "HH:mm"),
           recipientId: recipient.recipientId,
-          officeId: recipient.officeId!, // ✅ 必須（Facility.officeId と一致）
+          // officeId: recipient.officeId!, // ✅ 必須（Facility.officeId と一致）
+          officeId: recipient.officeId ?? "DEFAULT_OFFICE_ID_FOR_DEBUG", // ← 一時値。実運用の officeId に置換
           isManuallyEntered: false, // QRなので false
           isDeleted: false,
           // 初期値が必要なら（任意）
@@ -366,6 +367,7 @@ export default function QrReceptionScreen() {
           updatedBy: "qr-reader",
         },
         { authMode: "userPool" }
+        // { authMode: "apiKey" }
       );
 
       console.log("✅ VisitRecord.create 完了");
@@ -630,8 +632,6 @@ export default function QrReceptionScreen() {
           className="grid flex-1 gap-4"
           style={{ gridTemplateRows: showButtons ? "1fr auto" : "1fr" }}
         >
-
-
           {/* メッセージ表示エリア - 透明背景 */}
           <div className="flex flex-col relative overflow-hidden">
             {/* ミュートボタン */}
@@ -646,22 +646,21 @@ export default function QrReceptionScreen() {
              */}
 
             <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
-               {/* 隠しログアウト（左）。 ⌘/Ctrl+Alt+g で visible=true になった時だけ出現 */}
-                <SecretLogoutButton
-                  visible={visible}
-                  onClick={() => setLogoutOpen(true)}
-                />
+              {/* 隠しログアウト（左）。 ⌘/Ctrl+Alt+g で visible=true になった時だけ出現 */}
+              <SecretLogoutButton
+                visible={visible}
+                onClick={() => setLogoutOpen(true)}
+              />
 
               {/* ミュート（右）。短押し=ミュート切替、長押し=隠しログアウトの出現 */}
-                <Button
-                  variant="outline"
-                  onClick={() => setIsMuted((prev) => !prev)}
-                  className="bg-white/90 backdrop-blur-sm text-black shadow-md px-4 py-1 rounded-lg"
-                >
-                  {isMuted ? "🔇 ミュート中" : "🔊 音あり"}
-                </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsMuted((prev) => !prev)}
+                className="bg-white/90 backdrop-blur-sm text-black shadow-md px-4 py-1 rounded-lg"
+              >
+                {isMuted ? "🔇 ミュート中" : "🔊 音あり"}
+              </Button>
             </div>
-
 
             <div className="flex flex-1 flex-col items-center justify-center p-6">
               {/* 紙吹雪のためのref */}
@@ -776,15 +775,17 @@ export default function QrReceptionScreen() {
       </main>
 
       <LogoutDialog
-          open={logoutOpen}
-          onOpenChange={setLogoutOpen}
-          onConfirm={async()=> {await handleSignOut();}}
-          //onConfirm={handleConfirm}
-          //closeOnSuccess                          // ★ 成功時は即クローズ（busy解除しない）
-          labels={{ confirming: "ログアウト中…" }}
-          //isLoading={isLoggingOut}
+        open={logoutOpen}
+        onOpenChange={setLogoutOpen}
+        onConfirm={async () => {
+          await handleSignOut();
+        }}
+        //onConfirm={handleConfirm}
+        //closeOnSuccess                          // ★ 成功時は即クローズ（busy解除しない）
+        labels={{ confirming: "ログアウト中…" }}
+        //isLoading={isLoggingOut}
       />
-    
+
       {/* トースト通知 */}
       <Toaster />
       <BufferedInputHandler
