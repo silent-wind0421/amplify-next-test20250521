@@ -53,7 +53,7 @@ import type {
   ReasonCode,
 } from "@/types/attendance";
 import { reasonText, toReasonCode } from "@/types/attendance";
-import { Message } from "../components/common/message";
+import { successToast, errorToast } from "@/lib/ui-toast";
 
 import { parseTimeInJST, formatMinutes, calcStatus } from "@/lib/utils";
 
@@ -243,22 +243,6 @@ export default function AttendanceManagement() {
     refetch, // 失敗時の巻き戻し用
     currentUserName: "admin",
   });
-
-  const successToast = (desc: string) =>
-    toast(Message.IA000004, { description: desc });
-
-  const errorToast = () =>
-    toast(
-      <div>
-        <div className="font-bold text-destructive">{Message.EF050021}</div>
-        <div className="text-sm text-muted-foreground">{Message.EF050020}</div>
-      </div>,
-      {
-        icon: "❌",
-        className: "bg-destructive text-destructive-foreground",
-        duration: 5000,
-      }
-    );
 
   const sortedData = useMemo(
     () => sortAttendance<AttendanceData>(attendanceData, col, dir),
