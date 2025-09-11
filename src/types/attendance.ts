@@ -9,6 +9,24 @@ export const STATUS_LABEL: Record<StatusCode, string> = {
 
 export type ReasonCode = "0" | "1" | "2" | "3" | "99";
 
+export const REASON_LABEL: Record<ReasonCode, string> = {
+    "0": "未選択",
+    "1": "児童都合",
+    "2": "保護者都合",
+    "3": "事業者都合",
+    "99": "その他",
+};
+
+export const REASON_VALUES = ["0", "1", "2", "3", "99"] as const;
+
+export const toReasonCode = (v: unknown): ReasonCode =>
+    (REASON_VALUES as readonly string[]).includes(String(v)) ? (v as ReasonCode) : "0";
+
+// 便利関数（任意）
+export const reasonText = (code: ReasonCode | null) =>
+    REASON_LABEL[(code ?? "0") as ReasonCode];
+
+
 export type AttendanceData = {
     id: string;
     _version: number;

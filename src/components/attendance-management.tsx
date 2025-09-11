@@ -52,6 +52,7 @@ import type {
   StatusCode,
   ReasonCode,
 } from "@/types/attendance";
+import { reasonText, toReasonCode } from "@/types/attendance";
 import { Message } from "../components/common/message";
 
 import { parseTimeInJST, formatMinutes, calcStatus } from "@/lib/utils";
@@ -80,27 +81,9 @@ const toFixedDate = (hhmm: string): Date => {
 // HH:mm → 2000-01-01 固定日の Date、パース失敗は null に寄せる
 const toFixedDateOrNull = (hhmm?: string | null): Date | null =>
   hhmm ? (parseTimeInJST("2000-01-01", hhmm) ?? null) : null;
-const REASON_VALUES: readonly ReasonCode[] = ["0", "1", "2", "3", "99"];
-export const REASON_LABEL: Record<ReasonCode, string> = {
-  "0": "未選択",
-  "1": "児童都合",
-  "2": "保護者都合",
-  "3": "事業者都合",
-  "99": "その他",
-};
 
-// 日本語→コード に直す（未知は "0"）
-export const REASON_CODE: Record<string, ReasonCode> = {
-  未選択: "0",
-  児童都合: "1",
-  保護者都合: "2",
-  事業者都合: "3",
-  その他: "99",
-};
-
-// 何が来てもコードに丸めるガード
-export const toReasonCode = (v: unknown): ReasonCode =>
-  REASON_VALUES.includes(v as ReasonCode) ? (v as ReasonCode) : "0";
+// 理由の表示は共通ヘルパに統一
+const getReasonDisplayText = (reason: ReasonCode | null) => reasonText(reason);
 
 const jaCollator = new Intl.Collator("ja", {
   sensitivity: "base",
@@ -659,10 +642,6 @@ export default function AttendanceManagement() {
   // 完全に表示したい場合：
   const getUserNameDisplayText = (userName: string) => userName;
 
-  // 理由の表示用テキストを取得
-  const getReasonDisplayText = (reason: ReasonCode | null) =>
-    REASON_LABEL[reason ?? "0"];
-
   /**
    * 指定した日付に該当する VisitRecord モデルの変更をリアルタイムで購読する。
    *
@@ -1102,7 +1081,7 @@ export default function AttendanceManagement() {
                                               .then((res) => {
                                                 if (res.ok) {
                                                   successToast(
-                                                    REASON_LABEL[code]
+                                                    reasonText(code)
                                                   );
                                                 } else {
                                                   errorToast();
