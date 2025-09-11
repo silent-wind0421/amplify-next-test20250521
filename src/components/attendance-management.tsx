@@ -55,6 +55,8 @@ import type {
 import { reasonText, toReasonCode } from "@/types/attendance";
 import { successToast, errorToast } from "@/lib/ui-toast";
 
+import { useAttendanceEditing } from "@/hooks/use-attendance-editing";
+
 import { parseTimeInJST, formatMinutes, calcStatus } from "@/lib/utils";
 
 import {
@@ -215,11 +217,8 @@ export default function AttendanceManagement() {
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [editingTime, setEditingTime] = useState<{
-    id: string;
-    type: "arrival" | "departure";
-    value: string;
-  } | null>(null);
+  const { editing, startEditing, cancelEditing, setValue } =
+    useAttendanceEditing();
   const [editingNote, setEditingNote] = useState<{
     id: string;
     value: string;
@@ -487,20 +486,6 @@ export default function AttendanceManagement() {
     const interval = setInterval(updateCurrentTime, 1000);
     return () => clearInterval(interval);
   }, []);
-
-  // 時間編集の開始
-  const startEditing = (
-    id: string,
-    type: "arrival" | "departure",
-    currentValue: string
-  ) => {
-    setEditingTime({ id, type, value: currentValue });
-  };
-
-  // 時間編集のキャンセル
-  const cancelEditing = () => {
-    setEditingTime(null);
-  };
 
   /**
    * 来所・退所時刻の編集を保存し、DynamoDB に反映する。
@@ -890,34 +875,32 @@ export default function AttendanceManagement() {
                                 <ArrivalTimeCell
                                   time={data.arrivalTime}
                                   isEditing={
-                                    !!editingTime &&
-                                    editingTime.id === data.id &&
-                                    editingTime.type === "arrival"
+                                    !!editing &&
+                                    editing.id === data.id &&
+                                    editing.type === "arrival"
                                   }
-                                  editingValue={editingTime?.value ?? ""}
+                                  editingValue={editing?.value ?? ""}
                                   onStartEdit={(current) =>
-                                    startEditing(data.id, "arrival", current)
-                                  }
-                                  onChange={(v) =>
-                                    setEditingTime({
+                                    startEditing({
                                       id: data.id,
                                       type: "arrival",
-                                      value: v,
+                                      value: current,
                                     })
                                   }
+                                  onChange={(v) => setValue(v)}
                                   onSave={() => {
                                     actions
                                       .saveEditedTime(
                                         data.id,
                                         "arrival",
-                                        editingTime?.value ?? ""
+                                        editing?.value ?? ""
                                       )
                                       .then((res) => {
                                         if (res.ok) {
                                           successToast(
                                             "来所時刻を保存しました"
                                           );
-                                          cancelEditing(); // ← 追加
+                                          cancelEditing();
                                         } else {
                                           errorToast();
                                         }
@@ -942,14 +925,9 @@ export default function AttendanceManagement() {
                                   onBlur={() => {
                                     // 既存どおり onBlur で正規化
                                     const normalized = normalizeTimeInput(
-                                      editingTime?.value ?? ""
+                                      editing?.value ?? ""
                                     );
-                                    if (normalized) {
-                                      setEditingTime((prev) => ({
-                                        ...prev!,
-                                        value: normalized,
-                                      }));
-                                    }
+                                    if (normalized) setValue(normalized);
                                     setEditing(false);
                                   }}
                                   onClickArrival={() => {
@@ -969,27 +947,25 @@ export default function AttendanceManagement() {
                                   hasArrival={!!data.arrivalTime}
                                   time={data.departureTime}
                                   isEditing={
-                                    !!editingTime &&
-                                    editingTime.id === data.id &&
-                                    editingTime.type === "departure"
+                                    !!editing &&
+                                    editing.id === data.id &&
+                                    editing.type === "departure"
                                   }
-                                  editingValue={editingTime?.value ?? ""}
+                                  editingValue={editing?.value ?? ""}
                                   onStartEdit={(current) =>
-                                    startEditing(data.id, "departure", current)
-                                  }
-                                  onChange={(v) =>
-                                    setEditingTime({
+                                    startEditing({
                                       id: data.id,
                                       type: "departure",
-                                      value: v,
+                                      value: current,
                                     })
                                   }
+                                  onChange={(v) => setValue(v)}
                                   onSave={() => {
                                     actions
                                       .saveEditedTime(
                                         data.id,
                                         "departure",
-                                        editingTime?.value ?? ""
+                                        editing?.value ?? ""
                                       )
                                       .then((res) => {
                                         if (res.ok) {
@@ -1021,12 +997,9 @@ export default function AttendanceManagement() {
                                   onBlur={() => {
                                     // 既存どおり onBlur でフォーマット整形
                                     const formatted = formatToHHMM(
-                                      editingTime?.value ?? ""
+                                      editing?.value ?? ""
                                     );
-                                    setEditingTime((prev) => ({
-                                      ...prev!,
-                                      value: formatted,
-                                    }));
+                                    setValue(formatted);
                                     setEditing(false);
                                   }}
                                   onClickDeparture={() => {
