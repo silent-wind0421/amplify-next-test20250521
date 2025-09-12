@@ -55,19 +55,19 @@ export default function AttendanceRow({
   return (
     <tr className="odd:bg-white even:bg-gray-50 hover:bg-gray-100/70 border-b border-gray-200 last:border-0 transition-colors">
       {/* 児童名 */}
-      <td className="whitespace-nowrap px-4 py-3 text-left align-middle">
+      <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0 whitespace-nowrap py-2 text-left">
         {row.userName}
       </td>
 
       {/* 来所予定時刻 */}
-      <td>
-        <div className="mx-auto w-16 text-center tabular-nums whitespace-nowrap">
+      <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0 whitespace-nowrap py-2 text-center">
+        <div className="inline-block w-16 text-center tabular-nums whitespace-nowrap">
           {row.scheduledTime || "-"}
         </div>
       </td>
 
       {/* 契約利用時間 */}
-      <td className="whitespace-nowrap px-4 py-3 text-center align-middle">
+      <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0 whitespace-nowrap py-2 text-center">
         <ContractTimeCell
           value={row.contractTime}
           isEditing={!!isContractEditing}
@@ -87,7 +87,7 @@ export default function AttendanceRow({
       </td>
 
       {/* 来所時刻 */}
-      <td className="whitespace-nowrap px-4 py-3 text-center align-middle">
+      <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0 whitespace-nowrap py-2 text-center">
         <ArrivalTimeCell
           time={row.arrivalTime}
           isEditing={!!isArrivalEditing}
@@ -112,7 +112,7 @@ export default function AttendanceRow({
       </td>
 
       {/* 退所時刻 */}
-      <td className="whitespace-nowrap px-4 py-3 text-center align-middle">
+      <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0 whitespace-nowrap py-2 text-center">
         <DepartureTimeCell
           hasArrival={!!row.arrivalTime}
           time={row.departureTime}
@@ -138,14 +138,14 @@ export default function AttendanceRow({
       </td>
 
       {/* 実利用時間 */}
-      <td>
-        <div className="mx-auto w-16 text-center tabular-nums whitespace-nowrap">
+      <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0 whitespace-nowrap py-2 text-center">
+        <div className="inline-block w-16 text-center tabular-nums whitespace-nowrap">
           {row.actualUsageTime ?? "-"}
         </div>
       </td>
 
       {/* 早退/超過理由 */}
-      <td className="whitespace-nowrap px-4 py-3 text-center align-middle">
+      <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0 whitespace-nowrap py-2 text-center">
         <ReasonSelect
           value={row.reason}
           onChange={(code) => void actions.handleSaveReason(row.id, code)}
@@ -155,7 +155,7 @@ export default function AttendanceRow({
       </td>
 
       {/* 備考 */}
-      <td className="px-4 py-3 text-left align-middle w-[12rem]">
+      <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0 whitespace-nowrap py-2 text-left">
         <button
           type="button"
           className="h-8 w-full truncate rounded-md border border-gray-300 bg-white px-2 text-left text-xs text-gray-700 hover:bg-gray-50"
@@ -167,14 +167,14 @@ export default function AttendanceRow({
       </td>
 
       {/* ステータス */}
-      <td>
+      <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0 whitespace-nowrap py-2 text-center">
         <div className="flex justify-center">
           <StatusBadge code={(row.status ?? "0") as StatusCode} />
         </div>
       </td>
 
       {/* 削除 */}
-      <td className="whitespace-nowrap px-4 py-3 text-center align-middle">
+      <td className="p-4 align-middle [&:has([role=checkbox])]:pr-0 whitespace-nowrap py-2 text-center">
         <button
           type="button"
           title="この行を削除"

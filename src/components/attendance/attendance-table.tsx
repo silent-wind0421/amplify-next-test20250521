@@ -44,10 +44,10 @@ export default function AttendanceTable({
   return (
     <div className="w-full rounded-xl border bg-white shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <Table className="table-fixed w-full min-w-[1100px] text-[15px]">
+        <Table className="table-fixed w-full min-w-[1100px] text-[15px] align-middle">
           <TableHeader className="bg-gray-50">
             <TableRow>
-              <TableHead className="w-[10rem] whitespace-nowrap text-left px-4 py-3 text-gray-700 font-medium tracking-wide">
+              <TableHead className="w-[80px] whitespace-nowrap text-left p-4 py-2 text-gray-700 font-medium tracking-wide">
                 <SortHeader
                   active={sort.column === "userName"}
                   direction={sort.direction}
@@ -56,7 +56,7 @@ export default function AttendanceTable({
                   児童名
                 </SortHeader>
               </TableHead>
-              <TableHead className="w-[8rem] text-center px-4 py-3 text-gray-700 font-medium tracking-wide">
+              <TableHead className="w-[90px] text-center p-4 py-2 text-gray-700 font-medium tracking-wide">
                 <SortHeader
                   balanced
                   active={sort.column === "scheduledTime"}
@@ -66,7 +66,7 @@ export default function AttendanceTable({
                   来所予定時刻
                 </SortHeader>
               </TableHead>
-              <TableHead className="w-[8rem] whitespace-nowrap text-center px-4 py-3 text-gray-700 font-medium tracking-wide">
+              <TableHead className="w-[90px] text-center p-4 py-2 text-gray-700 font-medium tracking-wide">
                 <SortHeader
                   balanced
                   active={sort.column === "contractTime"}
@@ -76,7 +76,7 @@ export default function AttendanceTable({
                   契約利用時間
                 </SortHeader>
               </TableHead>
-              <TableHead className="w-[7rem] whitespace-nowrap text-center px-4 py-3 text-gray-700 font-medium tracking-wide">
+              <TableHead className="w-[90px] text-center p-4 py-2 text-gray-700 font-medium tracking-wide">
                 <SortHeader
                   balanced
                   active={sort.column === "arrivalTime"}
@@ -86,7 +86,7 @@ export default function AttendanceTable({
                   来所時刻
                 </SortHeader>
               </TableHead>
-              <TableHead className="w-[7rem] whitespace-nowrap text-center px-4 py-3 text-gray-700 font-medium tracking-wide">
+              <TableHead className="w-[90px] text-center p-4 py-2 text-gray-700 font-medium tracking-wide">
                 <SortHeader
                   balanced
                   active={sort.column === "departureTime"}
@@ -96,7 +96,7 @@ export default function AttendanceTable({
                   退所時刻
                 </SortHeader>
               </TableHead>
-              <TableHead className="w-[7rem] whitespace-nowrap text-center px-4 py-3 text-gray-700 font-medium tracking-wide">
+              <TableHead className="w-[80px] text-center p-4 py-2 text-gray-700 font-medium tracking-wide">
                 <SortHeader
                   balanced
                   active={sort.column === "actualUsageTime"}
@@ -106,13 +106,13 @@ export default function AttendanceTable({
                   実利用時間
                 </SortHeader>
               </TableHead>
-              <TableHead className="w-[9rem] whitespace-nowrap text-center px-4 py-3 text-gray-700 font-medium tracking-wide">
+              <TableHead className="w-[80px] lg:w-[100px] text-center p-4 py-2 text-gray-700 font-medium tracking-wide">
                 早退/超過理由
               </TableHead>
-              <TableHead className="w-[10rem] whitespace-nowrap text-center px-4 py-3 text-gray-700 font-medium tracking-wide">
+              <TableHead className="w-[70px] lg:w-[120px] whitespace-nowrap text-center p-4 py-2 text-gray-700 font-medium tracking-wide">
                 備考
               </TableHead>
-              <TableHead className="w-[7rem] whitespace-nowrap text-center px-4 py-3 text-gray-700 font-medium tracking-wide">
+              <TableHead className="w-[90px] text-center p-4 py-2 text-gray-700 font-medium tracking-wide">
                 <SortHeader
                   balanced
                   active={sort.column === "status"}
@@ -122,7 +122,7 @@ export default function AttendanceTable({
                   ステータス
                 </SortHeader>
               </TableHead>
-              <TableHead className="w-[5rem] whitespace-nowrap text-center px-4 py-3 text-gray-700 font-medium tracking-wide">
+              <TableHead className="w-[60px] text-center p-4 py-2 text-gray-700 font-medium tracking-wide">
                 削除
               </TableHead>
             </TableRow>

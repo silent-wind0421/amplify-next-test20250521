@@ -117,7 +117,7 @@ export function useAttendanceActions({
                 },
                 { authMode: "userPool" }
             );
-            successToast("備考を保存しました");
+            successToast("IA000003");            // 備考を更新しました
             return ok();
         } catch (e) {
             errorToast();
@@ -148,6 +148,7 @@ export function useAttendanceActions({
                 },
                 { authMode: "userPool" }
             );
+            successToast("IC000002");            // 保存しました
             return ok();
         } catch (e) {
             console.error(e);
@@ -190,7 +191,7 @@ export function useAttendanceActions({
                 },
                 { authMode: "userPool" }
             );
-            successToast(kind === "arrival" ? "来所を保存しました" : "退所を保存しました");
+            successToast(kind === "arrival" ? "IA000005" : "IA000006");
             return ok();
         } catch (e) {
             errorToast();
@@ -233,7 +234,7 @@ export function useAttendanceActions({
                 },
                 { authMode: "userPool" }
             );
-            successToast(kind === "arrival" ? "来所をリセットしました" : "退所をリセットしました");
+            successToast("EF050022");            // 時刻をリセットしました（※コード接頭辞はEFだが文言は成功系）
             return ok();
         } catch (e) {
             errorToast();
@@ -264,7 +265,7 @@ export function useAttendanceActions({
                 },
                 { authMode: "userPool" }
             );
-            successToast("来所を記録しました");
+            successToast("IA000001");            // 来所を記録しました
             return ok();
         } catch (e) {
             errorToast();
@@ -305,7 +306,7 @@ export function useAttendanceActions({
                 },
                 { authMode: "userPool" }
             );
-            successToast("退所を記録しました");
+            successToast("IA000002");            // 退所を記録しました
             return ok();
         } catch (e) {
             errorToast();

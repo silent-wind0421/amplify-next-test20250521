@@ -12,31 +12,16 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { Trash2, ArrowUp, ArrowDown } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { ArrowUp, ArrowDown } from "lucide-react";
+
 import NoteDialog from "@/components/attendance/note-dialog";
-import ReasonSelect from "@/components/attendance/reason-select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+
 import { Card, CardContent } from "@/components/ui/card";
-import StatusBadge from "@/components/attendance/status-badge";
+
 import { useVisitRecords } from "@/hooks/use-visit-records";
 import { useAttendanceActions } from "@/hooks/use-attendance-actions";
 import DateToolbar from "@/components/attendance/date-toolbar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { ENABLE_CONTRACT_EDIT } from "@/lib/utils";
+
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import type {
@@ -47,14 +32,8 @@ import type {
 import { reasonText, toReasonCode } from "@/types/attendance";
 import { successToast, errorToast } from "@/lib/ui-toast";
 import { parseTimeInJST, calcStatus } from "@/lib/utils";
-import {
-  normalizeTimeInput,
-  diffSameDay,
-  minutesToHHmm,
-} from "@/lib/time-utils";
-import ContractTimeCell from "@/components/attendance/contract-time-cell";
-import ArrivalTimeCell from "@/components/attendance/arrival-time-cell";
-import DepartureTimeCell from "@/components/attendance/departure-time-cell";
+import { diffSameDay, minutesToHHmm } from "@/lib/time-utils";
+
 import {
   sortAttendance,
   type SortColumn,
@@ -602,43 +581,48 @@ export default function AttendanceManagement() {
   }, [selectedDate, isEditing, recipientMap]);
 
   return (
-    <div className="flex flex-col bg-gray-50">
-      <div className="flex flex-1 overflow-hidden">
+    <div className="flex flex-col min-h-[100dvh] bg-gray-50">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* メインコンテンツ */}
-        <div className={cn("flex-1 overflow-auto transition-all duration-300")}>
-          <Card className="mb-4 overflow-hidden">
-            <DateToolbar
-              selectedDate={selectedDate}
-              onSelectDate={(d) => setSelectedDate(d)}
-              calendarMonth={calendarMonth}
-              setCalendarMonth={setCalendarMonth}
-              open={datePickerOpen}
-              setOpen={setDatePickerOpen}
-              title="通所実績管理"
-            />
-          </Card>
+        <div
+          className={cn(
+            "flex-1 min-h-0 overflow-auto transition-all duration-300 pb-24"
+          )}
+        >
+          <div className="mx-auto w-full max-w-none px-3 md:px-4">
+            <Card className="mb-4 overflow-hidden rounded-xl shadow-sm">
+              <DateToolbar
+                selectedDate={selectedDate}
+                onSelectDate={(d) => setSelectedDate(d)}
+                calendarMonth={calendarMonth}
+                setCalendarMonth={setCalendarMonth}
+                open={datePickerOpen}
+                setOpen={setDatePickerOpen}
+                title="通所実績管理"
+              />
+            </Card>
 
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <div className="min-w-[850px]">
+            <Card className="rounded-xl shadow-sm">
+              <CardContent className="p-0">
+                {/* 横スクロールはここで受ける。直下に Table（min-w は Table 側で持たせる） */}
+                <div className="overflow-x-auto overscroll-x-contain">
                   <AttendanceTable
                     rows={sortedData}
                     sort={sort}
-                    onSort={onSort} // ← これ！
+                    onSort={onSort}
                     editing={editing}
                     onStartEdit={startEditing}
                     onCancelEdit={cancelEditing}
                     actions={tableActions}
-                    onChangeEditValue={setValue} // ★ 入力値を親の editing に反映
-                    onEditNote={onEditNote} // ★ 備考ダイアログを開く
-                    onFocusEditing={() => setEditing(true)} // ★ フォーカス中は購読を止める
-                    onBlurEditing={() => setEditing(false)} // ★ フォーカス外れたら再開
+                    onChangeEditValue={setValue}
+                    onEditNote={onEditNote}
+                    onFocusEditing={() => setEditing(true)}
+                    onBlurEditing={() => setEditing(false)}
                   />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
           <NoteDialog
             open={noteDlg.open}
             userName={noteDlg.userName}
