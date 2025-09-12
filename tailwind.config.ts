@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss"
+import defaultTheme from "tailwindcss/defaultTheme"
 
 const config = {
   darkMode: "class",
@@ -21,6 +22,10 @@ const config = {
       },
     },
     extend: {
+      fontFamily: {
+        // body に付けた --font-sans（Noto Sans JP）を Tailwind の font-sans に紐づける
+        sans: ["var(--font-sans)", ...defaultTheme.fontFamily.sans],
+      },
       colors: {
         border: "hsl(var(--border))",
         DEFAULT: "hsl(var(--border))",

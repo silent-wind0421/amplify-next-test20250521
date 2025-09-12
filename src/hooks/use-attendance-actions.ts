@@ -6,14 +6,19 @@ import {
     hhmmToMinutes,
     normalizeTimeInput,
 } from "@/lib/time-utils";
-import type { AttendanceData, ReasonCode } from "@/types/attendance";
+import { reasonText, type AttendanceData, type ReasonCode } from "@/types/attendance";
+
+
 import type React from "react";
+import { Message } from "@/components/common/message";
+import { successToast, errorToast } from "@/lib/ui-toast";
 
 // Amplify client の最小型（このファイル内で使う範囲だけ）
 type AmplifyClient = {
     models: {
         VisitRecord: {
             update: (input: any, opts?: any) => Promise<any>;
+            delete: (input: any, opts?: any) => Promise<any>;
         };
     };
 };
@@ -84,8 +89,10 @@ export function useAttendanceActions({
                 },
                 { authMode: "userPool" }
             );
+            successToast(reasonText(code));
             return ok();
         } catch (e) {
+            errorToast();
             console.error(e);
             if (refetch) await refetch();
             return ng(e);
@@ -110,8 +117,10 @@ export function useAttendanceActions({
                 },
                 { authMode: "userPool" }
             );
+            successToast("備考を保存しました");
             return ok();
         } catch (e) {
+            errorToast();
             console.error(e);
             if (refetch) await refetch();
             return ng(e);
@@ -181,8 +190,10 @@ export function useAttendanceActions({
                 },
                 { authMode: "userPool" }
             );
+            successToast(kind === "arrival" ? "来所を保存しました" : "退所を保存しました");
             return ok();
         } catch (e) {
+            errorToast();
             console.error(e);
             if (refetch) await refetch();
             return ng(e);
@@ -222,8 +233,10 @@ export function useAttendanceActions({
                 },
                 { authMode: "userPool" }
             );
+            successToast(kind === "arrival" ? "来所をリセットしました" : "退所をリセットしました");
             return ok();
         } catch (e) {
+            errorToast();
             console.error(e);
             if (refetch) await refetch();
             return ng(e);
@@ -251,8 +264,10 @@ export function useAttendanceActions({
                 },
                 { authMode: "userPool" }
             );
+            successToast("来所を記録しました");
             return ok();
         } catch (e) {
+            errorToast();
             console.error(e);
             if (refetch) await refetch();
             return ng(e);
@@ -270,10 +285,13 @@ export function useAttendanceActions({
                 if (r.id !== id) return r;
                 const newDep = toFixedDateOrNull(hhmm);
                 const used = sameDayDiffMins(r.arrivalTime, newDep);
+                const contractMin = hhmmToMinutes(r.contractTime) ?? null;
                 return {
                     ...r,
                     departureTime: newDep,
                     actualUsageTime: used == null ? null : minutesToHHmm(used),
+                    // 契約時間が設定されていれば短時間判定を即時反映
+                    isShortUsage: used != null && contractMin != null ? used < contractMin : false,
                 };
             })
         );
@@ -287,13 +305,39 @@ export function useAttendanceActions({
                 },
                 { authMode: "userPool" }
             );
+            successToast("退所を記録しました");
             return ok();
         } catch (e) {
+            errorToast();
+
             console.error(e);
             if (refetch) await refetch();
             return ng(e);
         }
     };
+
+    const deleteVisitRecord = async (row: AttendanceData): Promise<ActionResult<void>> => {
+        // ① 楽観更新（まずUIから消す）
+        setAttendanceData(prev => prev.filter(x => x.id !== row.id));
+
+        try {
+            // ② サーバ削除（Amplifyの呼び方はあなたの他の関数に合わせて）
+            await client.models.VisitRecord.delete(
+                { id: row.id },
+                { authMode: "userPool" }
+            );
+
+            // ③ トースト → ④ 正常終了
+            successToast(Message.IA000004, { description: "削除しました" });
+            return ok();
+        } catch (e) {
+            // ⑤ 失敗時：トースト & ロールバック(refetch)
+            errorToast(Message.EF050021, { description: Message.EF050020 });
+            if (refetch) await refetch();
+            return ng(e);
+        }
+    };
+
 
     return {
         updateReason,
@@ -303,5 +347,6 @@ export function useAttendanceActions({
         resetTime,
         handleArrival,
         handleDeparture,
+        deleteVisitRecord,
     };
 }

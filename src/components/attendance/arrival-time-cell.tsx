@@ -92,7 +92,7 @@ export default function ArrivalTimeCell({
   return (
     <div className="group grid grid-cols-[1.5rem_auto_1.5rem] items-center w-full">
       <span aria-hidden />
-      <span className="justify-self-center inline-block w-14 text-center font-mono tabular-nums font-medium text-gray-700">
+      <span className="justify-self-center inline-block w-16 text-center tabular-nums whitespace-nowrap font-medium text-gray-700">
         {formatTimeJST(time)}
       </span>
       <Button

@@ -9,15 +9,11 @@
 
 import { fetchAuthSession } from "@aws-amplify/auth";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { format } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
-import { ja } from "date-fns/locale";
-
-import { Calendar, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
 import { Button } from "@/components/ui/button";
 import NoteDialog from "@/components/attendance/note-dialog";
 import ReasonSelect from "@/components/attendance/reason-select";
@@ -29,13 +25,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useSidebar } from "@/context/sidebar-context";
 import { Card, CardContent } from "@/components/ui/card";
 import StatusBadge from "@/components/attendance/status-badge";
-import { sortAttendance } from "../lib/attendance-sorting";
 import { useVisitRecords } from "@/hooks/use-visit-records";
 import { useAttendanceActions } from "@/hooks/use-attendance-actions";
-
 import DateToolbar from "@/components/attendance/date-toolbar";
 import {
   Tooltip,
@@ -43,8 +36,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ENABLE_CONTRACT_EDIT, normalizeToHHmm } from "@/lib/utils";
-
+import { ENABLE_CONTRACT_EDIT } from "@/lib/utils";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import type {
@@ -54,31 +46,29 @@ import type {
 } from "@/types/attendance";
 import { reasonText, toReasonCode } from "@/types/attendance";
 import { successToast, errorToast } from "@/lib/ui-toast";
-
-import { useAttendanceEditing } from "@/hooks/use-attendance-editing";
-
-import { parseTimeInJST, formatMinutes, calcStatus } from "@/lib/utils";
-
+import { parseTimeInJST, calcStatus } from "@/lib/utils";
 import {
   normalizeTimeInput,
-  compareHHmm,
   diffSameDay,
   minutesToHHmm,
-  hhmmToMinutes,
-  compareTime,
 } from "@/lib/time-utils";
 import ContractTimeCell from "@/components/attendance/contract-time-cell";
 import ArrivalTimeCell from "@/components/attendance/arrival-time-cell";
 import DepartureTimeCell from "@/components/attendance/departure-time-cell";
+import {
+  sortAttendance,
+  type SortColumn,
+  type SortDirection,
+} from "@/lib/attendance-sorting";
+import { useAttendanceEditing } from "@/hooks/use-attendance-editing";
+import AttendanceTable from "@/components/attendance/attendance-table";
+import type { RowActions } from "@/components/attendance/attendance-row";
+
+// ソート用の型定義
+
+export type SortConfig = { column: SortColumn; direction: "asc" | "desc" };
 
 const client = generateClient<Schema>({ authMode: "userPool" });
-
-// module-scope helper（固定日で Date を作る）
-const toFixedDate = (hhmm: string): Date => {
-  const d = parseTimeInJST("2000-01-01", hhmm);
-  if (!d) throw new Error(`Invalid time: ${hhmm}`);
-  return d;
-};
 
 // HH:mm → 2000-01-01 固定日の Date、パース失敗は null に寄せる
 const toFixedDateOrNull = (hhmm?: string | null): Date | null =>
@@ -86,17 +76,6 @@ const toFixedDateOrNull = (hhmm?: string | null): Date | null =>
 
 // 理由の表示は共通ヘルパに統一
 const getReasonDisplayText = (reason: ReasonCode | null) => reasonText(reason);
-
-const jaCollator = new Intl.Collator("ja", {
-  sensitivity: "base",
-  numeric: true,
-});
-
-function calcDiffMinutes(start: string, end: string): number {
-  const [sh, sm] = start.split(":").map(Number);
-  const [eh, em] = end.split(":").map(Number);
-  return eh * 60 + em - (sh * 60 + sm);
-}
 
 /**
  * 通所実績データを表す型。
@@ -112,17 +91,6 @@ const deriveStatus = (
   if (!leave) return "1";
   return isShort ? "2" : "3";
 };
-
-// ソート用の型定義
-type SortColumn =
-  | "userName"
-  | "scheduledTime"
-  | "contractTime"
-  | "arrivalTime"
-  | "departureTime"
-  | "actualUsageTime"
-  | "Badge";
-type SortDirection = "asc" | "desc";
 
 // 変換ユーティリティ（非async）
 const transformVisitRecord = (record: any, rec?: any) => {
@@ -183,10 +151,6 @@ const transformVisitRecord = (record: any, rec?: any) => {
  */
 
 export default function AttendanceManagement() {
-  //　メニュー開閉
-  const { toggle } = useSidebar();
-  const { isOpen } = useSidebar();
-
   // 現在の画面幅（レスポンシブ表示制御用）
   const [screenWidth, setScreenWidth] = useState<number | null>(null);
 
@@ -212,7 +176,20 @@ export default function AttendanceManagement() {
     value: string;
   } | null>(null);
 
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  // 備考ダイアログの状態
+  const [noteDlg, setNoteDlg] = useState<{
+    open: boolean;
+    id: string;
+    userName: string;
+    value: string;
+  }>({ open: false, id: "", userName: "", value: "" });
+
+  // 行から「編集したい」が来たら開く（Table に渡す）
+  const onEditNote = (id: string, current: string | null) => {
+    const u = sortedData.find((x) => x.id === id)?.userName ?? "";
+    setNoteDlg({ open: true, id, userName: u, value: current ?? "" });
+  };
+
   const [currentTime, setCurrentTime] = useState("");
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -223,18 +200,26 @@ export default function AttendanceManagement() {
     id: string;
     value: string;
   } | null>(null);
-  const [sortConfig, setSortConfig] = useState<{
+
+  const [sort, setSort] = useState<{
     column: SortColumn;
     direction: SortDirection;
-  }>({ column: "userName", direction: "asc" });
+  }>({
+    column: "userName",
+    direction: "asc",
+  });
+  const onSort = (c: SortColumn) =>
+    setSort((prev) =>
+      prev.column === c
+        ? { column: c, direction: prev.direction === "asc" ? "desc" : "asc" }
+        : { column: c, direction: "asc" }
+    );
+
   const {
     data: attendanceData,
     refetch,
     setData: setAttendanceData,
   } = useVisitRecords(selectedDate, client);
-
-  const col: SortColumn = sortConfig.column;
-  const dir: SortDirection = sortConfig.direction;
 
   const actions = useAttendanceActions({
     client,
@@ -243,9 +228,43 @@ export default function AttendanceManagement() {
     currentUserName: "admin",
   });
 
+  const handleDeleteVisitRecord = async (row: AttendanceData) => {
+    if (!window.confirm("この行を削除します。よろしいですか？")) return;
+    try {
+      await client.models.VisitRecord.delete(
+        { id: row.id },
+        { authMode: "userPool" }
+      );
+      setAttendanceData((prev) => prev.filter((x) => x.id !== row.id));
+      successToast("削除しました");
+    } catch (e) {
+      console.error("削除失敗:", e);
+      errorToast();
+    }
+  };
+
+  // ★ RowActions 形に合わせて“名前を変えて”束ねる
+  const tableActions: RowActions = {
+    handleArrival: actions.handleArrival,
+    handleDeparture: actions.handleDeparture,
+    saveEditedTime: actions.saveEditedTime,
+    resetTime: actions.resetTime,
+
+    // 名前違いを合わせる（三つ）
+    handleSaveContract: actions.saveContractTime, // ← saveContractTime を利用
+    handleSaveReason: (id, code) => actions.updateReason(id, code), // ← updateReason をラップ
+    handleSaveNote: (id, note) => actions.saveNote(id, note), // ← saveNote をラップ
+    deleteRow: handleDeleteVisitRecord,
+  };
+
   const sortedData = useMemo(
-    () => sortAttendance<AttendanceData>(attendanceData, col, dir),
-    [attendanceData, col, dir]
+    () =>
+      sortAttendance<AttendanceData>(
+        attendanceData,
+        sort.column,
+        sort.direction
+      ),
+    [attendanceData, sort]
   );
 
   const formatToHHMM = (value: string): string => {
@@ -297,21 +316,6 @@ export default function AttendanceManagement() {
 
     fetchChildMaster();
   }, []);
-
-  /**
-   * 通所実績を取得してステートを更新する。
-   * 無駄な更新を避けるため、前回と同一であれば更新しない。
-   */
-
-  const toDateTime = (date: Date, timeStr: string): Date => {
-    const [hours, minutes] = timeStr.split(":").map(Number);
-    const result = new Date(date);
-    result.setHours(hours);
-    result.setMinutes(minutes);
-    result.setSeconds(0);
-    result.setMilliseconds(0);
-    return result;
-  };
 
   /**
    * 選択中の日付に該当する通所実績を取得し、state に反映する。
@@ -460,20 +464,7 @@ export default function AttendanceManagement() {
    */
   useEffect(() => {
     fetchVisitRecords(); // 初回即実行
-
-    // const intervalId = setInterval(() => {
-    //   if (document.visibilityState === "visible") {
-    //     fetchVisitRecords();
-    //   }
-    // }, 10000); // 10秒
-
-    // return () => clearInterval(intervalId);
   }, [recipientMap, selectedDate]); // recipientMap に依存（受給者マスタ取得完了後に開始）
-
-  // 現在の日付
-  const formattedDate = format(selectedDate, "yyyy年MM月dd日(E)", {
-    locale: ja,
-  });
 
   // 現在時刻の更新
   useEffect(() => {
@@ -499,101 +490,12 @@ export default function AttendanceManagement() {
     setEditingNote({ id, value: currentValue || "" });
   };
 
-  /**
-   * 分数を "HH:mm" 形式に変換するユーティリティ関数。
-   * @param {number} minutes
-   * @returns {string}
-   */
-
-  const convertMinutesToHHMM = (minutes: number): string => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
-  };
-
-  /**
-   * 実利用時間（arrivalTime 〜 departureTime）を計算し、短時間利用かどうかも判定。
-   * @param {AttendanceData} item 計算対象の1件データ
-   * @param {Date} departureTime 退所時刻
-   * @returns {AttendanceData} 実利用時間・退所時刻を反映したデータ
-   */
-
-  /**
-   * 実利用時間を arrivalTime と departureTime から算出。
-   * 契約利用時間と比較して短時間利用フラグも付与。
-   *
-   * @param item AttendanceData型の1件（来所済みであること）
-   * @param departureTime 退所時刻
-   * @returns 利用時間と短時間利用情報を含んだ更新済みAttendanceData
-   */
-  const calculateUsageTime = (
-    item: AttendanceData,
-    departureTime: Date
-  ): AttendanceData => {
-    if (!item.arrivalTime) {
-      return {
-        ...item,
-        arrivalTime: null,
-        departureTime,
-        actualUsageTime: null,
-        isShortUsage: false,
-      };
-    }
-
-    // 同日前提：時分のみで差分
-    const toMinutes = (d: Date) => d.getHours() * 60 + d.getMinutes();
-    let diffMinutes = toMinutes(departureTime) - toMinutes(item.arrivalTime);
-    if (diffMinutes < 0) diffMinutes = 0; // 念のためガード
-    if (diffMinutes > 24 * 60) diffMinutes %= 24 * 60; // 念のためガード
-
-    const hours = Math.floor(diffMinutes / 60);
-    const minutes = diffMinutes % 60;
-    const actualUsageTime = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
-
-    const [ch, cm] = item.contractTime.split(":").map(Number);
-    const contractTotalMinutes = (ch || 0) * 60 + (cm || 0);
-    const isShortUsage =
-      contractTotalMinutes > 0 ? diffMinutes < contractTotalMinutes : false;
-
-    return { ...item, departureTime, actualUsageTime, isShortUsage };
-  };
-
-  // ソート関数
-  const handleSort = (column: SortColumn) => {
-    let direction: SortDirection = "asc";
-
-    if (
-      sortConfig &&
-      sortConfig.column === column &&
-      sortConfig.direction === "asc"
-    ) {
-      direction = "desc";
-    }
-
-    setSortConfig({ column, direction });
-  };
-
-  const handleDeleteVisitRecord = async (row: AttendanceData) => {
-    if (!window.confirm("この行を削除します。よろしいですか？")) return;
-    try {
-      await client.models.VisitRecord.delete(
-        { id: row.id },
-        { authMode: "userPool" }
-      );
-      setAttendanceData((prev) => prev.filter((x) => x.id !== row.id));
-      successToast("削除しました");
-    } catch (e) {
-      console.error("削除失敗:", e);
-      errorToast();
-    }
-  };
-
   // ソートアイコンを取得
   const getSortIcon = (column: SortColumn) => {
-    if (!sortConfig || sortConfig.column !== column) {
+    if (!sort || sort.column !== column) {
       return null;
     }
-    return sortConfig.direction === "asc" ? (
+    return sort.direction === "asc" ? (
       <ArrowUp className="ml-1 h-4 w-4" />
     ) : (
       <ArrowDown className="ml-1 h-4 w-4" />
@@ -720,438 +622,39 @@ export default function AttendanceManagement() {
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <div className="min-w-[850px]">
-                  <Table>
-                    <TableHeader className="bg-gray-50">
-                      <TableRow>
-                        <TableHead
-                          className="w-[80px] text-left cursor-pointer whitespace-nowrap hover:bg-gray-100"
-                          onClick={() => handleSort("userName")}
-                        >
-                          <div className="flex items-center">
-                            児童名
-                            {getSortIcon("userName")}
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="w-[90px] text-center cursor-pointer whitespace-nowrap hover:bg-gray-100"
-                          onClick={() => handleSort("scheduledTime")}
-                        >
-                          <div className="inline-flex items-center justify-center gap-1">
-                            来所予定時刻
-                            {getSortIcon("scheduledTime")}
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="w-[90px] text-center cursor-pointer whitespace-nowrap hover:bg-gray-100"
-                          onClick={() => handleSort("contractTime")}
-                        >
-                          <div className="inline-flex items-center justify-center gap-1">
-                            契約利用時間
-                            {getSortIcon("contractTime")}
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="w-[90px] text-center cursor-pointer whitespace-nowrap hover:bg-gray-100"
-                          onClick={() => handleSort("arrivalTime")}
-                        >
-                          <div className="inline-flex items-center justify-center gap-1">
-                            来所時刻
-                            {getSortIcon("arrivalTime")}
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="w-[90px] text-center cursor-pointer whitespace-nowrap hover:bg-gray-100"
-                          onClick={() => handleSort("departureTime")}
-                        >
-                          <div className="inline-flex items-center justify-center gap-1">
-                            退所時刻
-                            {getSortIcon("departureTime")}
-                          </div>
-                        </TableHead>
-                        <TableHead
-                          className="w-[90px] text-center cursor-pointer whitespace-nowrap hover:bg-gray-100"
-                          onClick={() => handleSort("actualUsageTime")}
-                        >
-                          <div className="inline-flex items-center justify-center gap-1">
-                            実利用時間
-                            {getSortIcon("actualUsageTime")}
-                          </div>
-                        </TableHead>
-                        <TableHead className="w-[80px] lg:w-[100px] text-center whitespace-nowrap">
-                          早退/超過理由
-                        </TableHead>
-                        <TableHead className="w-[70px] lg:w-[120px] xl:w-[150px] text-center whitespace-nowrap">
-                          備考
-                        </TableHead>
-                        <TableHead
-                          className="w-[90px] text-center cursor-pointer whitespace-nowrap hover:bg-gray-100"
-                          onClick={() => handleSort("Badge")}
-                        >
-                          ステータス
-                          {getSortIcon("Badge")}
-                        </TableHead>
-                        <TableHead className="w-[60px] text-center">
-                          削除
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <AnimatePresence>
-                        {sortedData.map(
-                          (data: AttendanceData, index: number) => (
-                            <motion.tr
-                              key={data.id}
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className={`border-b ${index % 2 === 1 ? "bg-blue-50/30" : ""} hover:bg-gray-50`}
-                            >
-                              <TableCell className="whitespace-nowrap py-2 text-left">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className="cursor-default">
-                                        {getUserNameDisplayText(data.userName)}
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>{data.userName}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </TableCell>
-                              <TableCell className="whitespace-nowrap py-2 text-center">
-                                {/* {data.scheduledTime} */}
-                                <span className="font-mono tabular-nums">
-                                  {data.scheduledTime}
-                                </span>
-                              </TableCell>
-                              <TableCell className="py-2 text-center">
-                                {ENABLE_CONTRACT_EDIT ? (
-                                  <ContractTimeCell
-                                    value={data.contractTime}
-                                    isEditing={editingContract?.id === data.id}
-                                    editingValue={editingContract?.value ?? ""}
-                                    onStartEdit={(current) =>
-                                      setEditingContract({
-                                        id: data.id,
-                                        value: current,
-                                      })
-                                    }
-                                    onChange={(v) =>
-                                      setEditingContract({
-                                        id: data.id,
-                                        value: v,
-                                      })
-                                    }
-                                    onSave={() => {
-                                      const val = editingContract?.value ?? "";
-                                      actions
-                                        .saveContractTime(data.id, val)
-                                        .then((res) => {
-                                          if (res.ok) {
-                                            successToast(
-                                              "契約時間を保存しました"
-                                            );
-                                            setEditingContract(null); // 編集モード終了
-                                          } else {
-                                            errorToast();
-                                          }
-                                        });
-                                    }}
-                                    onCancel={() => setEditingContract(null)}
-                                    onFocus={() => setEditing(true)}
-                                    onBlur={() => setEditing(false)}
-                                  />
-                                ) : (
-                                  <span className="font-mono tabular-nums">
-                                    {data.contractTime ?? "-"}
-                                  </span>
-                                )}
-                              </TableCell>
-
-                              <TableCell className="whitespace-nowrap py-2 text-center">
-                                <ArrivalTimeCell
-                                  time={data.arrivalTime}
-                                  isEditing={
-                                    !!editing &&
-                                    editing.id === data.id &&
-                                    editing.type === "arrival"
-                                  }
-                                  editingValue={editing?.value ?? ""}
-                                  onStartEdit={(current) =>
-                                    startEditing({
-                                      id: data.id,
-                                      type: "arrival",
-                                      value: current,
-                                    })
-                                  }
-                                  onChange={(v) => setValue(v)}
-                                  onSave={() => {
-                                    actions
-                                      .saveEditedTime(
-                                        data.id,
-                                        "arrival",
-                                        editing?.value ?? ""
-                                      )
-                                      .then((res) => {
-                                        if (res.ok) {
-                                          successToast(
-                                            "来所時刻を保存しました"
-                                          );
-                                          cancelEditing();
-                                        } else {
-                                          errorToast();
-                                        }
-                                      });
-                                  }}
-                                  onReset={() => {
-                                    actions
-                                      .resetTime(data.id, "arrival")
-                                      .then((res) => {
-                                        if (res.ok) {
-                                          successToast(
-                                            "時刻をリセットしました"
-                                          );
-                                          cancelEditing();
-                                        } else {
-                                          errorToast();
-                                        }
-                                      });
-                                  }}
-                                  onCancel={cancelEditing}
-                                  onFocus={() => setEditing(true)}
-                                  onBlur={() => {
-                                    // 既存どおり onBlur で正規化
-                                    const normalized = normalizeTimeInput(
-                                      editing?.value ?? ""
-                                    );
-                                    if (normalized) setValue(normalized);
-                                    setEditing(false);
-                                  }}
-                                  onClickArrival={() => {
-                                    actions
-                                      .handleArrival(data.id)
-                                      .then((res) => {
-                                        res.ok
-                                          ? successToast("来所を記録しました")
-                                          : errorToast();
-                                      });
-                                  }}
-                                />
-                              </TableCell>
-
-                              <TableCell className="whitespace-nowrap py-2 text-center">
-                                <DepartureTimeCell
-                                  hasArrival={!!data.arrivalTime}
-                                  time={data.departureTime}
-                                  isEditing={
-                                    !!editing &&
-                                    editing.id === data.id &&
-                                    editing.type === "departure"
-                                  }
-                                  editingValue={editing?.value ?? ""}
-                                  onStartEdit={(current) =>
-                                    startEditing({
-                                      id: data.id,
-                                      type: "departure",
-                                      value: current,
-                                    })
-                                  }
-                                  onChange={(v) => setValue(v)}
-                                  onSave={() => {
-                                    actions
-                                      .saveEditedTime(
-                                        data.id,
-                                        "departure",
-                                        editing?.value ?? ""
-                                      )
-                                      .then((res) => {
-                                        if (res.ok) {
-                                          successToast(
-                                            "退所時刻を保存しました"
-                                          );
-                                          cancelEditing();
-                                        } else {
-                                          errorToast();
-                                        }
-                                      });
-                                  }}
-                                  onReset={() => {
-                                    actions
-                                      .resetTime(data.id, "departure")
-                                      .then((res) => {
-                                        if (res.ok) {
-                                          successToast(
-                                            "時刻をリセットしました"
-                                          );
-                                          cancelEditing(); // ← これを追加すると統一感が出ます
-                                        } else {
-                                          errorToast();
-                                        }
-                                      });
-                                  }}
-                                  onCancel={cancelEditing}
-                                  onFocus={() => setEditing(true)}
-                                  onBlur={() => {
-                                    // 既存どおり onBlur でフォーマット整形
-                                    const formatted = formatToHHMM(
-                                      editing?.value ?? ""
-                                    );
-                                    setValue(formatted);
-                                    setEditing(false);
-                                  }}
-                                  onClickDeparture={() => {
-                                    actions
-                                      .handleDeparture(data.id)
-                                      .then((res) => {
-                                        res.ok
-                                          ? successToast("退所を記録しました")
-                                          : errorToast();
-                                      });
-                                  }}
-                                />
-                              </TableCell>
-
-                              <TableCell className="whitespace-nowrap py-2 text-center">
-                                {data.actualUsageTime && (
-                                  <span
-                                    className={`${data.isShortUsage ? "text-red-500" : "text-gray-700"} font-mono tabular-nums font-medium`}
-                                  >
-                                    {data.actualUsageTime}
-                                  </span>
-                                )}
-                              </TableCell>
-                              <TableCell className="whitespace-nowrap py-2 text-center">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div>
-                                        <ReasonSelect
-                                          value={data.reason ?? "0"}
-                                          onChange={(v) => {
-                                            const code = (v ??
-                                              "0") as ReasonCode;
-                                            actions
-                                              .updateReason(data.id, code)
-                                              .then((res) => {
-                                                if (res.ok) {
-                                                  successToast(
-                                                    reasonText(code)
-                                                  );
-                                                } else {
-                                                  errorToast();
-                                                }
-                                              });
-                                          }}
-                                          onFocus={() => setEditing(true)}
-                                          onBlur={() => setEditing(false)}
-                                        />
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>{getReasonDisplayText(data.reason)}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </TableCell>
-
-                              <TableCell className="whitespace-nowrap py-2 text-left">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 w-full max-w-[65px] lg:max-w-[110px] xl:max-w-[140px] flex items-center justify-start px-2 text-left text-gray-600 hover:bg-gray-100 text-xs mx-auto"
-                                  onClick={() =>
-                                    startEditingNote(data.id, data.note)
-                                  }
-                                >
-                                  {data.note ? (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          {screenWidth === null ? (
-                                            ""
-                                          ) : (
-                                            <span className="truncate">
-                                              {data.note!.length >
-                                              (screenWidth < 1280 ? 10 : 20)
-                                                ? `${data.note!.substring(0, screenWidth < 1280 ? 10 : 20)}...`
-                                                : data.note}
-                                            </span>
-                                          )}
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>{data.note}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  ) : (
-                                    <span className="text-gray-400">-</span>
-                                  )}
-                                </Button>
-
-                                <NoteDialog
-                                  open={
-                                    editingNote !== null &&
-                                    editingNote.id === data.id
-                                  }
-                                  userName={data.userName}
-                                  value={editingNote?.value || ""}
-                                  /* 編集内容の反映 */
-                                  onChange={(v) =>
-                                    setEditingNote({ id: data.id, value: v })
-                                  }
-                                  /* 閉じる・保存 */
-                                  onClose={() => setEditingNote(null)}
-                                  onSave={async () => {
-                                    const res = await actions.saveNote(
-                                      data.id,
-                                      editingNote!.value
-                                    );
-                                    if (res.ok) {
-                                      successToast("備考を保存しました");
-                                      setEditingNote(null);
-                                    } else {
-                                      errorToast();
-                                    }
-                                  }}
-                                  onFocus={() => setEditing(true)}
-                                  onBlur={() => setEditing(false)}
-                                />
-                              </TableCell>
-                              <TableCell className="whitespace-nowrap py-2 text-center">
-                                <StatusBadge
-                                  code={
-                                    (data.status ??
-                                      deriveStatus(
-                                        data.arrivalTime,
-                                        data.departureTime,
-                                        data.isShortUsage
-                                      )) as "0" | "1" | "2" | "3"
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell className="whitespace-nowrap py-2 text-center">
-                                <button
-                                  className="h-7 w-7 inline-flex items-center justify-center rounded hover:bg-red-50"
-                                  title="この行を削除"
-                                  aria-label="この行を削除"
-                                  onClick={() => handleDeleteVisitRecord(data)}
-                                >
-                                  <Trash2 className="h-4 w-4 text-red-600" />
-                                </button>
-                              </TableCell>
-                            </motion.tr>
-                          )
-                        )}
-                      </AnimatePresence>
-                    </TableBody>
-                  </Table>
+                  <AttendanceTable
+                    rows={sortedData}
+                    sort={sort}
+                    onSort={onSort} // ← これ！
+                    editing={editing}
+                    onStartEdit={startEditing}
+                    onCancelEdit={cancelEditing}
+                    actions={tableActions}
+                    onChangeEditValue={setValue} // ★ 入力値を親の editing に反映
+                    onEditNote={onEditNote} // ★ 備考ダイアログを開く
+                    onFocusEditing={() => setEditing(true)} // ★ フォーカス中は購読を止める
+                    onBlurEditing={() => setEditing(false)} // ★ フォーカス外れたら再開
+                  />
                 </div>
               </div>
             </CardContent>
           </Card>
+          <NoteDialog
+            open={noteDlg.open}
+            userName={noteDlg.userName}
+            value={noteDlg.value}
+            onChange={(v) => setNoteDlg((prev) => ({ ...prev, value: v }))}
+            onClose={() => setNoteDlg((prev) => ({ ...prev, open: false }))}
+            onSave={async () => {
+              const { id, value } = noteDlg;
+              const ok = await tableActions.handleSaveNote(id, value);
+              // 必要ならトースト
+              // ok ? successToast("備考を保存しました") : errorToast();
+              setNoteDlg((prev) => ({ ...prev, open: false }));
+            }}
+            onFocus={() => setEditing(true)} // 入力中は購読更新の反映を止めるなら
+            onBlur={() => setEditing(false)}
+          />
         </div>
       </div>
 

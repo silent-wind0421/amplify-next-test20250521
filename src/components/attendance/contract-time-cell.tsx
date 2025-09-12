@@ -30,7 +30,7 @@ export default function ContractTimeCell({
     return (
       <div className="group grid grid-cols-[1.5rem_auto_1.5rem] items-center w-full">
         <span aria-hidden />
-        <span className="justify-self-center inline-block w-14 text-center font-mono tabular-nums">
+        <span className="justify-self-center inline-block w-16 text-center tabular-nums whitespace-nowrap font-medium text-gray-700">
           {value ?? "-"}
         </span>
         <Button

@@ -7,7 +7,7 @@ export type SortColumn =
     | "arrivalTime"
     | "departureTime"
     | "actualUsageTime"
-    | "Badge";
+    | "status";
 
 export type SortDirection = "asc" | "desc";
 
@@ -84,7 +84,7 @@ export function sortAttendance<T extends SortableRow>(
                 if (bm == null) return -dir;
                 return (am - bm) * dir;
             }
-            case "Badge": {
+            case "status": {
                 // 未来所(0) < 利用中(1) < 短時間(2) < 完了(3)
                 const rank = (r: SortableRow) =>
                     !r.arrivalTime ? 0 : !r.departureTime ? 1 : r.isShortUsage ? 2 : 3;
