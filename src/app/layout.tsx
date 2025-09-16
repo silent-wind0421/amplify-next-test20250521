@@ -1,13 +1,13 @@
-//"use client"
-
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-// import "./app.css";
-import { Authenticator } from "@aws-amplify/ui-react";
+import { Noto_Sans_JP } from "next/font/google";
+import ClientToaster from "@/components/ui/client-toaster";
 
-
-const inter = Inter({ subsets: ["latin"] });
-
+const noto = Noto_Sans_JP({
+  weight: ["400", "500", "700"], // 必要な太さだけ
+  preload: false,
+  display: "swap",
+  variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
   title: "kotayori",
@@ -19,18 +19,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-
-//   console.log("root layout");
-
   return (
-
-
     <html lang="ja">
-    {/* <body className={inter.className}>{children}</body> 
-      <Authenticator.Provider> */}
-          <body className={inter.className}>{children}</body> 
-     {/* </Authenticator.Provider> */}
-
+      {/* ベース文字サイズは 14px 相当（text-sm）に */}
+      <body className={`${noto.variable} font-sans text-sm antialiased`}>
+        {children}
+        <ClientToaster />
+      </body>
     </html>
   );
 }

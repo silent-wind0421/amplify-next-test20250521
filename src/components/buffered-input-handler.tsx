@@ -1,7 +1,6 @@
 // src/components/buffered-input-Handler.tsx
 "use client";
 
-import { last } from "lodash";
 import React, { useEffect, useRef, useCallback } from "react";
 
 /**
@@ -54,13 +53,13 @@ const BufferedInputHandler: React.FC<Props> = ({
    * @param {React.FormEvent<HTMLInputElement>} e - 入力イベント。
    */
 
-  const handlKeydown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const now = Date.now();
-    if (e.key) {
-      // playBeep();
-      //lastPlayTimeRef.current = now;
-    }
-  };
+  // const handlKeydown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  //   const now = Date.now();
+  //   if (e.key) {
+  //     // playBeep();
+  //     //lastPlayTimeRef.current = now;
+  //   }
+  // };
 
   //QRコード読み取り時
   const handleInput = useCallback(
