@@ -88,19 +88,23 @@ const transformVisitRecord = (record: any, rec?: any) => {
     ? `${Math.floor(record.contractedDuration / 60)}:${`${record.contractedDuration % 60}`.padStart(2, "0")}`
     : "";
 
-  const actualUsageTime = record.actualDuration
-    ? `${Math.floor(record.actualDuration / 60)}:${`${record.actualDuration % 60}`.padStart(2, "0")}`
-    : null;
+  const usedMins = diffSameDay(
+    record.actualArrivalTime,
+    record.actualLeaveTime
+  ); // 分 or null
+  const actualUsageTime = usedMins == null ? null : minutesToHHmm(usedMins);
 
   const isShortUsage =
     typeof record.contractedDuration === "number" &&
-    typeof record.actualDuration === "number"
-      ? record.actualDuration < record.contractedDuration
+    typeof usedMins === "number"
+      ? usedMins < record.contractedDuration
       : false;
 
-  const status: StatusCode =
-    (record.status as StatusCode) ??
-    deriveStatus(arrivalTime, departureTime, isShortUsage);
+  const status: StatusCode = deriveStatus(
+    arrivalTime,
+    departureTime,
+    isShortUsage
+  );
 
   return {
     id: record.id,
@@ -513,13 +517,6 @@ export default function AttendanceManagement() {
       const session = await fetchAuthSession();
       const token = session.tokens?.accessToken;
 
-      // if (!token || token.isExpired) {
-      //   console.warn(
-      //     "未認証状態またはトークン期限切れのため observeQuery をスキップ"
-      //   );
-      //   return;
-      // }
-
       const exp = token?.payload?.exp;
       const isExpired = typeof exp === "number" && Date.now() >= exp * 1000;
 
@@ -582,11 +579,11 @@ export default function AttendanceManagement() {
 
   return (
     <div className="flex flex-col min-h-[100dvh] bg-gray-50">
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-y-hidden">
         {/* メインコンテンツ */}
         <div
           className={cn(
-            "flex-1 min-h-0 overflow-auto transition-all duration-300 pb-24"
+            "flex-1 min-h-0 min-w-0 overflow-y-auto transition-all duration-300 pb-24"
           )}
         >
           <div className="mx-auto w-full max-w-none px-3 md:px-4">
@@ -604,22 +601,19 @@ export default function AttendanceManagement() {
 
             <Card className="rounded-xl shadow-sm">
               <CardContent className="p-0">
-                {/* 横スクロールはここで受ける。直下に Table（min-w は Table 側で持たせる） */}
-                <div className="overflow-x-auto overscroll-x-contain">
-                  <AttendanceTable
-                    rows={sortedData}
-                    sort={sort}
-                    onSort={onSort}
-                    editing={editing}
-                    onStartEdit={startEditing}
-                    onCancelEdit={cancelEditing}
-                    actions={tableActions}
-                    onChangeEditValue={setValue}
-                    onEditNote={onEditNote}
-                    onFocusEditing={() => setEditing(true)}
-                    onBlurEditing={() => setEditing(false)}
-                  />
-                </div>
+                <AttendanceTable
+                  rows={sortedData}
+                  sort={sort}
+                  onSort={onSort}
+                  editing={editing}
+                  onStartEdit={startEditing}
+                  onCancelEdit={cancelEditing}
+                  actions={tableActions}
+                  onChangeEditValue={setValue}
+                  onEditNote={onEditNote}
+                  onFocusEditing={() => setEditing(true)}
+                  onBlurEditing={() => setEditing(false)}
+                />
               </CardContent>
             </Card>
           </div>
@@ -632,8 +626,7 @@ export default function AttendanceManagement() {
             onSave={async () => {
               const { id, value } = noteDlg;
               const ok = await tableActions.handleSaveNote(id, value);
-              // 必要ならトースト
-              // ok ? successToast("備考を保存しました") : errorToast();
+
               setNoteDlg((prev) => ({ ...prev, open: false }));
             }}
             onFocus={() => setEditing(true)} // 入力中は購読更新の反映を止めるなら
@@ -641,9 +634,6 @@ export default function AttendanceManagement() {
           />
         </div>
       </div>
-
-      {/* トースト通知 */}
-      {/* <Toaster /> */}
     </div>
   );
 }
