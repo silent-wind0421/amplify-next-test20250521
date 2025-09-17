@@ -18,7 +18,7 @@ import NoteDialog from "@/components/attendance/note-dialog";
 
 import { Card, CardContent } from "@/components/ui/card";
 
-import { useVisitRecords } from "@/hooks/use-visit-records";
+// import { useVisitRecords } from "@/hooks/use-visit-records";
 import { useAttendanceActions } from "@/hooks/use-attendance-actions";
 import DateToolbar from "@/components/attendance/date-toolbar";
 
@@ -198,16 +198,12 @@ export default function AttendanceManagement() {
         : { column: c, direction: "asc" }
     );
 
-  const {
-    data: attendanceData,
-    refetch,
-    setData: setAttendanceData,
-  } = useVisitRecords(selectedDate, client);
+  const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([]);
 
   const actions = useAttendanceActions({
     client,
     setAttendanceData,
-    refetch, // 失敗時の巻き戻し用
+    refetch: fetchVisitRecords, // 自前の取得関数に一本化
     currentUserName: "admin",
   });
 
@@ -263,6 +259,11 @@ export default function AttendanceManagement() {
   };
   // State: 児童マスタと前回取得データのキャッシュ
   const [recipientMap, setRecipientMap] = useState<Map<string, any>>(new Map());
+  // 最新の受給者マップを購読コールバックから参照するための参照
+  const recipientMapRef = useRef(recipientMap);
+  useEffect(() => {
+    recipientMapRef.current = recipientMap;
+  }, [recipientMap]);
   const [lastFetchedJson, setLastFetchedJson] = useState<string>("");
 
   useEffect(() => {
@@ -304,7 +305,7 @@ export default function AttendanceManagement() {
    * 選択中の日付に該当する通所実績を取得し、state に反映する。
    * VisitRecord.child のリレーションから児童名を取得する。
    */
-  const fetchVisitRecords = async () => {
+  async function fetchVisitRecords() {
     try {
       const ymd = formatInTimeZone(selectedDate, "Asia/Tokyo", "yyyy-MM-dd");
       console.log("検索日付:", ymd);
@@ -385,7 +386,9 @@ export default function AttendanceManagement() {
 
       // 3) 画面用に整形（recMap から氏名を引く）
       const mapped: AttendanceData[] = (records ?? []).map((r: any) => {
-        const rec = r.recipientId ? recMap.get(r.recipientId) : undefined;
+        const rec = r.recipientId
+          ? recipientMapRef.current.get(r.recipientId)
+          : undefined;
 
         // ★ ここで Date|null を確定（undefined は null に寄せる）
         const arrivalTime: Date | null = toFixedDateOrNull(r.actualArrivalTime);
@@ -439,15 +442,16 @@ export default function AttendanceManagement() {
     } catch (error) {
       console.error("通所実績の取得に失敗:", error);
     }
-  };
+  }
 
   /**
    * 通所実績を 10 秒おきに自動取得。
    * タブが非アクティブなときはスキップする。
    */
   useEffect(() => {
-    fetchVisitRecords(); // 初回即実行
-  }, [recipientMap, selectedDate]); // recipientMap に依存（受給者マスタ取得完了後に開始）
+    setAttendanceData([]); // 先にクリアしてから
+    fetchVisitRecords(); // 取得（選択日で eq フィルタ）
+  }, [selectedDate]); // recipientMap に依存（受給者マスタ取得完了後に開始）
 
   // 現在時刻の更新
   useEffect(() => {
@@ -575,7 +579,7 @@ export default function AttendanceManagement() {
     return () => {
       subscriptions.unsubscribe();
     };
-  }, [selectedDate, isEditing, recipientMap]);
+  }, [selectedDate, isEditing]);
 
   return (
     <div className="flex flex-col min-h-[100dvh] bg-gray-50">
