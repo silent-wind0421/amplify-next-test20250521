@@ -42,9 +42,11 @@ export default function AttendanceTable({
   onBlurEditing?: () => void;
 }) {
   return (
-    <div className="w-full rounded-xl border bg-white shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <div className="max-h-[65vh] overflow-y-auto">
+    <div className="w-full rounded-xl border bg-white shadow-sm">
+      <div>
+        {/* <div className="max-h-[65vh] overflow-y-auto">
+         */}
+        <div className="overflow-y-visible">
           <Table className="table-fixed w-full min-w-[1100px] text-[15px] align-middle">
             <TableHeader className="bg-gray-50">
               <TableRow>

@@ -579,11 +579,11 @@ export default function AttendanceManagement() {
 
   return (
     <div className="flex flex-col min-h-[100dvh] bg-gray-50">
-      <div className="flex flex-1 min-h-0 overflow-y-hidden">
+      <div className="flex flex-1 min-h-0">
         {/* メインコンテンツ */}
         <div
           className={cn(
-            "flex-1 min-h-0 min-w-0 overflow-y-auto transition-all duration-300 pb-24"
+            "flex-1 min-h-0 min-w-0 transition-all duration-300 pb-24"
           )}
         >
           <div className="mx-auto w-full max-w-none px-3 md:px-4">
