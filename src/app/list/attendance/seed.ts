@@ -53,6 +53,7 @@ async function seedRecipients() {
                 isDeleted: false,
                 createdAt: now,
                 createdBy: "seed",
+                guardians: [],
             });
         }
     }
