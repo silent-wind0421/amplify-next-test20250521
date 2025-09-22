@@ -51,7 +51,8 @@ const schema = a.schema({
     version: a.integer(),
     // リレーション
     visitRecords: a.hasMany("VisitRecord", "recipientId"),
-    guardians: a.hasMany("Guardian", "recipientId"),
+    // guardians: a.hasMany("Guardian", "recipientId"),
+    guardians: a.json().required(),
   }).identifier(['recipientId'])
     .authorization((allow) => [
       allow.publicApiKey().to(["read"]), // ← APIキー利用者は read のみ許可
@@ -59,34 +60,34 @@ const schema = a.schema({
       allow.groups(['admin']).to(['create', 'update', 'delete', 'read']),
     ]),
   // ---------------- Guardian（保護者：1:N モデル化） ---------
-  Guardian: a.model({
-    guardianId: a.id().required(),
-    recipientId: a.id().required(),
+  // Guardian: a.model({
+  //   guardianId: a.id().required(),
+  //   recipientId: a.id().required(),
 
-    userId: a.string().required(),
-    lastName: a.string().required(),
-    firstName: a.string().required(),
-    lastNameKana: a.string(),
-    firstNameKana: a.string(),
-    officeId: a.string(),
-    phoneNo: a.string(),
-    email: a.string(),
-    lineUserId: a.string(),
-    isEmailArrivalRequired: a.boolean(),
-    isEmailLeaveRequired: a.boolean(),
-    isLineArrivalRequired: a.boolean(),
-    isLineLeaveRequired: a.boolean(),
-    isDeleted: a.boolean().required(),
+  //   userId: a.string().required(),
+  //   lastName: a.string().required(),
+  //   firstName: a.string().required(),
+  //   lastNameKana: a.string(),
+  //   firstNameKana: a.string(),
+  //   officeId: a.string(),
+  //   phoneNo: a.string(),
+  //   email: a.string(),
+  //   lineUserId: a.string(),
+  //   isEmailArrivalRequired: a.boolean(),
+  //   isEmailLeaveRequired: a.boolean(),
+  //   isLineArrivalRequired: a.boolean(),
+  //   isLineLeaveRequired: a.boolean(),
+  //   isDeleted: a.boolean().required(),
 
-    // 任意の監査項目（必要なら）
-    createdAt: a.string(),
-    createdBy: a.string(),
-    updatedAt: a.string(),
-    updatedBy: a.string(),
+  //   // 任意の監査項目（必要なら）
+  //   createdAt: a.string(),
+  //   createdBy: a.string(),
+  //   updatedAt: a.string(),
+  //   updatedBy: a.string(),
 
-    // リレーション
-    recipient: a.belongsTo("Recipient", "recipientId"),
-  }).authorization((allow) => [allow.owner()]),
+  //   // リレーション
+  //   recipient: a.belongsTo("Recipient", "recipientId"),
+  // }).authorization((allow) => [allow.owner()]),
 
   // ---------------- VisitRecord（通所実績） ----------------
   VisitRecord: a.model({

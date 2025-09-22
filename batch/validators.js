@@ -1,12 +1,47 @@
 import dayjs from 'dayjs';
 /** 漢字・ひらがな・カタカナ + 半角スペース + 漢字・ひらがな・カタカナ */
-export const isValidJapaneseFullName = (value) => {
+/*export const isValidJapaneseFullName = (value) => {
     return /^[\u4E00-\u9FFFぁ-んーァ-ヶー]+ [\u4E00-\u9FFFぁ-んーァ-ヶー]+$/.test(value);
-};
+};*/
+
+
+export function isValidJapaneseFullName(s) {
+  if (typeof s !== 'string') return false;
+
+  // 正規化 & スペース整形
+  const v = s
+    .normalize('NFC')
+    .replace(/\u3000/g, ' ') // 全角スペース→半角
+    .trim()
+    .replace(/\s+/g, ' ');   // 連続空白を1つに
+
+    if (!v) return false;
+
+  // 許可文字:
+  //  - 漢字（全領域・互換含む）: \p{Script=Han}
+  //  - ひらがな: ぁ-ん
+  //  - カタカナ: ァ-ヶ
+  //  - 記号: 々(3005)
+
+  // 許可文字: 漢字(全域)・ひらがな・カタカナ・々
+    const part = String.raw`[\p{Script=Han}ぁ-んァ-ヶ\u3005]+`;
+    const re = new RegExp(`^${part} ${part}$`, 'u');  // ← u フラグ必須
+
+
+  // 半角ｶﾀｶﾅは禁止（必要なければ削除可）
+    if (/[\uFF65-\uFF9F]/u.test(v)) return false;
+
+    return re.test(v);
+}
+
+
+
 /** 全角カタカナ + 半角スペース + 全角カタカナ の形式チェック */
 export const isFullWidthKatakanaFullName = (value) => {
     return /^[ァ-ヶー]+ [ァ-ヶー]+$/.test(value);
 };
+
+
 /** 全角漢字 + 半角スペース + 全角漢字 */
 export const isFullWidthKanjiFullName = (value) => {
     return /^[\u4E00-\u9FFF]+ [\u4E00-\u9FFF]+$/.test(value);
