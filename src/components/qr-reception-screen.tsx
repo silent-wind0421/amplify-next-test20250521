@@ -332,41 +332,58 @@ export default function QrReceptionScreen() {
         return;
       }
 
+      // // ✅ レコードがない場合 → Recipient を確認して新規作成
+      // console.log("🔍 Recipient.list 開始");
+      // const recipientResult = await client.models.Recipient.list({
+      //   filter: { recipientId: { eq: cleanedChildId } },
+      //   authMode: "userPool",
+      // });
+      // console.log("✅ Child.list 完了:", recipientResult);
+
+      // const recipients = recipientResult.data ?? [];
+      // if (!recipients.length) return;
+      // const recipient = recipients[0];
+      // const userName = `${recipient.lastName}${recipient.firstName}`;
+
       // ✅ レコードがない場合 → Recipient を確認して新規作成
-      console.log("🔍 Recipient.list 開始");
-      const recipientResult = await client.models.Recipient.list({
-        filter: { recipientId: { eq: cleanedChildId } },
-        authMode: "userPool",
+      console.log("🔍 Recipient.get 開始");
+
+      // 1) get の結果（userPool → 見えなければ apiKey）
+      const { data: recipientUP } = await client.models.Recipient.get({
+        recipientId: cleanedChildId,
       });
-      console.log("✅ Child.list 完了:", recipientResult);
+      let recipient = recipientUP;
+      if (!recipient) {
+        const publicClient = generateClient<Schema>({ authMode: "apiKey" });
+        const { data: recipientAK } = await publicClient.models.Recipient.get({
+          recipientId: cleanedChildId,
+        });
+        recipient = recipientAK ?? null;
+      }
 
-      const recipients = recipientResult.data ?? [];
-      if (!recipients.length) return;
-      const recipient = recipients[0];
-      const userName = `${recipient.lastName}${recipient.firstName}`;
+      // 2) null でも大丈夫な派生値を先に作る（ここで null を潰す）
+      const userName: string =
+        (recipient
+          ? `${recipient.lastName ?? ""}${recipient.firstName ?? ""}`.trim()
+          : "") || cleanedChildId;
 
-      // ✅ 新規作成処理
-      console.log("✅ VisitRecord.create 開始:", cleanedChildId);
-      await client.models.VisitRecord.create(
-        {
-          visitRecordId: crypto.randomUUID(),
-          visitDate,
-          actualArrivalTime: format(now, "HH:mm"),
-          recipientId: recipient.recipientId,
-          // officeId: recipient.officeId!, // ✅ 必須（Facility.officeId と一致）
-          officeId: recipient.officeId ?? "DEFAULT_OFFICE_ID_FOR_DEBUG", // ← 一時値。実運用の officeId に置換
-          isManuallyEntered: false, // QRなので false
-          isDeleted: false,
-          // 初期値が必要なら（任意）
-          // reason: "0",
-          createdAt: now.toISOString(),
-          createdBy: "qr-reader",
-          updatedAt: now.toISOString(),
-          updatedBy: "qr-reader",
-        },
-        { authMode: "userPool" }
-        // { authMode: "apiKey" }
-      );
+      const officeId: string =
+        recipient?.officeId ?? "DEFAULT_OFFICE_ID_FOR_DEBUG";
+
+      // 3) 派生値を使って create（recipient が null でも型OK）
+      await client.models.VisitRecord.create({
+        visitRecordId: crypto.randomUUID(),
+        visitDate,
+        actualArrivalTime: format(now, "HH:mm"),
+        recipientId: cleanedChildId,
+        officeId,
+        isManuallyEntered: false,
+        isDeleted: false,
+        createdAt: now.toISOString(),
+        createdBy: "qr-reader",
+        updatedAt: now.toISOString(),
+        updatedBy: "qr-reader",
+      });
 
       console.log("✅ VisitRecord.create 完了");
       setMessage({
