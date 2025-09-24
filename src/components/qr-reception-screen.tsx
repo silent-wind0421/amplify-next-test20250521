@@ -34,7 +34,7 @@ import {
 import { generateClient } from "aws-amplify/data";
 // import { Schema } from "../../amplify/data/resource";
 import type { Schema } from "../../amplify/data/resource";
-const client = generateClient<Schema>();
+const client = generateClient<Schema>({ authMode: "userPool" });
 
 // メッセージの型定義
 type MessageType = "info" | "success" | "warning" | "error" | "question";
@@ -223,7 +223,6 @@ export default function QrReceptionScreen() {
       const visitRecordResult = await client.models.VisitRecord.list({
         filter: { visitDate: { eq: visitDate } },
         authMode: "userPool",
-        // authMode: "apiKey",
       });
 
       console.log("✅ VisitRecord.list 完了:", visitRecordResult);
@@ -338,7 +337,6 @@ export default function QrReceptionScreen() {
       const recipientResult = await client.models.Recipient.list({
         filter: { recipientId: { eq: cleanedChildId } },
         authMode: "userPool",
-        // authMode: "apiKey",
       });
       console.log("✅ Child.list 完了:", recipientResult);
 
