@@ -106,13 +106,16 @@ export const isNotEmpty = (value) => {
         return false;
     return value.toString().replace(/[\s\u3000]/g, '') !== '';
 };
+
+export const codePointLength = (s = '') => [...String(s)].length;
+
 export const hasMaxLength = (max) => {
-    return (value) => {
-        return value.length <= max;
+    return (s = '') => {
+        return codePointLength(s) <= max;
     };
 };
 export const isLength = (length) => {
-    return (value) => {
-        return value.length == length;
+    return (s = '') => {
+        return codePointLength(s) == length;
     };
 };

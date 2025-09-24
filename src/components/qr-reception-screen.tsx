@@ -236,20 +236,24 @@ export default function QrReceptionScreen() {
 
       if (match) {
         let userName = cleanedChildId;
-        // recipientId から氏名を取得
-        const recipientResult = await client.models.Recipient.list({
-          filter: { recipientId: { eq: match.recipientId } },
-          authMode: "userPool",
-          // authMode: "apiKey",
+
+        const { data: recUP } = await client.models.Recipient.get({
+          recipientId: match.recipientId,
         });
-        const recipientData = recipientResult.data?.[0];
-        if (recipientData) {
-          const lastName = recipientData.lastName ?? "";
-          const firstName = recipientData.firstName ?? "";
-          userName =
-            lastName || firstName
-              ? `${lastName} ${firstName}`.trim()
-              : match.recipientId;
+
+        let recipient = recUP;
+        if (!recipient) {
+          const publicClient = generateClient<Schema>({ authMode: "apiKey" });
+          const { data: recAK } = await publicClient.models.Recipient.get({
+            recipientId: match.recipientId,
+          });
+          recipient = recAK ?? null;
+        }
+
+        if (recipient) {
+          const ln = recipient.lastName ?? "";
+          const fn = recipient.firstName ?? "";
+          userName = ln || fn ? `${ln}${fn}`.trim() : match.recipientId;
         }
 
         // ✅ 退所済みなら受け付けない
@@ -361,14 +365,24 @@ export default function QrReceptionScreen() {
         recipient = recipientAK ?? null;
       }
 
+      // 受給者がなければ作成しない
+      if (!recipient) {
+        setMessage({
+          text: "未登録のQRです。児童マスタを登録してください。",
+          type: "error",
+          userName: cleanedChildId,
+        });
+        scheduleReset();
+        return;
+      }
+
       // 2) null でも大丈夫な派生値を先に作る（ここで null を潰す）
-      const userName: string =
+      const userName =
         (recipient
           ? `${recipient.lastName ?? ""}${recipient.firstName ?? ""}`.trim()
           : "") || cleanedChildId;
 
-      const officeId: string =
-        recipient?.officeId ?? "DEFAULT_OFFICE_ID_FOR_DEBUG";
+      const officeId = recipient?.officeId ?? "DEFAULT_OFFICE_ID_FOR_DEBUG";
 
       // 3) 派生値を使って create（recipient が null でも型OK）
       await client.models.VisitRecord.create({

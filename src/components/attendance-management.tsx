@@ -386,9 +386,11 @@ export default function AttendanceManagement() {
 
       // 3) 画面用に整形（recMap から氏名を引く）
       const mapped: AttendanceData[] = (records ?? []).map((r: any) => {
-        const rec = r.recipientId
-          ? recipientMapRef.current.get(r.recipientId)
-          : undefined;
+        // const rec = r.recipientId
+        //   ? recipientMapRef.current.get(r.recipientId)
+        //   : undefined;
+
+        const rec = r.recipientId ? recMap.get(r.recipientId) : undefined;
 
         // ★ ここで Date|null を確定（undefined は null に寄せる）
         const arrivalTime: Date | null = toFixedDateOrNull(r.actualArrivalTime);
@@ -451,7 +453,7 @@ export default function AttendanceManagement() {
   useEffect(() => {
     setAttendanceData([]); // 先にクリアしてから
     fetchVisitRecords(); // 取得（選択日で eq フィルタ）
-  }, [selectedDate]); // recipientMap に依存（受給者マスタ取得完了後に開始）
+  }, [selectedDate, recipientMap]); // recipientMap に依存（受給者マスタ取得完了後に開始）
 
   // 現在時刻の更新
   useEffect(() => {
@@ -559,7 +561,7 @@ export default function AttendanceManagement() {
           // recipientMap を使って氏名をJOIN
           const mapped = (items ?? []).map((r: any) => {
             const rec = r.recipientId
-              ? recipientMap.get(r.recipientId)
+              ? recipientMapRef.current.get(r.recipientId)
               : undefined;
             return transformVisitRecord(r, rec);
           });
