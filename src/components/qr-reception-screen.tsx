@@ -104,6 +104,7 @@ export default function QrReceptionScreen() {
   const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isScanLocked, setIsScanLocked] = useState(false);
+  const scanLockedRef = useRef(false);
 
   //ミュート判定
   const [isMuted, setIsMuted] = useState(false);
@@ -202,15 +203,13 @@ export default function QrReceptionScreen() {
 
   const { toggle } = useSidebar();
   const handleScanComplete = async (rawChildId: string) => {
-    //確認用sound
-    playSuccessSound();
-    if (isScanLocked) {
+    if (scanLockedRef.current) {
       console.log("スキャンはロック中（再試行不可）");
       return;
     }
+    scanLockedRef.current = true;
     setIsScanLocked(true);
 
-    playSuccessSound(); // 音声ファイル呼び出し
     console.log("✅ QRスキャン受信:", rawChildId);
     const cleanedChildId = rawChildId
       .trim()
@@ -287,7 +286,7 @@ export default function QrReceptionScreen() {
             { authMode: "userPool" }
             // { authMode: "apiKey" }
           );
-
+          playSuccessSound();
           setMessage({
             text: "こんにちは！\n今日もがんばろう！",
             type: "success",
@@ -322,7 +321,7 @@ export default function QrReceptionScreen() {
           { authMode: "userPool" }
           // { authMode: "apiKey" }
         );
-
+        playSuccessSound();
         setMessage({
           text: "おつかれさま！\n気を付けて帰ってね！",
           type: "success",
@@ -335,19 +334,6 @@ export default function QrReceptionScreen() {
         scheduleReset();
         return;
       }
-
-      // // ✅ レコードがない場合 → Recipient を確認して新規作成
-      // console.log("🔍 Recipient.list 開始");
-      // const recipientResult = await client.models.Recipient.list({
-      //   filter: { recipientId: { eq: cleanedChildId } },
-      //   authMode: "userPool",
-      // });
-      // console.log("✅ Child.list 完了:", recipientResult);
-
-      // const recipients = recipientResult.data ?? [];
-      // if (!recipients.length) return;
-      // const recipient = recipients[0];
-      // const userName = `${recipient.lastName}${recipient.firstName}`;
 
       // ✅ レコードがない場合 → Recipient を確認して新規作成
       console.log("🔍 Recipient.get 開始");
@@ -398,7 +384,7 @@ export default function QrReceptionScreen() {
         updatedAt: now.toISOString(),
         updatedBy: "qr-reader",
       });
-
+      playSuccessSound();
       console.log("✅ VisitRecord.create 完了");
       setMessage({
         text: "こんにちは！\n今日もがんばろう！",
@@ -418,8 +404,11 @@ export default function QrReceptionScreen() {
       });
       scheduleReset();
     } finally {
-      // 3秒後に再スキャン許可
-      setTimeout(() => setIsScanLocked(false), SCAN_LOCK_DURATION_MS);
+      // 3秒後に再スキャン許可（ref と state を両方解除）
+      setTimeout(() => {
+        scanLockedRef.current = false;
+        setIsScanLocked(false);
+      }, SCAN_LOCK_DURATION_MS);
     }
   };
 

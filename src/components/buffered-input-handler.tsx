@@ -2,7 +2,10 @@
 "use client";
 
 import React, { useEffect, useRef, useCallback } from "react";
-
+import {
+  SCAN_INPUT_TIMEOUT_MS,
+  SCAN_INPUT_FINALIZE_LEN,
+} from "@/config/scan-config";
 /**
  * BufferedInputHandler コンポーネントのプロパティ型定義。
  *
@@ -31,7 +34,7 @@ type Props = {
  */
 const BufferedInputHandler: React.FC<Props> = ({
   onScanComplete,
-  timeoutMs = 500,
+  timeoutMs = SCAN_INPUT_TIMEOUT_MS,
   onKeyDown,
   reverse = false, // デフォルトは反転しない
 }) => {
@@ -82,8 +85,8 @@ const BufferedInputHandler: React.FC<Props> = ({
         // playBeep(); // 即ビープ音
         onScanComplete(processedValue);
         if (inputRef.current) inputRef.current.value = "";
-      } else if (cleaned.length >= 20) {
-        // 20文字に達したら即確定
+      } else if (cleaned.length >= SCAN_INPUT_FINALIZE_LEN) {
+        // 10文字に達したら即確定
         // playBeep();
         onScanComplete(processedValue);
         if (inputRef.current) inputRef.current.value = "";
