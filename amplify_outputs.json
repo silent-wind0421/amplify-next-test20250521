@@ -1,9 +1,9 @@
 {
   "auth": {
-    "user_pool_id": "ap-northeast-1_qZe3b8qSj",
+    "user_pool_id": "ap-northeast-1_69x88NSzz",
     "aws_region": "ap-northeast-1",
-    "user_pool_client_id": "1li0b757gut3kav5eounnu6f8t",
-    "identity_pool_id": "ap-northeast-1:61ed2994-d310-471e-b1d1-cd9ee0a488c5",
+    "user_pool_client_id": "7aikh7ctth2bk9ddr1jmpul05p",
+    "identity_pool_id": "ap-northeast-1:9f1270e4-b810-4e0f-be59-2b0ea555cde7",
     "mfa_methods": [],
     "standard_required_attributes": [
       "sub",
@@ -165,6 +165,12 @@
               "properties": {
                 "rules": [
                   {
+                    "allow": "private",
+                    "operations": [
+                      "read"
+                    ]
+                  },
+                  {
                     "provider": "userPools",
                     "ownerField": "owner",
                     "allow": "owner",
@@ -305,19 +311,10 @@
             },
             "guardians": {
               "name": "guardians",
-              "isArray": true,
-              "type": {
-                "model": "Guardian"
-              },
-              "isRequired": false,
-              "attributes": [],
-              "isArrayNullable": true,
-              "association": {
-                "connectionType": "HAS_MANY",
-                "associatedWith": [
-                  "recipientId"
-                ]
-              }
+              "isArray": false,
+              "type": "AWSJSON",
+              "isRequired": true,
+              "attributes": []
             }
           },
           "syncable": true,
@@ -373,205 +370,6 @@
           "primaryKeyInfo": {
             "isCustomPrimaryKey": true,
             "primaryKeyFieldName": "recipientId",
-            "sortKeyFieldNames": []
-          }
-        },
-        "Guardian": {
-          "name": "Guardian",
-          "fields": {
-            "id": {
-              "name": "id",
-              "isArray": false,
-              "type": "ID",
-              "isRequired": true,
-              "attributes": []
-            },
-            "guardianId": {
-              "name": "guardianId",
-              "isArray": false,
-              "type": "ID",
-              "isRequired": true,
-              "attributes": []
-            },
-            "recipientId": {
-              "name": "recipientId",
-              "isArray": false,
-              "type": "ID",
-              "isRequired": true,
-              "attributes": []
-            },
-            "userId": {
-              "name": "userId",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true,
-              "attributes": []
-            },
-            "lastName": {
-              "name": "lastName",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true,
-              "attributes": []
-            },
-            "firstName": {
-              "name": "firstName",
-              "isArray": false,
-              "type": "String",
-              "isRequired": true,
-              "attributes": []
-            },
-            "lastNameKana": {
-              "name": "lastNameKana",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "firstNameKana": {
-              "name": "firstNameKana",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "officeId": {
-              "name": "officeId",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "phoneNo": {
-              "name": "phoneNo",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "email": {
-              "name": "email",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "lineUserId": {
-              "name": "lineUserId",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "isEmailArrivalRequired": {
-              "name": "isEmailArrivalRequired",
-              "isArray": false,
-              "type": "Boolean",
-              "isRequired": false,
-              "attributes": []
-            },
-            "isEmailLeaveRequired": {
-              "name": "isEmailLeaveRequired",
-              "isArray": false,
-              "type": "Boolean",
-              "isRequired": false,
-              "attributes": []
-            },
-            "isLineArrivalRequired": {
-              "name": "isLineArrivalRequired",
-              "isArray": false,
-              "type": "Boolean",
-              "isRequired": false,
-              "attributes": []
-            },
-            "isLineLeaveRequired": {
-              "name": "isLineLeaveRequired",
-              "isArray": false,
-              "type": "Boolean",
-              "isRequired": false,
-              "attributes": []
-            },
-            "isDeleted": {
-              "name": "isDeleted",
-              "isArray": false,
-              "type": "Boolean",
-              "isRequired": true,
-              "attributes": []
-            },
-            "createdAt": {
-              "name": "createdAt",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "createdBy": {
-              "name": "createdBy",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "updatedAt": {
-              "name": "updatedAt",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "updatedBy": {
-              "name": "updatedBy",
-              "isArray": false,
-              "type": "String",
-              "isRequired": false,
-              "attributes": []
-            },
-            "recipient": {
-              "name": "recipient",
-              "isArray": false,
-              "type": {
-                "model": "Recipient"
-              },
-              "isRequired": false,
-              "attributes": [],
-              "association": {
-                "connectionType": "BELONGS_TO",
-                "targetNames": [
-                  "recipientId"
-                ]
-              }
-            }
-          },
-          "syncable": true,
-          "pluralName": "Guardians",
-          "attributes": [
-            {
-              "type": "model",
-              "properties": {}
-            },
-            {
-              "type": "auth",
-              "properties": {
-                "rules": [
-                  {
-                    "provider": "userPools",
-                    "ownerField": "owner",
-                    "allow": "owner",
-                    "identityClaim": "cognito:username",
-                    "operations": [
-                      "create",
-                      "update",
-                      "delete",
-                      "read"
-                    ]
-                  }
-                ]
-              }
-            }
-          ],
-          "primaryKeyInfo": {
-            "isCustomPrimaryKey": false,
-            "primaryKeyFieldName": "id",
             "sortKeyFieldNames": []
           }
         },
@@ -779,6 +577,14 @@
                     ],
                     "groups": [
                       "admin"
+                    ]
+                  },
+                  {
+                    "allow": "private",
+                    "operations": [
+                      "create",
+                      "update",
+                      "read"
                     ]
                   }
                 ]
@@ -1297,5 +1103,5 @@
       "nonModels": {}
     }
   },
-  "version": "1.4"
+  "version": "1.3"
 }
