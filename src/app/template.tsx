@@ -11,7 +11,7 @@ import outputs from "../../amplify_outputs.json";
 
 
 // Amplify設定を反映
-Amplify.configure(outputs);
+Amplify.configure(outputs, { ssr: true });
 
 //　ログインフォームの設定
 const customTheme = createTheme({
