@@ -23,7 +23,7 @@ I18n.putVocabularies({
 });
 
 // Amplify設定を反映
-//Amplify.configure(outputs);
+Amplify.configure(outputs);
 
 // Amplify UIのカスタマイズ
 const components = {
