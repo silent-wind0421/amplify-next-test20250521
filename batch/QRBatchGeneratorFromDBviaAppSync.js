@@ -47,7 +47,7 @@ const client = new GraphQLClient(GRAPHQL_API_ENDPOINT, {
 const query = gql `
   query ListRecipients($limit: Int, $nextToken: String) {
     listRecipients(limit: $limit, nextToken: $nextToken) {
-      items { recipientId isDeleted }
+      items { recipientId lastName firstName isDeleted }
       nextToken
     }
   }
@@ -63,11 +63,7 @@ async function fetchUIDsFromGraphQL() {
             if (nextToken)
                 vars.nextToken = nextToken;
             const data = await client.request(query, vars);
-            //  const page = data.listRecipients;
-            //  const page = data.listRecipients;
-            // const page: ListRecipientsData['listRecipients'] = data.listRecipients;
-            //  page = null;  
-            // レスポンスが存在しない場合
+            
             const items = data.listRecipients?.items;
             // let iitems = null;
             // 配列でなければエラー扱いにして終了
@@ -81,13 +77,18 @@ async function fetchUIDsFromGraphQL() {
             data_a.push(...items);
             nextToken = data.listRecipients?.nextToken ?? null;
         } while (nextToken);
+
         // 受給者IDが存在して、isDeleted が false のものだけ抽出
-        const ids = data_a
-            .filter((item) => item.isDeleted === false)
-            .map((item) => item.recipientId)
-            .filter((id) => Boolean(id));
+        const recipients = data_a
+            .filter((item) => item?.isDeleted === false && item?.recipientId)
+            .map((item) => ({
+                recipientId: String(item.recipientId),
+                lastName: item.lastName ?? '',
+                firstName: item.firstName ?? '',
+            }));
+
         // 受給者IDが空の場合
-        if (ids.length === 0) {
+        if (recipients.length === 0) {
             logger.error({
                 message: ErrorMessages_QR.emptyId()
             });
@@ -95,8 +96,8 @@ async function fetchUIDsFromGraphQL() {
             await new Promise((resolve) => setTimeout(resolve, 100));
             process.exit(1);
         }
-        console.log(`✅ GraphQLから${ids.length}件のUIDを取得しました`);
-        return ids;
+        console.log(`✅ GraphQLから${recipients.length}件のUIDを取得しました`);
+        return recipients;
     }
     catch (error) {
         logger.error({
@@ -108,32 +109,42 @@ async function fetchUIDsFromGraphQL() {
     }
 }
 // QRコード生成関数
-async function generateQRCodes(ids) {
-    // let i = 0;
-    for (const id of ids) {
+async function generateQRCodes(recipients) {
+   // let i = 0;
+    for (const r of recipients) {
         //  for (let id of ids) {
-        const outputPath = path.join(outputDir, `${id}.png`);
-        //if(i % 2 === 0)id = null as unknown as string;
-        // i++;
+        
+
+      //  if(i % 2 === 0)r.lastName = null;
+       // i++;
+      
+        const last = (r.lastName ?? '');
+        const first = (r.firstName ?? '');
+       
+      //  if(last ==='')console.log(i);
+
+        const fileName = `${r.recipientId}_${last}${first}.png`;
+        const outputPath = path.join(outputDir, fileName);
+        
         try {
-            await QRCode.toFile(outputPath, id, {
+            await QRCode.toFile(outputPath, r.recipientId, {
                 width: 256,
                 margin: 2,
             });
-            console.log(`✅ ${id} → ${outputPath}`);
+            console.log(`✅ ${r.recipientId} → ${outputPath}`);
         }
         catch (err) {
             logger.error({
                 message: ErrorMessages_QR.failedQRCodeGeneration(),
-                "受給者ID": id
+                "受給者ID": r.recipientId
             });
-            console.error(`❌ ${id} のQRコード生成に失敗:`, err);
+            console.error(`❌ ${r.recipientId} のQRコード生成に失敗:`, err);
         }
     }
 }
 // 実行
 (async () => {
-    const ids = await fetchUIDsFromGraphQL();
-    await generateQRCodes(ids);
+    const recipients = await fetchUIDsFromGraphQL();
+    await generateQRCodes(recipients);
     console.log('🎉 QRコード生成完了');
 })();

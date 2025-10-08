@@ -39,7 +39,7 @@ export function Header({ className = "" }: HeaderProps) {
   useEffect(() => {
     if (authStatus === "configuring") return;
     if (authStatus === "unauthenticated") {
-      router.replace("/"); // 未認証時にリダイレクト
+      router.replace("/login-admin"); // 未認証時にリダイレクト
     }
 
     (async () => {
@@ -55,7 +55,7 @@ export function Header({ className = "" }: HeaderProps) {
           signingOutRef.current = true;
           await handleSignOut(); // ここでセッションを落とす
           setTimeout(() => {
-            router.replace("/"); //遷移の履歴を残さない(ブラウザーバックを防ぐ)
+            router.replace("/login-admin"); //遷移の履歴を残さない(ブラウザーバックを防ぐ)
           }, 100);
         }
       } catch {
@@ -64,7 +64,7 @@ export function Header({ className = "" }: HeaderProps) {
           signingOutRef.current = true;
           await handleSignOut();
           setTimeout(() => {
-            router.replace("/"); //遷移の履歴を残さない(ブラウザーバックを防ぐ)
+            router.replace("/login-admin"); //遷移の履歴を残さない(ブラウザーバックを防ぐ)
           }, 100);
         }
       }

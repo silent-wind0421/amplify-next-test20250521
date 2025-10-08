@@ -1,7 +1,7 @@
 import fs from 'fs';
 import csv from 'csv-parser';
 import pLimit from 'p-limit';
-import { Message } from "../batch/message.js";
+import { Message } from "./message.js";
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, BatchWriteCommand, BatchGetCommand } from '@aws-sdk/lib-dynamodb';
 import { marshall } from "@aws-sdk/util-dynamodb";

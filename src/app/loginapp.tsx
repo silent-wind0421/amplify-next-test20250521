@@ -133,6 +133,7 @@ export default function LoginApp({destination, loginType}:LoginAppProps) {
         />
       )}
       
+      {/*
       <div>
         <p className="text-lg mb-4">現在、更新中・・・</p>
         <button
@@ -142,6 +143,7 @@ export default function LoginApp({destination, loginType}:LoginAppProps) {
           サインアウト
         </button>
       </div>
+      */}
     </main>
   );
 }
