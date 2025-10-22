@@ -30,7 +30,7 @@ export function Header({ className = "" }: HeaderProps) {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   //modified  by yoshida
-  const handleSignOut = useSignOutHandler();
+  const handleSignOut = useSignOutHandler('admin', '/login-admin');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { user, authStatus } = useAuthenticator();
   const router = useRouter();
