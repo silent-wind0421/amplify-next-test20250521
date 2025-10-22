@@ -50,12 +50,18 @@ async function sign(data: object) {
 export async function DELETE() {
   // 作成時と同じ属性でクッキーを無効化することが重要
   const res = NextResponse.json({ ok: true })
-  res.cookies.set('app_session', '', {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    path: '/',   // ← POST 時と同じ path
-    maxAge: 0,   // 即時失効
-  })
+  const isProd = process.env.NODE_ENV === 'production'
+
+  for (const p of ['/', '/list', '/list/qr-reception-screen']) {
+        res.cookies.set('app_session', '', {
+          httpOnly: true,
+          secure: isProd,
+          sameSite: 'lax',
+          path: p,   // ← POST 時と同じ path
+          maxAge: 0,   // 即時失効
+        })
+      }      
+  
+  
   return res
 }

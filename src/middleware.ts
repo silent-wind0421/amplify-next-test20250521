@@ -54,6 +54,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/list/qr-reception-screen', req.url))
   }
 
+  if (isAuthed && isUserArea && role !== 'user') {
+    return NextResponse.redirect(new URL('/list', req.url))
+  }
+
   const res = NextResponse.next()
   if (isAdminArea || isUserArea) res.headers.set('Cache-Control', 'no-store')
   return res

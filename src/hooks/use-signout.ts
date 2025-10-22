@@ -27,7 +27,7 @@ export function useSignOutHandler(group: Group, redirectPath: `/${string}`) {
 
     try {
       sessionStorage.clear()
-
+      //localStorage.setItem('signedOut', '1')
       // 1) Amplifyサインアウト
       await signOut()
 
@@ -42,12 +42,15 @@ export function useSignOutHandler(group: Group, redirectPath: `/${string}`) {
       }
     } catch (e) {
       console.error('handleSignOut error:', e)
+      
       // 失敗しても遷移は続ける
     } finally {
       inFlight.current = false
       // 3) 成否に関わらずログインへ退避（ループ/タイムラグ回避にハード遷移）
-     // location.replace(url.toString())
-      router.replace(url.toString())
+     
+      location.replace(url.toString())  
+   //   location.replace(redirectPath)
+      //router.replace(url.toString())
       
     }
   }

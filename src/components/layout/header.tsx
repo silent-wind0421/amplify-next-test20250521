@@ -36,40 +36,6 @@ export function Header({ className = "" }: HeaderProps) {
   const router = useRouter();
   const signingOutRef = useRef(false);
 
-  useEffect(() => {
-    if (authStatus === "configuring") return;
-    if (authStatus === "unauthenticated") {
-      router.replace("/login-admin"); // 未認証時にリダイレクト
-    }
-
-    (async () => {
-      try {
-        const { tokens } = await fetchAuthSession();
-        const raw = tokens?.idToken?.payload?.["cognito:groups"];
-        const groups: string[] = Array.isArray(raw) ? (raw as string[]) : [];
-
-        // const isAdmin = groups.includes("admin");
-        const isUser = groups.includes("user");
-
-        if (isUser && !signingOutRef.current) {
-          signingOutRef.current = true;
-          await handleSignOut(); // ここでセッションを落とす
-          setTimeout(() => {
-            router.replace("/login-admin"); //遷移の履歴を残さない(ブラウザーバックを防ぐ)
-          }, 100);
-        }
-      } catch {
-        // 失敗時は安全側で落とす
-        if (!signingOutRef.current) {
-          signingOutRef.current = true;
-          await handleSignOut();
-          setTimeout(() => {
-            router.replace("/login-admin"); //遷移の履歴を残さない(ブラウザーバックを防ぐ)
-          }, 100);
-        }
-      }
-    })();
-  }, [authStatus, router]);
 
   const ENABLE_SIDEBAR = false as const;
 

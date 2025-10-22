@@ -38,9 +38,61 @@ export default function LoginApp({destination, loginType}:LoginAppProps) {
   const bridged = useRef(false) // 二重実行防止
 
   useEffect(() => {
+    const doBridge = async () => {
+      if (bridged.current) return;
+
+      // ★ 直前ログアウトのマーカーがあれば一度だけスキップ
+      const sp = new URLSearchParams(location.search);
+      if (sp.get("justSignedOut") === "1") {
+        sp.delete("justSignedOut");
+        bridged.current = true;               // ← 同一マウント中の多重起動防止
+        router.replace(`${location.pathname}${sp.toString() ? `?${sp}` : ""}`);
+        bridged.current = false;
+        return;
+      }
+
+      // ★ 本当にトークンがあるかを確認（無ければ橋渡ししない）
+      const { tokens } = await fetchAuthSession().catch(() => ({ tokens: null as any }));
+      const idToken = tokens?.idToken?.toString();
+      if (!idToken) return;
+
+      bridged.current = true;
+      const r = await fetch("/api/session", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ idToken }),
+      });
+      if (!r.ok) { bridged.current = false; return; }
+
+      const p = new URLSearchParams(location.search);
+      const next = p.get("next");
+      const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+      router.replace(safeNext || destination);
+    };
+
+    // ★ Hub で “signedIn” のときだけブリッジを走らせる
+    const unsub = Hub.listen("auth", (caps) => {
+      if (caps.payload?.event === "signedIn") doBridge();
+    });
+
+    // 既にログイン済みでこの画面に来たケースにも対応（初期1回だけ試す）
+    doBridge();
+
+    return () => { unsub(); };
+  }, [destination, router]);
+
+  {/*
+  useEffect(() => {
     if (authStatus === 'authenticated' && !bridged.current) {
-      bridged.current = true
-      ;(async () => {
+
+       if (localStorage.getItem('signedOut') === '1') {
+            localStorage.removeItem('signedOut')
+            return
+        }
+
+      bridged.current = true;
+      (async () => {
         await afterSignIn(destination)
         const p = new URLSearchParams(location.search)
         const next = p.get('next')
@@ -52,7 +104,7 @@ export default function LoginApp({destination, loginType}:LoginAppProps) {
       })
     }
   }, [authStatus, destination, router])
-  
+  */}
 
   return (
     <main className="flex items-center justify-center h-screen">
@@ -65,17 +117,6 @@ export default function LoginApp({destination, loginType}:LoginAppProps) {
         />
       )}
       
-      {/*
-      <div>
-        <p className="text-lg mb-4">現在、更新中・・・</p>
-        <button
-          onClick={handleSignOut}
-          className="px-4 py-2 bg-blue-500 text-white rounded"
-        >
-          サインアウト
-        </button>
-      </div>
-      */}
     </main>
   );
 }
