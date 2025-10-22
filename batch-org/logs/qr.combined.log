@@ -1,0 +1,12 @@
+{"level":"error","message":"GraphQLの取得に失敗しました。","timestamp":"2025-10-08T02:11:52.097Z"}
+{"level":"error","message":"GraphQLの取得に失敗しました。","timestamp":"2025-10-08T11:04:42.981Z"}
+{"level":"error","message":"GraphQLの取得に失敗しました。","timestamp":"2025-10-08T11:10:01.331Z"}
+{"level":"error","message":"GraphQLの取得に失敗しました。","timestamp":"2025-10-13T09:12:17.624Z"}
+{"level":"error","message":"GraphQLの取得に失敗しました。","timestamp":"2025-10-13T09:13:33.997Z"}
+{"level":"error","message":"受給者IDが空データです。","timestamp":"2025-10-13T09:23:59.053Z"}
+{"level":"error","message":"受給者IDが空データです。","timestamp":"2025-10-13T09:41:53.327Z"}
+{"level":"info","message":"📌 バッチ処理開始","startTime":"2025-10-15T00:27:04.863Z","timestamp":"2025-10-15T00:27:04.873Z"}
+{"level":"info","message":"📌 バッチ処理開始","startTime":"2025-10-15T10:59:08.862Z","timestamp":"2025-10-15T01:59:08.863Z"}
+{"durationSeconds":"1.78","endTime":"2025-10-15T10:59:10.646Z","level":"info","message":"✅ バッチ処理完了","timestamp":"2025-10-15T01:59:10.707Z"}
+{"level":"info","message":"📌 バッチ処理開始","startTime":"2025-10-15T12:01:35.645Z","timestamp":"2025-10-15T03:01:35.646Z"}
+{"QRコード生成処理回数":109,"QRコード生成処理失敗回数":0,"durationSeconds":"1.33","endTime":"2025-10-15T12:01:36.980Z","level":"info","message":"✅ バッチ処理完了","timestamp":"2025-10-15T03:01:36.980Z"}

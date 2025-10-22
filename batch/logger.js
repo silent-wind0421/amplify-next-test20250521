@@ -7,9 +7,16 @@ const logDir = 'logs';
 if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir);
 }
+
+const jstTimestamp = format.timestamp({
+        format: () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString(),
+});
+  
 const logger = createLogger({
+    
     level: 'info', // 最低ログレベル（'error', 'warn', 'info', 'debug' など）
-    format: format.combine(format.timestamp(), format.errors({ stack: true }), // エラーに stack trace を含める
+
+    format: format.combine(jstTimestamp, format.errors({ stack: true }), // エラーに stack trace を含める
     format.json() // ログを JSON 形式で出力
     ),
     transports: [

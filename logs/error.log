@@ -1,2 +1,0 @@
-{"level":"error","message":"指定のファイルが存在しません。","source":"CsvToDynamodbBatch.ts","stack":"Error: ENOENT: no such file or directory, open 'C:\\work\\batch\\kotayori\\dat\\kaipoke-sample-dummy2.csv'","timestamp":"2025-08-04T02:23:42.400Z"}
-{"level":"error","message":"指定のファイルが存在しません。","source":"CsvToDynamodbBatch.ts","stack":"Error: ENOENT: no such file or directory, open 'C:\\work\\login\\tmp\\kotayori\\dat\\kaipoke-sample-dummy2.csv'","timestamp":"2025-09-03T03:47:38.036Z"}

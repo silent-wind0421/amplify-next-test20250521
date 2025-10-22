@@ -19,6 +19,7 @@ export const ErrorMessages = {
     sizeError: () => `データのサイズが不正です。`,
     invalidFormatted: () => `指定の書式ではありません。`,
     invalidDateFormatted: () => `生年月日はyyyy/M/dの形式ではありません。`,
+    invalidDateFormatted2: () => `生年月日はyyyy-MM-ddの形式ではありません。`,
     invalidDate: () => `生年月日に存在しない日付が指定されています。`,
     invalidNumber: () => `半角数字以外が指定されています。`,
     invalidTenNumber: () => `数字のみ10個の並びではありません。`,
@@ -26,7 +27,9 @@ export const ErrorMessages = {
 export const ErrorMessages_QR = {
     invalidGraphQL_API: () => `GraphQLの取得に失敗しました。`,
     invalidResponse: () => `APIレスポンスに必要なデータが存在しません。`,
+    invalidTenNumber: () => `数字のみ10個の並びではありません。`,
     emptyId: () => `受給者IDが空データです。`,
+    invalidData: () => `削除フラグ無しの有効な受給者情報がありません。`,
     noDirectoryPermission: () => `指定のディレクトリの作成権限が存在しません。`,
     failedQRCodeGeneration: () => `QRコード生成に失敗しました。`,
 };

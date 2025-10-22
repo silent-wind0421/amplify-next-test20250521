@@ -1,4 +1,8 @@
 import dayjs from 'dayjs';
+
+import customParseFormat from 'dayjs/plugin/customParseFormat.js';
+dayjs.extend(customParseFormat);
+
 /** 漢字・ひらがな・カタカナ + 半角スペース + 漢字・ひらがな・カタカナ */
 /*export const isValidJapaneseFullName = (value) => {
     return /^[\u4E00-\u9FFFぁ-んーァ-ヶー]+ [\u4E00-\u9FFFぁ-んーァ-ヶー]+$/.test(value);
@@ -74,6 +78,16 @@ export const validateBirthDate = (value) => {
         return { valid: false, reason: 'invalidDate' };
     }
 };
+
+export const isValidBirthDateFormat2 = (value) => {
+    return validateBirthDate2(value).valid;
+};
+
+export const validateBirthDate2 = (value) => {
+  const ok = dayjs(value, 'YYYY-MM-DD', true).isValid();
+  return ok ? { valid: true } : { valid: false, reason: 'invalidDate' };
+};
+
 /*
 export const isValidBirthDateFormat = (value: string): boolean => {
 
@@ -89,6 +103,12 @@ export const isValidBirthDateFormat = (value: string): boolean => {
 export const isValidBirthDate = (value) => {
     return dayjs(value, 'YYYY/M/D', true).isValid();
 };
+
+
+export const isValidBirthDate2 = (value) => {
+    return dayjs(value, 'YYYY-MM-DD', true).isValid();
+};
+
 /** 英数字10桁 */
 export const isValidRecipientId = (value) => {
     return /^[a-zA-Z0-9_-]{6,20}$/.test(value); // 任意の形式

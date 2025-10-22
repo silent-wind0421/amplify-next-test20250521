@@ -1,17 +1,26 @@
 import fs from 'fs';
 import csv from 'csv-parser';
 import pLimit from 'p-limit';
-import { Message } from "./message.js";
+import { Message } from "../batch/message.js";
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, BatchWriteCommand, BatchGetCommand } from '@aws-sdk/lib-dynamodb';
 import { marshall } from "@aws-sdk/util-dynamodb";
 import logger from './logger.js';
-import { isNotEmpty, hasMaxLength, isLength, isDigitNumber, isValidJapaneseFullName, isFullWidthKatakanaFullName, isValidBirthDateFormat, validateBirthDate } from './validators.js';
+import { isNotEmpty, hasMaxLength, isLength, isDigitNumber, isValidJapaneseFullName, isFullWidthKatakanaFullName, isValidBirthDateFormat2, validateBirthDate2 } from './validators.js';
 import { ErrorMessages } from './errorMessages.js';
-// const fname = './dat/kaipoke-sample-dummy2.csv';
-const fname = './dat/20250901_recipients.csv';
-// const tblname = 'UserRecipientProfiles-5ejheuwxlbbuznsn3hos2h2nie-NONE';
-const tblname = 'Recipient-xogfmayxofaavkuqqeh33ygzka-NONE';
+
+// csvのエンコーディングのチェック
+import { detectEncodingFromFile } from './checkEncoding.js';
+import iconv from 'iconv-lite';
+
+import { Transform } from 'stream';
+
+//const fname = './dat/kaipoke-sample-dummy2.csv';
+//const fname = './dat/20251017-recipients.csv'; 
+const fname = './dat/20250901_recipients.csv'; 
+//const tblname = 'Recipient-xogfmayxofaavkuqqeh33ygzka-NONE'; // for staging
+const tblname = 'Recipient-2fvqh6bsrffuxhzs2qzdgrn2lq-NONE';  // for feature/logout 
+//const tblname = 'Recipient-5ejheuwxlbbuznsn3hos2h2nie-NONE'; // for develop
 //const tblname = 'User-neko2222';
 const ddbClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(ddbClient);
@@ -27,7 +36,7 @@ const validations = [
     (v) => isValidJapaneseFullName(v),
     (v) => isFullWidthKatakanaFullName(v),
     (v) => isDigitNumber(v),
-    (v) => isValidBirthDateFormat(v)
+    (v) => isValidBirthDateFormat2(v)
 ];
 const sizeValidations = [
     hasMaxLength,
@@ -48,7 +57,7 @@ const errorMessages = [
     ErrorMessages.sizeError(),
     ErrorMessages.invalidFormatted(),
     ErrorMessages.invalidNumber(),
-    ErrorMessages.invalidDateFormatted(),
+    ErrorMessages.invalidDateFormatted2(),
     ErrorMessages.invalidDate()
 ];
 /*
@@ -163,6 +172,13 @@ async function addTimestampsToItems(docClient, tableName, items) {
             console.error(Message.EB050008)
             //console.error('DynamoDBの接続に失敗しました。');
             // ✅ 処理停止
+            
+           await new Promise((resolve) => {
+            // winston v3 は logger が stream なので 'finish' が飛ぶ
+                logger.once('finish', resolve);
+                logger.end(); // すべての transports を閉じて 'finish' を発火
+            }); 
+            
             process.exit(1);
         }
     }
@@ -185,24 +201,60 @@ const indexSizeValidationMap = {};
 const indexErrorMessageMap = {};
 const indexMaxSizeMap = {};
 const fixedValidator = isNotEmpty;
+
+
 // BOM除去関数
 const stripBOM = (value) => typeof value === 'string' ? value.replace(/^\uFEFF/, '') : value;
+
+// 先頭チャンクのBOMだけを剥がす Transform
+function stripBomStream() {
+  let first = true;
+  return new Transform({
+    // 上流が setEncoding('utf8') 済みなら文字列で来るので decodeStrings: false
+    // Buffer のままでも動くよう Buffer も処理します
+    decodeStrings: false,
+    transform(chunk, enc, cb) {
+      if (first) {
+        first = false;
+        if (typeof chunk === 'string') {
+          chunk = stripBOM(chunk);
+        } else if (Buffer.isBuffer(chunk) && chunk.length >= 3 &&
+                   chunk[0] === 0xEF && chunk[1] === 0xBB && chunk[2] === 0xBF) {
+          chunk = chunk.slice(3); // UTF-8 BOMをバイトで除去
+        }
+      }
+      cb(null, chunk);
+    }
+  });
+}
+
 async function processCSV(filePath) {
     const inputMap = new Map();
     let headerKeys = [];
+
+    const det = detectEncodingFromFile(filePath, { maxBytes: 256 });
     return new Promise((resolve, reject) => {
         /*try
         {*/
-        fs.createReadStream(filePath, { encoding: 'utf8' })
-            .on('error', (err) => {
-            console.error('ファイル読み込みエラー:', err.message);
-            logger.error({
-                message: ErrorMessages.fileNotFound(),
-                stack: err.stack,
-                source: 'CsvToDynamodbBatch.ts',
-            });
-        })
-            .pipe(csv())
+       let stream = fs.createReadStream(filePath)
+                      .once('error', (err) => {
+                            console.error('ファイル読み込みエラー:', err.message);
+                            logger.error({
+                                message: ErrorMessages.fileNotFound(),
+                                stack: err.stack,
+                                source: 'CsvToDynamodbBatch.ts',
+                            });
+                        });
+
+       if (det.encoding === 'utf8') {
+            stream = stream.pipe(stripBomStream());           // 上の関数を流用
+        } else {
+            stream = stream.pipe(iconv.decodeStream(det.encoding))
+                 .pipe(iconv.encodeStream('utf8'));
+        }
+
+      
+       stream = stream.pipe(csv())
             .on('headers', (headers) => {
             headers.forEach((header, index) => {
                 headers[index] = stripBOM(header);
@@ -235,7 +287,9 @@ async function processCSV(filePath) {
                 if (err instanceof Error) {
                     console.error('項目読み込みエラー:', err.message);
                     logger.error('CSVヘッダー検証中に例外が発生', { error: err });
-                    process.exit(1); // 致命的エラーとして処理を終了
+                    logger.once('finish', () => process.exit(1));
+                    logger.end(); // 全 File transport を閉じて 'finish' を発火
+                    
                 }
             }
         })
@@ -361,7 +415,9 @@ async function processCSV(filePath) {
             const allValid = rowsWithMeta.every(r => r.isValid);
             if (!allValid) {
                 console.error(Message.EB050011);
-                process.exit(1);
+                logger.once('finish', () => process.exit(1));
+                logger.end(); // 全 File transport を閉じて 'finish' を発火
+                
             }
             // ✅ 全件バリデーションOK → inputMap に詰めていく
             const inputMap = new Map();
@@ -429,6 +485,8 @@ async function processCSV(filePath) {
             }
             if (isConflict) {
                 console.error(Message.EB050007);
+                logger.once('finish', () => process.exit(1));
+                logger.end(); // 全 File transport を閉じて 'finish' を発火
                 process.exit(1);
             }
             else {
@@ -439,7 +497,7 @@ async function processCSV(filePath) {
                         const { baseRow, baseLine, guardians } = value;
                         const updatedGuardians = guardians.map((g, i) => ({
                             ...g,
-                            userId: `${recipientId}-${String.fromCharCode(97 + i)}`, // a, b, c...
+                            userId: `${recipientId}-${String(i + 1).padStart(2, '0')}`,
                         }));
                         const [lastName, firstName] = baseRow['cname']?.split(' ') ?? ['', ''];
                         const [lastNameKana, firstNameKana] = baseRow['cname_kana']?.split(' ') ?? ['', ''];
@@ -491,16 +549,21 @@ async function processCSV(filePath) {
             .on('error', reject);
     });
 }
+
 const start = Date.now();
+const startDate = new Date(start); 
+
 logger.info('📌 バッチ処理開始', {
-    startTime: new Date(start).toISOString(),
+    startTime: new Date(startDate.getTime() + 9 * 60 * 60 * 1000).toISOString(),
 });
 processCSV(fname)
     .then(() => {
     const end = Date.now();
+    const endDate = new Date(end); 
+
     const durationSec = ((end - start) / 1000).toFixed(2);
     logger.info('✅ バッチ処理完了', {
-        endTime: new Date(end).toISOString(),
+        endTime: new Date(endDate.getTime() + 9 * 60 * 60 * 1000).toISOString(),
         durationSeconds: durationSec,
         processedItemCount: inputMap.size, // 登録対象件数（recipientIdの数）
     });
@@ -510,49 +573,3 @@ processCSV(fname)
     logger.error('❌ バッチ処理中にエラー発生', { error: err });
     console.error('❌ Error occurred:', err);
 });
-const test = async () => {
-    const fakeUnprocessedItems = {
-        [tblname]: [
-            {
-                PutRequest: {
-                    Item: {
-                        recipientId: { S: '1000000001' },
-                        lastName: { S: '広島' },
-                        firstName: { S: '隆' },
-                        lastNameKana: { S: 'ヒロシマ' },
-                        firstNameKana: { S: 'タカシ' },
-                        dob: { S: '2015/12/1' },
-                        qrCodeName: { S: 'test-qrcode' },
-                        guardians: {
-                            L: [
-                                {
-                                    M: {
-                                        userId: { S: '1000000001-a' },
-                                        lastName: { S: '広島' },
-                                        firstName: { S: '隆一' },
-                                        lastNameKana: { S: 'ヒロシマ' },
-                                        firstNameKana: { S: 'リュウイチ' },
-                                        officeId: { S: 'default-office-id' },
-                                        phoneNo: { S: '' },
-                                        email: { S: '' },
-                                        lineUserId: { S: '' },
-                                        isEmailArrivalRequired: { BOOL: false },
-                                        isEmailLeaveRequired: { BOOL: false },
-                                        isLineArrivalRequired: { BOOL: false },
-                                        isLineLeaveRequired: { BOOL: false },
-                                    },
-                                },
-                            ],
-                        },
-                        officeId: { S: 'default-office-id' },
-                        createdBy: { S: 'system' },
-                        updatedBy: { S: 'system' },
-                        version: { N: '11' },
-                    },
-                },
-            },
-        ],
-    };
-    await retryUnprocessedItems(fakeUnprocessedItems, 2, 100);
-};
-//test();

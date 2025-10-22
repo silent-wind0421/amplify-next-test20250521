@@ -128,18 +128,6 @@ export default function App() {
       },
     }}
   
-  /*  services={{
-        async handleSignIn(formData) {
-          const { username, password } = formData;
-          console.log('handleSignIn called', formData?.username);
-          return signIn({
-            username,
-            password,
-            options: { authFlowType: 'USER_PASSWORD_AUTH', clientMetadata: { loginType } },
-          });
-        },
-      }}*/
-      
     >
      <LoginApp destination="/list/qr-reception-screen" loginType="user"/>  
      {/*<div className="fixed inset-0">

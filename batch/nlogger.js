@@ -11,10 +11,15 @@ if (!fs.existsSync(logDir)) {
  * @param name 識別用のログ名（例: "qrBatch", "userImport"）
  */
 export function createAppLogger(name) {
-    var safeName = name.replace(/[^\w\-]/g, ''); // 安全なファイル名に変換（英数字・_・-のみ）
+    const safeName = name.replace(/[^\w\-]/g, ''); // 安全なファイル名に変換（英数字・_・-のみ）
+
+    const jstTimestamp = format.timestamp({
+        format: () => new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString(),
+    });
+
     return createLogger({
         level: 'info',
-        format: format.combine(format.timestamp(), format.errors({ stack: true }), format.json()),
+        format: format.combine(jstTimestamp, format.errors({ stack: true }), format.json()),
         transports: [
             new transports.File({
                 filename: path.join(logDir, "".concat(safeName, ".error.log")),

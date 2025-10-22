@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja">
+    <html lang="ja" suppressHydrationWarning>
       {/* ベース文字サイズは 14px 相当（text-sm）に */}
       <body
         className={`${noto.variable} font-sans text-sm antialiased min-h-screen overflow-x-auto overflow-y-auto`}

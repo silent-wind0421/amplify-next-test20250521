@@ -1,0 +1,32 @@
+// errorMessages.ts
+export const ErrorMessages = {
+    required: (fieldName) => `${fieldName} は必須です。`,
+    maxLength: (fieldName, max) => `${fieldName} は ${max} 文字以内で入力してください。`,
+    minLength: (fieldName, min) => `${fieldName} は ${min} 文字以上で入力してください。`,
+    invalidFormat: (fieldName) => `${fieldName} の形式が正しくありません。`,
+    notFullWidthKatakana: (fieldName) => `${fieldName} は全角カタカナで入力してください。`,
+    notDigitOnly: (fieldName) => `数字のみの並びではありません。`,
+    notTenDigits: (fieldName) => `${fieldName} は10桁の数字で入力してください。`,
+    duplicate: (fieldName) => `${fieldName} が重複しています。`,
+    unknownError: () => `予期しないエラーが発生しました。`,
+    fileNotFound: () => `指定のファイルが存在しません。`,
+    headerError: () => `ファイルにヘッダー項目が存在しません。`,
+    columnNameError: () => `処理に必要なCSV項目が存在しません。`,
+    dbConnectionError: () => `DynamoDBの接続に失敗しました。`,
+    dbUpsertError: () => `DynamoDBへの書き込みに失敗しました。`,
+    emptyError: () => `データが空です。`,
+    invalid: () => `フォーマットが不正です。：`,
+    sizeError: () => `データのサイズが不正です。`,
+    invalidFormatted: () => `指定の書式ではありません。`,
+    invalidDateFormatted: () => `生年月日はyyyy/M/dの形式ではありません。`,
+    invalidDate: () => `生年月日に存在しない日付が指定されています。`,
+    invalidNumber: () => `半角数字以外が指定されています。`,
+    invalidTenNumber: () => `数字のみ10個の並びではありません。`,
+};
+export const ErrorMessages_QR = {
+    invalidGraphQL_API: () => `GraphQLの取得に失敗しました。`,
+    invalidResponse: () => `APIレスポンスに必要なデータが存在しません。`,
+    emptyId: () => `受給者IDが空データです。`,
+    noDirectoryPermission: () => `指定のディレクトリの作成権限が存在しません。`,
+    failedQRCodeGeneration: () => `QRコード生成に失敗しました。`,
+};

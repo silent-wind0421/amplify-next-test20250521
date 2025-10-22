@@ -113,50 +113,8 @@ export default function QrReceptionScreen() {
 
   const successAudio = useRef<HTMLAudioElement | null>(null);
 
-  // added by yoshida
-  //const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-
-  //modified  by yoshida
-  const handleSignOut = useSignOutHandler();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { user, authStatus } = useAuthenticator();
-  const router = useRouter();
-  const signingOutRef = useRef(false);
-
-  useEffect(() => {
-    if (authStatus === "configuring") return;
-    if (authStatus === "unauthenticated") {
-      router.replace("/"); // 未認証時にリダイレクト
-    }
-
-    (async () => {
-      try {
-        const { tokens } = await fetchAuthSession();
-        const raw = tokens?.idToken?.payload?.["cognito:groups"];
-        const groups: string[] = Array.isArray(raw) ? (raw as string[]) : [];
-
-        const isAdmin = groups.includes("admin");
-        //const isUser = groups.includes("user");
-
-        if (isAdmin && !signingOutRef.current) {
-          signingOutRef.current = true;
-          await handleSignOut(); // ここでセッションを落とす
-          setTimeout(() => {
-            router.replace("/"); //遷移の履歴を残さない(ブラウザーバックを防ぐ)
-          }, 100);
-        }
-      } catch {
-        // 失敗時は安全側で落とす
-        if (!signingOutRef.current) {
-          signingOutRef.current = true;
-          await handleSignOut();
-          setTimeout(() => {
-            router.replace("/"); //遷移の履歴を残さない(ブラウザーバックを防ぐ)
-          }, 100);
-        }
-      }
-    })();
-  }, [authStatus, router]);
+  const handleSignOut = useSignOutHandler('user', '/login-user');
+ 
 
   // 隠しボタンの表示ロジック
   const { visible, onPressStart, onPressEnd } = useSecretReveal({
@@ -168,15 +126,9 @@ export default function QrReceptionScreen() {
   // ダイアログ制御
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-  const handleConfirm = () =>
-    new Promise<void>((resolve) => {
-      handleSignOut(); // 同期
-      setTimeout(() => {
-        // 少し待ってから遷移＆resolve
-        router.replace("/login-user");
-        resolve();
-      }, 1000);
-    });
+  const handleConfirm = async () => {
+    await handleSignOut();   // ← ここを await に
+  };
 
   useEffect(() => {
     successAudio.current = new Audio("/sounds/maou_se_system23.mp3");
